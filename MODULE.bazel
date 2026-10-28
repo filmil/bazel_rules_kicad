@@ -23,7 +23,7 @@ register_toolchains(
 
 # KiCad itself, prebuilt and pinned by sha256 (kicad/private/extensions.bzl).
 kicad = use_extension("//kicad:extensions.bzl", "kicad")
-use_repo(kicad, "kicad_toolchains")
+use_repo(kicad, "kicad_libs", "kicad_toolchains")
 
 register_toolchains(
     "@kicad_toolchains//:all",

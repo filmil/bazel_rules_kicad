@@ -6,7 +6,7 @@
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("@rules_kicad//kicad:defs.bzl", "RULES_KICAD_API_VERSION")
+load("@rules_kicad//kicad:defs.bzl", "RULES_KICAD_API_VERSION", "kicad_lib_tables", "lib_table_test")
 
 # The public packages load and build: the rules, and the root package
 # with the --@rules_kicad//:tools flag that every user's build reads.
@@ -37,4 +37,16 @@ diff_test(
     size = "small",
     file1 = ":api_version",
     file2 = "expected_api_version.txt",
+)
+
+# The pinned KiCad libraries give tables with no host path.
+kicad_lib_tables(
+    name = "tables",
+    library = "@kicad_libs//:standard",
+)
+
+lib_table_test(
+    name = "tables_test",
+    size = "small",
+    tables = [":tables"],
 )

@@ -15,6 +15,7 @@ HelpersInfo = provider(
         "launcher": "FilesToRunProvider: runs a tool with a private home.",
         "swapcheck": "DefaultInfo of the swap test's checker (a target binary).",
         "compare": "DefaultInfo of determinism_test's comparer (a target binary).",
+        "tablecheck": "DefaultInfo of lib_table_test's checker (a target binary).",
     },
 )
 
@@ -23,15 +24,17 @@ def _helpers_toolchain_impl(ctx):
         launcher = ctx.attr.launcher[DefaultInfo].files_to_run,
         swapcheck = ctx.attr.swapcheck[DefaultInfo],
         compare = ctx.attr.compare[DefaultInfo],
+        tablecheck = ctx.attr.tablecheck[DefaultInfo],
     ))]
 
 helpers_toolchain = rule(
     implementation = _helpers_toolchain_impl,
-    doc = "The helpers toolchain: the launcher, the swap checker and the determinism comparer.",
+    doc = "The helpers toolchain: the launcher and the checkers of the tests.",
     attrs = {
         "launcher": attr.label(mandatory = True, executable = True, cfg = "exec"),
         "swapcheck": attr.label(mandatory = True, executable = True, cfg = "target"),
         "compare": attr.label(mandatory = True, executable = True, cfg = "target"),
+        "tablecheck": attr.label(mandatory = True, executable = True, cfg = "target"),
     },
 )
 

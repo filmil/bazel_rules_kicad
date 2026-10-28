@@ -31,6 +31,7 @@ helpers_toolchain(
     compare = "//kicad/private/detcompare",
     launcher = "//kicad/private/launcher",
     swapcheck = "//kicad/private/swapcheck",
+    tablecheck = "//kicad/private/tablecheck",
 )
 
 # The helpers run on Linux x86_64 only in v1 (spec P1). The outputs of the
