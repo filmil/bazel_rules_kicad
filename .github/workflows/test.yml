@@ -76,6 +76,13 @@ jobs:
           disk-cache: ${{ github.workflow }}-integration-${{ matrix.bazel }}
           repository-cache: true
 
+      # The registry presubmit resolves this module from the BCR alone.
+      - name: Integration dependencies resolve from the BCR alone
+        working-directory: integration
+        env:
+          USE_BAZEL_VERSION: ${{ matrix.bazel }}
+        run: bazel --ignore_all_rc_files mod graph --registry=https://bcr.bazel.build > /dev/null
+
       - name: Test the integration module with Bazel ${{ matrix.bazel }}
         working-directory: integration
         env:

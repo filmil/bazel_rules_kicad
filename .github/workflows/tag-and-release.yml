@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # When run:
-# * runs tests to ensure that released version works.
-# * tags a new release based on main top of tree.
-# * builds a source bundle and uploads it into the release
+# * skips everything when HEAD is already released;
+# * tags a new release based on main top of tree (at least a patch bump);
+# * builds the source archive with git archive and uploads it;
+# * publishes the release to the filmil registry and to the BCR.
 #
-# The workflow can be run manually, otherwise it runs once a week.
+# It runs by hand only for now; see the comment on `on:`.
 name: Tag and Release
 
 
@@ -18,8 +19,8 @@ on:
     inputs:
       force_publish:
         description: >-
-          Release and publish even when no commit asks for a version bump, or
-          when HEAD is already released. Bumps the patch version.
+          Release and publish even when HEAD is already released. Bumps the
+          patch version.
         type: boolean
         default: false
         required: false
@@ -74,7 +75,7 @@ jobs:
       tag_name: ${{ steps.tag_version.outputs.new_tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Bump version and push tag
@@ -83,13 +84,10 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           release_branches: main
-          # Normally `false`, so the action emits an empty `new_tag` when no
-          # commit asks for a release and the guards below skip everything.
-          # The Run workflow button can override that with `force_publish`,
-          # which bumps the patch version regardless. That is the escape hatch
-          # for commits whose messages conventional-commit parsing does not
-          # recognise as a release trigger.
-          default_bump: ${{ inputs.force_publish && 'patch' || 'false' }}
+          # At least a patch bump, so commits such as `chore:` still release.
+          # The `check` job above already stops a run on a HEAD that is
+          # released, so this cannot release the same tree twice.
+          default_bump: patch
 
   release:
     needs: tag

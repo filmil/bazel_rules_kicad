@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 """Public API of rules_kicad.
 
-Load every rule from this file:
+Load every rule from this file. For now it holds only the API version:
 
 ```starlark
-load("@rules_kicad//kicad:defs.bzl", "kicad_schematic", "kicad_erc_test")
+load("@rules_kicad//kicad:defs.bzl", "RULES_KICAD_API_VERSION")
 ```
 
 The rules arrive in milestones M1 and M2 (see the issues of

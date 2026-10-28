@@ -7,11 +7,9 @@ TAG="$1"
 VERSION="${TAG#v}"
 ARCHIVE="bazel_rules_kicad-${TAG}.zip"
 
-# Exclude repository clutter and build artifacts matching previous
-# zip-release exclusions.
-zip --quiet --symlinks --recurse-paths "${ARCHIVE}" . \
-  -x '*.git*' '/*node_modules/*' '.editorconfig' '*bazel-*' \
-     'release_notes.txt' "${ARCHIVE}"
+# The archive holds the tracked files of the tagged commit and nothing else,
+# so nothing the release run creates in the checkout can leak into it.
+git archive --format=zip --output="${ARCHIVE}" "${TAG}"
 
 cat <<EOF
 ## Using Bzlmod
