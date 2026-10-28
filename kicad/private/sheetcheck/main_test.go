@@ -42,9 +42,9 @@ func TestProblems(t *testing.T) {
 	}{
 		"all there":       {all, nil},
 		"power missing":   {all[1:], []string{`sheet "power.kicad_sch", which root.kicad_sch references, is not in srcs`}},
-		"nested missing":  {all[:2], []string{`sheet "../leaf.kicad_sch", which io.kicad_sch references, is not in srcs`}},
-		"one extra":       {append(append([]string{}, all...), d+"/extra.kicad_sch"), []string{`"extra.kicad_sch" is in srcs, but no sheet references it`}},
-		"missing a level": {[]string{d + "/power.kicad_sch", d + "/leaf.kicad_sch"}, []string{`sheet "sub/io.kicad_sch", which root.kicad_sch references, is not in srcs`, `"leaf.kicad_sch" is in srcs, but no sheet references it`}},
+		"nested missing":  {all[:2], []string{`sheet "leaf.kicad_sch", which sub/io.kicad_sch references, is not in srcs`}},
+		"one extra":       {append(append([]string{}, all...), d+"/extra.kicad_sch"), []string{`sheet "extra.kicad_sch" is in srcs, but no sheet references it`}},
+		"missing a level": {[]string{d + "/power.kicad_sch", d + "/leaf.kicad_sch"}, []string{`sheet "sub/io.kicad_sch", which root.kicad_sch references, is not in srcs`, `sheet "leaf.kicad_sch" is in srcs, but no sheet references it`}},
 	} {
 		got, err := Problems(d+"/root.kicad_sch", c.given, readFile)
 		if err != nil {
@@ -69,6 +69,12 @@ func TestRun(t *testing.T) {
 	if msg, code := run(missing, ""); code != 1 || !strings.Contains(msg, `"power.kicad_sch"`) {
 		t.Errorf("missing: %d %s", code, msg)
 	}
+	if _, code := run(missing, "unused:power.kicad_sch"); code != 1 {
+		t.Error("expect unused for a missing sheet must fail")
+	}
+	if _, code := run(missing, "bogus:power.kicad_sch"); code != 2 {
+		t.Error("an unknown expectation must exit 2")
+	}
 	if _, code := run(missing, "missing:power.kicad_sch"); code != 0 {
 		t.Error("expect missing:power.kicad_sch: the check did not find it")
 	}
@@ -77,5 +83,26 @@ func TestRun(t *testing.T) {
 	}
 	if _, code := run([]string{d + "/nope.kicad_sch"}, ""); code != 2 {
 		t.Error("an unreadable root must exit 2")
+	}
+}
+
+// A sheet that references its own parent makes a circular hierarchy.
+func TestCircular(t *testing.T) {
+	files := map[string]string{
+		"r/root.kicad_sch":  "(kicad_sch (sheet (property \"Sheetfile\" \"a.kicad_sch\")))",
+		"r/a.kicad_sch":     "(kicad_sch (sheet (property \"Sheetfile\" \"sub/b.kicad_sch\")))",
+		"r/sub/b.kicad_sch": "(kicad_sch (sheet (property \"Sheetfile\" \"../a.kicad_sch\")))",
+	}
+	read := func(p string) (string, error) { return files[filepath.ToSlash(p)], nil }
+	got, err := Problems("r/root.kicad_sch", []string{"r/a.kicad_sch", "r/sub/b.kicad_sch"}, read)
+	want := []string{`sheet "a.kicad_sch", which sub/b.kicad_sch references, is one of its own parents: the hierarchy is circular`}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("got %q, %v", got, err)
+	}
+	// A sheet used twice, not in a cycle, is fine.
+	files["r/root.kicad_sch"] = "(kicad_sch (sheet (property \"Sheetfile\" \"sub/b.kicad_sch\")) (sheet (property \"Sheetfile\" \"sub/b.kicad_sch\")))"
+	files["r/sub/b.kicad_sch"] = "(kicad_sch)"
+	if got, err := Problems("r/root.kicad_sch", []string{"r/sub/b.kicad_sch"}, read); err != nil || len(got) != 0 {
+		t.Errorf("reused sheet: %q, %v", got, err)
 	}
 }

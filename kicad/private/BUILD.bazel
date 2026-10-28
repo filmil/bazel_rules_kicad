@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
-load(":library_test.bzl", "relative_to_test")
+load(":library_test.bzl", "relative_path_test", "relative_to_test")
 
 bzl_library(
     name = "private",
@@ -33,5 +33,11 @@ string_flag(
 # The paths that write_lib_tables puts in the tables.
 relative_to_test(
     name = "relative_to_test",
+    size = "small",
+)
+
+# The sheet paths that kicad_schematic stages.
+relative_path_test(
+    name = "relative_path_test",
     size = "small",
 )

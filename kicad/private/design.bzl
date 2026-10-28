@@ -26,10 +26,13 @@ KicadSchematicInfo = provider(
 KicadPcbInfo = provider(
     doc = "A board, staged as a KiCad project with its schematic.",
     fields = {
-        "board": "File: the board, <name>.kicad_pcb, in the project directory.",
-        "schematic": "KicadSchematicInfo or None: the schematic the board follows.",
-        "netlist": "File or None: the netlist the board follows, when there is no schematic.",
-        "design_rules": "File or None: <name>.kicad_dru, in the project directory.",
+        "board": "File: the board, in the project directory. Its name is the schematic's root name " +
+                 "(<root>.kicad_pcb), or with a netlist the board's own.",
+        "schematic": "KicadSchematicInfo or None: the schematic the board follows, staged in the board's " +
+                     "project directory, next to the board.",
+        "netlist": "File or None: the netlist the board follows, when there is no schematic; " +
+                   "staged as <board name>.net.",
+        "design_rules": "File or None: the design rules, staged with the board's name (.kicad_dru).",
         "project": "File: the project file.",
         "project_dir": "string: the project directory, relative to the execution root.",
         "library": "KicadLibraryInfo: the libraries the tables list.",
@@ -42,11 +45,34 @@ def _stage(ctx, dir, rel, target_file):
     ctx.actions.symlink(output = out, target_file = target_file)
     return out
 
-def _relative(f, base_dir, what, label):
-    """The path of f below base_dir; f must be in or below it."""
-    if not f.path.startswith(base_dir + "/"):
-        fail("%s: %s %s is not in or below %s, the directory of the root sheet" % (label, what, f.short_path, base_dir))
-    return f.path[len(base_dir) + 1:]
+def relative_path(short_path, base_dir):
+    """Returns short_path below base_dir, or None if it is not below it.
+
+    Both are short paths (`File.short_path`, `File.dirname` of one), which
+    are the same for source and generated files. An empty base_dir is the
+    root package.
+
+    Args:
+      short_path: the path of a file.
+      base_dir: the directory it should be in or below.
+
+    Returns:
+      The path below base_dir, or None.
+    """
+    if base_dir == "":
+        return None if short_path.startswith("../") else short_path
+    if short_path.startswith(base_dir + "/"):
+        return short_path[len(base_dir) + 1:]
+    return None
+
+def _short_dir(f):
+    return f.short_path.rpartition("/")[0]
+
+def _relative(f, root, what, label):
+    rel = relative_path(f.short_path, _short_dir(root))
+    if rel == None:
+        fail("%s: %s %s is not in or below %s, the directory of the root sheet" % (label, what, f.short_path, _short_dir(root) or "the root package"))
+    return rel
 
 def _project_file(ctx, dir, base, given):
     """Stages the project file, or writes an empty one.
@@ -77,7 +103,7 @@ def _kicad_schematic_impl(ctx):
     for f in ctx.files.srcs:
         if f == root_src:
             fail("%s: srcs lists the root sheet %s" % (ctx.label, f.short_path))
-        sheets.append(_stage(ctx, dir, _relative(f, root_src.dirname, "sheet", ctx.label), f))
+        sheets.append(_stage(ctx, dir, _relative(f, root_src, "sheet", ctx.label), f))
     project = _project_file(ctx, dir, base, ctx.file.project)
     library = merge_libraries(ctx.label, [d[KicadLibraryInfo] for d in ctx.attr.deps])
     tables = _tables(ctx, dir, library, project_dir)
@@ -172,9 +198,13 @@ def _kicad_pcb_impl(ctx):
     board = _stage(ctx, dir, base + ".kicad_pcb", ctx.file.board)
     project_dir = board.dirname
     staged = [board]
+    sch_root = None
+    sch_sheets = []
     if sch:
-        for f in [sch.root] + sch.sheets:
-            staged.append(_stage(ctx, dir, f.path[len(sch.project_dir) + 1:], f))
+        sch_root = _stage(ctx, dir, sch.root.basename, sch.root)
+        for f in sch.sheets:
+            sch_sheets.append(_stage(ctx, dir, f.path[len(sch.project_dir) + 1:], f))
+        staged.extend([sch_root] + sch_sheets)
     netlist = None
     if ctx.file.netlist:
         netlist = _stage(ctx, dir, base + ".net", ctx.file.netlist)
@@ -191,11 +221,26 @@ def _kicad_pcb_impl(ctx):
         infos.append(sch.library)
     library = merge_libraries(ctx.label, infos)
     staged.extend(_tables(ctx, dir, library, project_dir))
-    files = depset(staged, transitive = [library.files])
+
+    # The schematic's own staged files come along, so the symlinks above
+    # resolve wherever the action runs.
+    files = depset(staged, transitive = [library.files] + ([sch.files] if sch else []))
+    pcb_sch = None
+    if sch:
+        # The schematic as it is in this project directory, so that a rule
+        # never mixes files of two directories.
+        pcb_sch = KicadSchematicInfo(
+            root = sch_root,
+            sheets = sch_sheets,
+            project = project,
+            project_dir = project_dir,
+            library = library,
+            files = files,
+        )
     return [
         KicadPcbInfo(
             board = board,
-            schematic = sch,
+            schematic = pcb_sch,
             netlist = netlist,
             design_rules = rules,
             project = project,
@@ -224,7 +269,10 @@ board as `<root name>.kicad_pcb` next to the schematic's sheets (KiCad
 finds a board's schematic by that name), the design rules as
 `<root name>.kicad_dru`, the project file (`project`, else the
 schematic's), and library tables with the libraries of the schematic and
-of `deps`. Every rule that runs KiCad on the board reads `KicadPcbInfo`.
+of `deps`. With `netlist` instead of `schematic`, the names come from the
+board's: `<board name>.kicad_pcb`, `<board name>.net` and
+`<board name>.kicad_dru`. Every rule that runs KiCad on the board reads
+`KicadPcbInfo`.
 """,
     attrs = {
         "board": attr.label(
@@ -270,7 +318,7 @@ def _sheet_check_test_impl(ctx):
             runfiles = ctx.runfiles(files = files).merge(helpers.sheetcheck.default_runfiles),
         ),
         RunEnvironmentInfo(environment = {
-            "SHEETCHECK_EXPECT": "missing:" + ctx.attr.missing,
+            "SHEETCHECK_EXPECT": ctx.attr.expect,
             "SHEETCHECK_FILES": "\n".join([f.short_path for f in files]),
         }),
     ]
@@ -278,13 +326,16 @@ def _sheet_check_test_impl(ctx):
 sheet_check_test = rule(
     implementation = _sheet_check_test_impl,
     test = True,
-    doc = """The sheet check's own known-bad test (spec T3): passes only if the
-check finds the sheet `missing` absent from `srcs`. It runs the checker of
+    doc = """The sheet check's own known-bad tests (spec T3): passes only if the
+check finds the problem `expect` names. It runs the checker of
 kicad_schematic's validation on the same files.""",
     attrs = {
         "root": attr.label(allow_single_file = [".kicad_sch"], mandatory = True),
         "srcs": attr.label_list(allow_files = [".kicad_sch"]),
-        "missing": attr.string(mandatory = True),
+        "expect": attr.string(
+            doc = "KIND:SHEET, KIND being missing, unused or circular; SHEET relative to the root's directory.",
+            mandatory = True,
+        ),
     },
     toolchains = [HELPERS_TOOLCHAIN_TYPE],
 )

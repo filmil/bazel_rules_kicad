@@ -29,9 +29,11 @@ go_test(
     pure = "on",
 )
 
-# The check's own known-bad input (spec T3): root.kicad_sch references
-# power.kicad_sch, which is left out. The test passes only if the check
-# names it. //tests/design:sch_missing shows the same through a rule.
+# The check's own known-bad inputs (spec T3). Each test passes only if the
+# check names the sheet. //tests/design:sch_missing shows the first
+# through a rule, in CI.
+#
+# root.kicad_sch references power.kicad_sch, which is left out.
 sheet_check_test(
     name = "detects_missing_sheet_test",
     size = "small",
@@ -39,6 +41,20 @@ sheet_check_test(
         "testdata/leaf.kicad_sch",
         "testdata/sub/io.kicad_sch",
     ],
-    missing = "power.kicad_sch",
+    expect = "missing:power.kicad_sch",
+    root = "testdata/root.kicad_sch",
+)
+
+# extra.kicad_sch is in srcs, but no sheet references it.
+sheet_check_test(
+    name = "detects_unused_sheet_test",
+    size = "small",
+    srcs = [
+        "testdata/extra.kicad_sch",
+        "testdata/leaf.kicad_sch",
+        "testdata/power.kicad_sch",
+        "testdata/sub/io.kicad_sch",
+    ],
+    expect = "unused:extra.kicad_sch",
     root = "testdata/root.kicad_sch",
 )
