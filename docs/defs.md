@@ -264,7 +264,7 @@ determinism_test(
 <pre>
 load("@rules_kicad//kicad:defs.bzl", "lib_table_test")
 
-lib_table_test(<a href="#lib_table_test-name">name</a>, <a href="#lib_table_test-tables">tables</a>, <a href="#lib_table_test-kwargs">**kwargs</a>)
+lib_table_test(<a href="#lib_table_test-name">name</a>, <a href="#lib_table_test-tables">tables</a>, <a href="#lib_table_test-expect">expect</a>, <a href="#lib_table_test-kwargs">**kwargs</a>)
 </pre>
 
 Fails if a library table names a path on the host (spec H4).
@@ -289,6 +289,7 @@ lib_table_test(
 | :------------- | :------------- | :------------- |
 | <a id="lib_table_test-name"></a>name |  the test's name.   |  none |
 | <a id="lib_table_test-tables"></a>tables |  targets whose table outputs are checked.   |  none |
+| <a id="lib_table_test-expect"></a>expect |  "clean": every table must pass. "host": some table must fail; for a known-bad fixture that proves the check works (spec T3).   |  `"clean"` |
 | <a id="lib_table_test-kwargs"></a>kwargs |  common test attributes, such as `size` and `tags`.   |  none |
 
 

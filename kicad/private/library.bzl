@@ -15,8 +15,8 @@ KicadLibraryInfo = provider(
 
 def _nickname(path, suffix):
     base = path.rsplit("/", 1)[-1]
-    if not base.endswith(suffix):
-        fail("%s: expected a name ending in %s" % (path, suffix))
+    if not base.endswith(suffix) or base == suffix:
+        fail("%s: expected a name ending in %s, with a nickname before it" % (path, suffix))
     return base[:-len(suffix)]
 
 def _merge(into, nick, value, what, label):
@@ -37,12 +37,12 @@ def _kicad_library_impl(ctx):
         transitive.append(info.files)
     for f in ctx.files.symbols:
         _merge(symbols, _nickname(f.path, ".kicad_sym"), f, "symbol", ctx.label)
-    for f in ctx.files.footprints:
-        if f.extension != "kicad_mod":
-            continue
-        d = f.dirname
-        _merge(footprints, _nickname(d, ".pretty"), d, "footprint", ctx.label)
-    files = depset(ctx.files.symbols + ctx.files.footprints, transitive = transitive)
+    mods = [f for f in ctx.files.footprints if f.extension == "kicad_mod"]
+    if ctx.files.footprints and not mods:
+        fail("%s: footprints has no .kicad_mod file" % ctx.label)
+    for f in mods:
+        _merge(footprints, _nickname(f.dirname, ".pretty"), f.dirname, "footprint", ctx.label)
+    files = depset(ctx.files.symbols + mods, transitive = transitive)
     return [
         KicadLibraryInfo(symbols = symbols, footprints = footprints, files = files),
         DefaultInfo(files = files),
@@ -101,7 +101,14 @@ def relative_to(path, project_dir):
     """
     if path.startswith("/") or project_dir.startswith("/"):
         fail("absolute path: %s, %s" % (path, project_dir))
-    up = len([s for s in project_dir.split("/") if s not in ("", ".")])
+    parts = [s for s in project_dir.split("/") if s not in ("", ".")]
+    if ".." in parts:
+        fail("project_dir %s leaves the execution root" % project_dir)
+
+    # A path that starts with ../ (an external repository with
+    # --experimental_sibling_repository_layout) still resolves: the ../
+    # steps first reach the execution root.
+    up = len(parts)
     return "${KIPRJMOD}/" + "../" * up + path
 
 def _quote(s):
@@ -142,8 +149,18 @@ def write_lib_tables(ctx, info, project_dir, sym_table, fp_table):
 def _kicad_lib_tables_impl(ctx):
     sym = ctx.actions.declare_file(ctx.label.name + "/sym-lib-table")
     fp = ctx.actions.declare_file(ctx.label.name + "/fp-lib-table")
-    write_lib_tables(ctx, ctx.attr.library[KicadLibraryInfo], sym.dirname, sym, fp)
-    return [DefaultInfo(files = depset([sym, fp]))]
+    info = ctx.attr.library[KicadLibraryInfo]
+    write_lib_tables(ctx, info, sym.dirname, sym, fp)
+
+    # The libraries come along, so whatever uses the tables has the files
+    # they name.
+    return [
+        DefaultInfo(
+            files = depset([sym, fp]),
+            runfiles = ctx.runfiles(transitive_files = info.files),
+        ),
+        info,
+    ]
 
 kicad_lib_tables = rule(
     implementation = _kicad_lib_tables_impl,
@@ -202,7 +219,7 @@ raw_lib_table_test = rule(
     toolchains = [HELPERS_TOOLCHAIN_TYPE],
 )
 
-def lib_table_test(name, tables, **kwargs):
+def lib_table_test(name, tables, expect = "clean", **kwargs):
     """Fails if a library table names a path on the host (spec H4).
 
     Every library URI in the `sym-lib-table` and `fp-lib-table` outputs of
@@ -220,6 +237,8 @@ def lib_table_test(name, tables, **kwargs):
     Args:
       name: the test's name.
       tables: targets whose table outputs are checked.
+      expect: "clean": every table must pass. "host": some table must fail;
+        for a known-bad fixture that proves the check works (spec T3).
       **kwargs: common test attributes, such as `size` and `tags`.
     """
-    raw_lib_table_test(name = name, tables = tables, **kwargs)
+    raw_lib_table_test(name = name, tables = tables, expect = expect, **kwargs)

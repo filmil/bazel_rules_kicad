@@ -17,6 +17,11 @@ func TestCheckURI(t *testing.T) {
 		"~/kicad/Device.kicad_sym":                                 true,
 		"${KICAD9_SYMBOL_DIR}/Device.kicad_sym":                    true,
 		"${KIPRJMOD}/${HOME}/x.kicad_sym":                          true,
+		"${KIPRJMOD}/${KIPRJMOD}/x.kicad_sym":                      true,
+		"${KIPRJMOD}/$(KIPRJMOD)/x.kicad_sym":                      true,
+		"${KIPRJMOD}/${HOME/x.kicad_sym":                           true,
+		"${KIPRJMOD}/":                                             true,
+		"${KIPRJMOD}//etc/x.kicad_sym":                             true,
 		"$(KIPRJMOD)/x.kicad_sym":                                  true,
 		"lib/Device.kicad_sym":                                     true,
 		"C:/kicad/Device.kicad_sym":                                true,
@@ -44,13 +49,28 @@ func TestCheckTable(t *testing.T) {
 	if ps := CheckTable("bad", bad); len(ps) != 1 || ps[0].URI != "/home/u/kicad/Device.kicad_sym" {
 		t.Errorf("bad table: %v", ps)
 	}
-	// A URI the pattern cannot read must not pass unseen.
-	odd := strings.Replace(good, `(uri "`, `(uri  x"`, 1)
-	if ps := CheckTable("odd", odd); len(ps) != 1 {
-		t.Errorf("unreadable uri: %v", ps)
+	// Whitespace other than a space, and a descr that mentions (lib.
+	odd := "(sym_lib_table\n\t(version 7)\n\t(lib\n\t\t(name \"A\")(uri \"/abs/A.kicad_sym\")(descr \"see (lib x)\"))\n)\n"
+	if ps := CheckTable("odd", odd); len(ps) != 1 || ps[0].URI != "/abs/A.kicad_sym" {
+		t.Errorf("odd table: %v", ps)
 	}
-	if ps := CheckTable("junk", "hello"); len(ps) != 1 {
-		t.Errorf("not a table: %v", ps)
+	// Escaped quotes and backslashes are read as KiCad reads them.
+	esc := `(fp_lib_table (lib (name "a\"b")(uri "${KIPRJMOD}/x\\y.pretty")))`
+	if ps := CheckTable("escaped", esc); len(ps) != 0 {
+		t.Errorf("escaped table: %v", ps)
+	}
+	for name, text := range map[string]string{
+		"junk":       "hello",
+		"unclosed":   "(sym_lib_table (lib (uri \"${KIPRJMOD}/a\")",
+		"no uri":     "(sym_lib_table (lib (name \"A\")))",
+		"two uris":   "(sym_lib_table (lib (uri \"${KIPRJMOD}/a\")(uri \"${KIPRJMOD}/b\")))",
+		"list uri":   "(sym_lib_table (lib (uri (x))))",
+		"other kind": "(kicad_sch (version 1))",
+		"trailing":   good + ")",
+	} {
+		if ps := CheckTable(name, text); len(ps) == 0 {
+			t.Errorf("%s: no problem found", name)
+		}
 	}
 }
 

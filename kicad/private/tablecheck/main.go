@@ -17,52 +17,177 @@ package main
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 )
 
-// uriRe finds each (uri "...") of a table. KiCad writes table strings with
-// backslash escapes for quotes and backslashes.
-var uriRe = regexp.MustCompile(`\(uri\s+"((?:[^"\\]|\\.)*)"\)`)
-
-var varRe = regexp.MustCompile(`\$\{([^}]*)\}|\$\(([^)]*)\)`)
-
-// Problem is one host-dependent URI.
+// Problem is one host-dependent URI, or a table that cannot be read.
 type Problem struct {
 	File, URI, Why string
 }
 
-func (p Problem) String() string { return fmt.Sprintf("%s: uri %q %s", p.File, p.URI, p.Why) }
-
-// CheckURI returns why uri depends on the host, or "".
-func CheckURI(uri string) string {
-	for _, m := range varRe.FindAllStringSubmatch(uri, -1) {
-		name := m[1] + m[2]
-		if name != "KIPRJMOD" {
-			return fmt.Sprintf("names the variable %s, which the host sets", name)
-		}
+func (p Problem) String() string {
+	if p.URI == "" {
+		return fmt.Sprintf("%s: %s", p.File, p.Why)
 	}
-	if !strings.HasPrefix(uri, "${KIPRJMOD}/") {
+	return fmt.Sprintf("%s: uri %q %s", p.File, p.URI, p.Why)
+}
+
+// CheckURI returns why uri depends on the host, or "". The only form
+// allowed is ${KIPRJMOD}/ followed by a path with no other variable.
+func CheckURI(uri string) string {
+	const prefix = "${KIPRJMOD}/"
+	if !strings.HasPrefix(uri, prefix) {
 		return "does not start with ${KIPRJMOD}/, so it is not relative to the project"
+	}
+	rest := uri[len(prefix):]
+	if rest == "" {
+		return "names the project directory itself, not a library"
+	}
+	if strings.Contains(rest, "$") {
+		return "names a variable after ${KIPRJMOD}/; the host may set it"
+	}
+	if strings.HasPrefix(rest, "/") || strings.HasPrefix(rest, "~") {
+		return "is absolute after ${KIPRJMOD}/"
 	}
 	return ""
 }
 
-// CheckTable returns the problems of one table's text. A table with no
-// library is fine; a text that is not a table is a problem.
+// node is an S-expression: an atom (a symbol or a string) or a list.
+type node struct {
+	atom   string
+	quoted bool
+	list   []*node
+	isList bool
+}
+
+// parse reads one S-expression from KiCad's format: parentheses, quoted
+// strings with backslash escapes, and bare symbols.
+func parse(text string) (*node, error) {
+	p := &parser{s: text}
+	p.space()
+	n, err := p.node()
+	if err != nil {
+		return nil, err
+	}
+	p.space()
+	if p.i != len(p.s) {
+		return nil, fmt.Errorf("text after the table at byte %d", p.i)
+	}
+	return n, nil
+}
+
+type parser struct {
+	s string
+	i int
+}
+
+func (p *parser) space() {
+	for p.i < len(p.s) && strings.ContainsRune(" \t\r\n", rune(p.s[p.i])) {
+		p.i++
+	}
+}
+
+func (p *parser) node() (*node, error) {
+	if p.i >= len(p.s) {
+		return nil, fmt.Errorf("unexpected end")
+	}
+	switch c := p.s[p.i]; {
+	case c == '(':
+		p.i++
+		n := &node{isList: true}
+		for {
+			p.space()
+			if p.i >= len(p.s) {
+				return nil, fmt.Errorf("unclosed list")
+			}
+			if p.s[p.i] == ')' {
+				p.i++
+				return n, nil
+			}
+			c, err := p.node()
+			if err != nil {
+				return nil, err
+			}
+			n.list = append(n.list, c)
+		}
+	case c == ')':
+		return nil, fmt.Errorf("unexpected ) at byte %d", p.i)
+	case c == '"':
+		p.i++
+		var b strings.Builder
+		for {
+			if p.i >= len(p.s) {
+				return nil, fmt.Errorf("unclosed string")
+			}
+			c := p.s[p.i]
+			p.i++
+			if c == '"' {
+				return &node{atom: b.String(), quoted: true}, nil
+			}
+			if c == '\\' {
+				if p.i >= len(p.s) {
+					return nil, fmt.Errorf("unclosed string")
+				}
+				c = p.s[p.i]
+				p.i++
+			}
+			b.WriteByte(c)
+		}
+	default:
+		start := p.i
+		for p.i < len(p.s) && !strings.ContainsRune(" \t\r\n()\"", rune(p.s[p.i])) {
+			p.i++
+		}
+		return &node{atom: p.s[start:p.i]}, nil
+	}
+}
+
+// head returns a list's first atom, or "".
+func (n *node) head() string {
+	if !n.isList || len(n.list) == 0 || n.list[0].isList {
+		return ""
+	}
+	return n.list[0].atom
+}
+
+// CheckTable returns the problems of one table's text: every library must
+// have exactly one URI, and every URI must pass CheckURI.
 func CheckTable(file, text string) []Problem {
-	t := strings.TrimSpace(text)
-	if !strings.HasPrefix(t, "(sym_lib_table") && !strings.HasPrefix(t, "(fp_lib_table") {
-		return []Problem{{File: file, Why: "is not a sym-lib-table or fp-lib-table"}}
+	t, err := parse(text)
+	if err != nil {
+		return []Problem{{File: file, Why: "is not a library table: " + err.Error()}}
+	}
+	if h := t.head(); h != "sym_lib_table" && h != "fp_lib_table" {
+		return []Problem{{File: file, Why: fmt.Sprintf("is a %q, not a sym_lib_table or fp_lib_table", h)}}
 	}
 	var ps []Problem
-	for _, m := range uriRe.FindAllStringSubmatch(text, -1) {
-		if why := CheckURI(m[1]); why != "" {
-			ps = append(ps, Problem{File: file, URI: m[1], Why: why})
+	for _, lib := range t.list[1:] {
+		switch lib.head() {
+		case "version":
+			continue
+		case "lib":
+		default:
+			ps = append(ps, Problem{File: file, Why: fmt.Sprintf("has an unknown entry %q", lib.head())})
+			continue
 		}
-	}
-	if n := strings.Count(text, "(lib "); n != len(uriRe.FindAllString(text, -1)) {
-		ps = append(ps, Problem{File: file, Why: fmt.Sprintf("has %d libraries but %d readable URIs", n, len(uriRe.FindAllString(text, -1)))})
+		var uris []string
+		for _, f := range lib.list[1:] {
+			if f.head() == "uri" {
+				if len(f.list) != 2 || f.list[1].isList {
+					ps = append(ps, Problem{File: file, Why: "has a uri that is not one string"})
+					continue
+				}
+				uris = append(uris, f.list[1].atom)
+			}
+		}
+		if len(uris) != 1 {
+			ps = append(ps, Problem{File: file, Why: fmt.Sprintf("has a library with %d uris", len(uris))})
+		}
+		for _, u := range uris {
+			if why := CheckURI(u); why != "" {
+				ps = append(ps, Problem{File: file, URI: u, Why: why})
+			}
+		}
 	}
 	return ps
 }

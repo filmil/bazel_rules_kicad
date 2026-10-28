@@ -70,7 +70,7 @@ load("@rules_kicad//kicad/private:kicad_toolchain.bzl", "kicad_toolchain")
 
 kicad_toolchain(
     name = "kicad_impl",
-    data = glob(["kicad/**"]),
+    data = glob(["kicad/**"], allow_empty = False),
     fonts = glob(["fonts/ttf/*.ttf"]),
     fonts_conf = "fonts.conf",
     kicad_cli = "kicad/bin/kicad-cli",
@@ -129,12 +129,12 @@ kicad_library(
 
 kicad_library(
     name = "symbols",
-    symbols = glob(["symbols/*.kicad_sym"]),
+    symbols = glob(["symbols/*.kicad_sym"], allow_empty = False),
 )
 
 kicad_library(
     name = "footprints",
-    footprints = glob(["footprints/*.pretty/*.kicad_mod"]),
+    footprints = glob(["footprints/*.pretty/*.kicad_mod"], allow_empty = False),
 )
 """
 

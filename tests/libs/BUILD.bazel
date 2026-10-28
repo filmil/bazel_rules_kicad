@@ -2,7 +2,7 @@
 #
 # KiCad libraries and their generated tables (issue #11, spec H4).
 load("@rules_kicad//kicad:defs.bzl", "kicad_lib_tables", "kicad_library", "lib_table_test")
-load(":dup_test.bzl", "duplicate_nickname_test")
+load(":dup_test.bzl", "duplicate_footprint_test", "duplicate_symbol_test", "no_footprint_test")
 
 # A project library on top of the pinned KiCad libraries.
 kicad_library(
@@ -34,14 +34,62 @@ lib_table_test(
 
 # A second footprint library named Resistor_SMD clashes with KiCad's own.
 kicad_library(
-    name = "dup",
+    name = "dup_footprint",
     footprints = glob(["dup/Resistor_SMD.pretty/*"]),
     tags = ["manual"],
     deps = ["@kicad_libs//:footprints"],
 )
 
-duplicate_nickname_test(
-    name = "duplicate_nickname_test",
+duplicate_footprint_test(
+    name = "duplicate_footprint_test",
     size = "small",
-    target_under_test = ":dup",
+    target_under_test = ":dup_footprint",
+)
+
+# So does a second symbol library named Device.
+kicad_library(
+    name = "dup_symbol",
+    symbols = ["dup/Device.kicad_sym"],
+    tags = ["manual"],
+    deps = ["@kicad_libs//:symbols"],
+)
+
+duplicate_symbol_test(
+    name = "duplicate_symbol_test",
+    size = "small",
+    target_under_test = ":dup_symbol",
+)
+
+# A footprints list with no .kicad_mod file is a mistake, not an empty
+# library.
+kicad_library(
+    name = "no_footprint",
+    footprints = ["My_Parts.pretty/README.md"],
+    tags = ["manual"],
+)
+
+no_footprint_test(
+    name = "no_footprint_test",
+    size = "small",
+    target_under_test = ":no_footprint",
+)
+
+# The same library reached twice (a diamond) is not a clash.
+kicad_library(
+    name = "diamond",
+    deps = [
+        ":mine",
+        "@kicad_libs//:standard",
+    ],
+)
+
+kicad_lib_tables(
+    name = "diamond_tables",
+    library = ":diamond",
+)
+
+lib_table_test(
+    name = "diamond_tables_test",
+    size = "small",
+    tables = [":diamond_tables"],
 )
