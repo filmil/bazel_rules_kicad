@@ -6,8 +6,12 @@
 # --incompatible_strict_action_env and --sandbox_default_allow_network=false
 # on for every build, so CI and local builds run the same way.
 #
-# The container gets only what launches Bazel: a pinned, checksummed
-# bazelisk, plus curl, git and CA certificates to fetch it and the sources.
+# The image is buildpack-deps:bullseye-curl, pinned by digest: Debian 11
+# with curl and CA certificates and nothing else (no compiler, no git, no
+# Python). Debian 11's security archive has left the live mirrors, so
+# apt-get cannot install anything in a plain debian:11 image any more. The
+# only thing added is a pinned, checksummed bazelisk. Without git,
+# actions/checkout fetches the sources through the GitHub API.
 #
 # A test that cannot be hermetic carries an exception tag (for example
 # `requires-network`), is listed with its reason in the hermeticity lint's
@@ -40,13 +44,11 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
-    container: debian:11
+    container: buildpack-deps:bullseye-curl@sha256:7c8d79c31eb106cca055357456a2fa89b10fa20f254da6fe3eca937439696c62
     steps:
-      - name: Install what launches Bazel
+      - name: Install bazelisk
         run: |
           set -o errexit -o nounset -o pipefail
-          apt-get update -qq
-          apt-get install -y -qq --no-install-recommends ca-certificates curl git
           curl -fsSL -o /usr/local/bin/bazel \
             "https://github.com/bazelbuild/bazelisk/releases/download/${BAZELISK_VERSION}/bazelisk-linux-amd64"
           echo "${BAZELISK_SHA256}  /usr/local/bin/bazel" | sha256sum -c -
@@ -56,7 +58,7 @@ jobs:
       # rule that works here does not depend on them.
       - name: No CAD tools on the host
         run: |
-          for t in kicad-cli kicad freecadcmd FreeCAD openscad python3 python; do
+          for t in kicad-cli kicad freecadcmd FreeCAD openscad python3 python gcc cc; do
             if command -v "$t" >/dev/null 2>&1; then
               echo "unexpected host tool: $t"; exit 1
             fi
@@ -101,17 +103,15 @@ jobs:
 
   integration:
     runs-on: ubuntu-latest
-    container: debian:11
+    container: buildpack-deps:bullseye-curl@sha256:7c8d79c31eb106cca055357456a2fa89b10fa20f254da6fe3eca937439696c62
     strategy:
       fail-fast: false
       matrix:
         bazel: ["8.x", "9.x"]
     steps:
-      - name: Install what launches Bazel
+      - name: Install bazelisk
         run: |
           set -o errexit -o nounset -o pipefail
-          apt-get update -qq
-          apt-get install -y -qq --no-install-recommends ca-certificates curl git
           curl -fsSL -o /usr/local/bin/bazel \
             "https://github.com/bazelbuild/bazelisk/releases/download/${BAZELISK_VERSION}/bazelisk-linux-amd64"
           echo "${BAZELISK_SHA256}  /usr/local/bin/bazel" | sha256sum -c -
