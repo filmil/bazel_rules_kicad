@@ -11,6 +11,7 @@ def _kicad_env_impl(ctx):
 
 kicad_env = rule(
     implementation = _kicad_env_impl,
-    doc = "Writes NAME=VALUE for each variable the resolved KiCad toolchain sets.",
+    doc = "Writes NAME=VALUE for each fixed value (`env`) of the resolved KiCad toolchain. " +
+          "utccheck tests what kicad-cli actually does with them.",
     toolchains = [_KICAD],
 )

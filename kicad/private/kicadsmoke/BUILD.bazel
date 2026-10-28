@@ -6,6 +6,7 @@
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("//kicad:defs.bzl", "determinism_test", "swap_test")
 load(":env.bzl", "kicad_env")
+load(":erc.bzl", "kicad_erc_report")
 load(":version.bzl", "kicad_version")
 
 kicad_version(name = "version")
@@ -41,4 +42,11 @@ diff_test(
     size = "small",
     file1 = ":env",
     file2 = "expected_env.txt",
+)
+
+# A real kicad-cli run whose output holds a time stamp; utccheck reads it.
+kicad_erc_report(
+    name = "erc",
+    schematic = "empty.kicad_sch",
+    visibility = ["//kicad/private/kicadsmoke/utccheck:__pkg__"],
 )
