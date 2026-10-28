@@ -1,0 +1,45 @@
+<!-- Generated with Stardoc: http://skydoc.bazel.build -->
+
+Module extensions of rules_kicad.
+
+```starlark
+kicad = use_extension("@rules_kicad//kicad:extensions.bzl", "kicad")
+kicad.toolchain(version = "9.0.9")
+```
+
+<a id="kicad"></a>
+
+## kicad
+
+<pre>
+kicad = use_extension("@rules_kicad//kicad:extensions.bzl", "kicad")
+kicad.toolchain(<a href="#kicad.toolchain-version">version</a>)
+</pre>
+
+The prebuilt KiCad toolchain.
+
+rules_kicad registers it, so a user needs nothing to get KiCad
+9.0.9. The root module can pick another
+version that rules_kicad has a prebuilt for:
+
+```starlark
+kicad = use_extension("@rules_kicad//kicad:extensions.bzl", "kicad")
+kicad.toolchain(version = "9.0.9")
+```
+
+
+**TAG CLASSES**
+
+<a id="kicad.toolchain"></a>
+
+### toolchain
+
+Picks the KiCad version. Only the root module's tag counts.
+
+**Attributes**
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad.toolchain-version"></a>version |  A KiCad version that rules_kicad has a prebuilt for.   | String | optional |  `"9.0.9"`  |
+
+

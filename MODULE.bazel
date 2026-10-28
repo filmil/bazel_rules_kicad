@@ -21,6 +21,16 @@ register_toolchains(
     "//kicad/toolchains:unsupported",
 )
 
+# KiCad itself, prebuilt and pinned by sha256 (kicad/private/extensions.bzl).
+kicad = use_extension("//kicad:extensions.bzl", "kicad")
+use_repo(kicad, "kicad_toolchains")
+
+register_toolchains(
+    "@kicad_toolchains//:all",
+    # swap_test's stand-in for kicad-cli.
+    "//kicad/toolchains:kicad_stub",
+)
+
 # The demonstration tools of the swap test template
 # (kicad/private/swapdemo) and of determinism_test's own tests
 # (kicad/private/detdemo).

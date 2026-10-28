@@ -69,8 +69,9 @@ tool_toolchain = rule(
     implementation = _tool_toolchain_impl,
     doc = """A toolchain that offers tools by name, for `run_tool`.
 
-Example, a toolchain for a newer kicad-cli that a user built or fetched
-(the KiCad toolchain type arrives with issue #10):
+Example, a toolchain that offers a user's own build of kicad-cli for the
+swap test or a custom rule. For the KiCad toolchain type, `kicad_toolchain`
+also brings KiCad's data, fonts and environment:
 
 ```starlark
 tool_toolchain(
@@ -81,7 +82,7 @@ tool_toolchain(
 toolchain(
     name = "my_kicad",
     toolchain = ":my_kicad_impl",
-    toolchain_type = "@rules_kicad//kicad:toolchain_type",
+    toolchain_type = "//my:toolchain_type",
 )
 ```
 """,

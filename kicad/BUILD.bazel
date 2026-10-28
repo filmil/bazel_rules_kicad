@@ -15,7 +15,23 @@ toolchain_type(
     visibility = ["//visibility:public"],
 )
 
+# The toolchain type of KiCad: kicad-cli and its data (KicadToolchainInfo).
+toolchain_type(
+    name = "toolchain_type",
+    visibility = ["//visibility:public"],
+)
+
+bzl_library(
+    name = "extensions",
+    srcs = ["extensions.bzl"],
+    visibility = ["//visibility:public"],
+    deps = ["//kicad/private"],
+)
+
 exports_files(
-    ["defs.bzl"],
+    [
+        "defs.bzl",
+        "extensions.bzl",
+    ],
     visibility = ["//docs:__pkg__"],
 )

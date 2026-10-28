@@ -12,6 +12,60 @@ The rules arrive in milestones M1 and M2 (see the issues of
 https://github.com/filmil/bazel_rules_kicad). This file is the only public
 entry point; everything under `//kicad/private` may change without notice.
 
+<a id="kicad_toolchain"></a>
+
+## kicad_toolchain
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_toolchain")
+
+kicad_toolchain(<a href="#kicad_toolchain-name">name</a>, <a href="#kicad_toolchain-data">data</a>, <a href="#kicad_toolchain-fonts">fonts</a>, <a href="#kicad_toolchain-fonts_conf">fonts_conf</a>, <a href="#kicad_toolchain-kicad_cli">kicad_cli</a>, <a href="#kicad_toolchain-version">version</a>)
+</pre>
+
+A KiCad toolchain, for the toolchain type `@rules_kicad//kicad:toolchain_type`.
+
+The `kicad` module extension makes one from the prebuilt KiCad. A user who
+builds or fetches KiCad another way declares their own:
+
+```starlark
+load("@rules_kicad//kicad:defs.bzl", "kicad_toolchain")
+
+kicad_toolchain(
+    name = "my_kicad_impl",
+    data = ["@my_kicad//:all_files"],
+    fonts = ["@my_fonts//:ttf"],
+    fonts_conf = "fonts.conf",
+    kicad_cli = "@my_kicad//:bin/kicad-cli",
+    version = "9.0.9",
+)
+
+toolchain(
+    name = "my_kicad",
+    exec_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
+    target_settings = ["@rules_kicad//kicad/toolchains:stub_off"],
+    toolchain = ":my_kicad_impl",
+    toolchain_type = "@rules_kicad//kicad:toolchain_type",
+)
+```
+
+Every action runs kicad-cli through `run_tool`, which gives it a private
+home: `KICAD_CONFIG_HOME`, `KICAD_DOCUMENTS_HOME`, `KICAD_CACHE_HOME` and
+the XDG directories all point inside the action (spec H3), and
+`FONTCONFIG_FILE` names `fonts_conf`.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_toolchain-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_toolchain-data"></a>data |  Every file kicad-cli reads: its libraries and data.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="kicad_toolchain-fonts"></a>fonts |  The font files that `fonts_conf` names.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="kicad_toolchain-fonts_conf"></a>fonts_conf |  A fontconfig file that names only `fonts` (spec H3: no host fonts).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+| <a id="kicad_toolchain-kicad_cli"></a>kicad_cli |  The kicad-cli executable.   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+| <a id="kicad_toolchain-version"></a>version |  The KiCad version kicad-cli reports, such as "9.0.9".   | String | required |  |
+
+
 <a id="tool_toolchain"></a>
 
 ## tool_toolchain
@@ -24,8 +78,9 @@ tool_toolchain(<a href="#tool_toolchain-name">name</a>, <a href="#tool_toolchain
 
 A toolchain that offers tools by name, for `run_tool`.
 
-Example, a toolchain for a newer kicad-cli that a user built or fetched
-(the KiCad toolchain type arrives with issue #10):
+Example, a toolchain that offers a user's own build of kicad-cli for the
+swap test or a custom rule. For the KiCad toolchain type, `kicad_toolchain`
+also brings KiCad's data, fonts and environment:
 
 ```starlark
 tool_toolchain(
@@ -36,7 +91,7 @@ tool_toolchain(
 toolchain(
     name = "my_kicad",
     toolchain = ":my_kicad_impl",
-    toolchain_type = "@rules_kicad//kicad:toolchain_type",
+    toolchain_type = "//my:toolchain_type",
 )
 ```
 
@@ -47,6 +102,26 @@ toolchain(
 | :------------- | :------------- | :------------- | :------------- | :------------- |
 | <a id="tool_toolchain-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
 | <a id="tool_toolchain-tools"></a>tools |  Executable targets, each mapped to the name rules use for it.   | <a href="https://bazel.build/rules/lib/core/dict">Dictionary: Label -> String</a> | required |  |
+
+
+<a id="KicadToolchainInfo"></a>
+
+## KicadToolchainInfo
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "KicadToolchainInfo")
+
+KicadToolchainInfo(<a href="#KicadToolchainInfo-version">version</a>, <a href="#KicadToolchainInfo-major">major</a>)
+</pre>
+
+What a KiCad toolchain offers beyond the `kicad_cli` tool.
+
+**FIELDS**
+
+| Name  | Description |
+| :------------- | :------------- |
+| <a id="KicadToolchainInfo-version"></a>version |  The KiCad version kicad-cli reports, such as "9.0.9".    |
+| <a id="KicadToolchainInfo-major"></a>major |  The major version as a string, such as "9". KiCad's library variables are named after it (KICAD9_SYMBOL_DIR).    |
 
 
 <a id="determinism_test"></a>
