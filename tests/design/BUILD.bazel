@@ -1,0 +1,105 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# kicad_schematic and kicad_pcb: what they stage and provide (issue #13).
+# The sheets here only reference each other; the e2e design in
+# integration/e2e is the one KiCad runs on.
+load("//kicad:defs.bzl", "kicad_library", "kicad_pcb", "kicad_schematic")
+load(":design_test.bzl", "fails_test", "netlist_pcb_info_test", "pcb_info_test", "schematic_info_test")
+
+kicad_schematic(
+    name = "sch",
+    srcs = ["sheets/power.kicad_sch"],
+    root = "main.kicad_sch",
+    deps = ["//tests/libs:mine"],
+)
+
+schematic_info_test(
+    name = "schematic_info_test",
+    size = "small",
+    target_under_test = ":sch",
+)
+
+kicad_library(
+    name = "board_lib",
+    symbols = ["lib/Fixture2.kicad_sym"],
+)
+
+# The board file has another name; it is staged as main.kicad_pcb.
+kicad_pcb(
+    name = "pcb",
+    board = "board.kicad_pcb",
+    design_rules = "rules.kicad_dru",
+    schematic = ":sch",
+    deps = [":board_lib"],
+)
+
+pcb_info_test(
+    name = "pcb_info_test",
+    size = "small",
+    target_under_test = ":pcb",
+)
+
+kicad_pcb(
+    name = "pcb_from_netlist",
+    board = "board.kicad_pcb",
+    netlist = "circuit.net",
+)
+
+netlist_pcb_info_test(
+    name = "netlist_pcb_info_test",
+    size = "small",
+    target_under_test = ":pcb_from_netlist",
+)
+
+# A board needs exactly one of schematic and netlist.
+kicad_pcb(
+    name = "pcb_both",
+    board = "board.kicad_pcb",
+    netlist = "circuit.net",
+    schematic = ":sch",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "pcb_both_test",
+    size = "small",
+    message = "give exactly one of schematic and netlist",
+    target_under_test = ":pcb_both",
+)
+
+kicad_pcb(
+    name = "pcb_neither",
+    board = "board.kicad_pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "pcb_neither_test",
+    size = "small",
+    message = "give exactly one of schematic and netlist",
+    target_under_test = ":pcb_neither",
+)
+
+# A sheet outside the root's directory cannot keep its relative path.
+kicad_schematic(
+    name = "sch_outside",
+    srcs = ["main.kicad_sch"],
+    root = "sheets/power.kicad_sch",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "sch_outside_test",
+    size = "small",
+    message = "is not in or below tests/design/sheets",
+    target_under_test = ":sch_outside",
+)
+
+# Known bad (spec T3): the root references sheets/power.kicad_sch, which
+# srcs leaves out. Building it fails and names the sheet; CI checks that
+# (.github/workflows/test.yml). Manual, so that //... builds.
+kicad_schematic(
+    name = "sch_missing",
+    root = "bad/main.kicad_sch",
+    tags = ["manual"],
+)

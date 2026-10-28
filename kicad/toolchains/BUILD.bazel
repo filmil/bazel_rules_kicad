@@ -31,6 +31,8 @@ helpers_toolchain(
     name = "helpers_impl",
     compare = "//kicad/private/detcompare",
     launcher = "//kicad/private/launcher",
+    sheetcheck = "//kicad/private/sheetcheck",
+    sheetcheck_test = "//kicad/private/sheetcheck",
     swapcheck = "//kicad/private/swapcheck",
     tablecheck = "//kicad/private/tablecheck",
 )

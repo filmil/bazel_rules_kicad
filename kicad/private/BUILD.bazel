@@ -6,6 +6,7 @@ load(":library_test.bzl", "relative_to_test")
 bzl_library(
     name = "private",
     srcs = [
+        "design.bzl",
         "determinism.bzl",
         "extensions.bzl",
         "kicad_toolchain.bzl",

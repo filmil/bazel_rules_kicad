@@ -120,6 +120,16 @@ jobs:
           fi
           grep -F "rules_kicad v1 supports only Linux x86_64 hosts" "${HOME}/p1.log"
 
+      # Spec T3: a schematic whose root references a sheet missing from
+      # srcs fails to build, and the message names the sheet.
+      - name: A missing sheet fails the build and is named
+        run: |
+          set -o nounset -o pipefail
+          if bazel build //tests/design:sch_missing > "${HOME}/sheet.log" 2>&1; then
+            echo "the schematic with a missing sheet built"; exit 1
+          fi
+          grep -F 'sheet "sheets/power.kicad_sch", which main.kicad_sch references, is not in srcs' "${HOME}/sheet.log"
+
       # Fails when a dependency is only in the filmil registry: the BCR
       # would then reject the module.
       - name: Dependencies resolve from the BCR alone

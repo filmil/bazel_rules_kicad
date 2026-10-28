@@ -80,6 +80,91 @@ host.
 | <a id="kicad_library-symbols"></a>symbols |  `.kicad_sym` files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 
 
+<a id="kicad_pcb"></a>
+
+## kicad_pcb
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_pcb")
+
+kicad_pcb(<a href="#kicad_pcb-name">name</a>, <a href="#kicad_pcb-deps">deps</a>, <a href="#kicad_pcb-board">board</a>, <a href="#kicad_pcb-design_rules">design_rules</a>, <a href="#kicad_pcb-netlist">netlist</a>, <a href="#kicad_pcb-project">project</a>, <a href="#kicad_pcb-schematic">schematic</a>)
+</pre>
+
+A KiCad board, with the schematic or netlist it follows.
+
+```starlark
+kicad_pcb(
+    name = "pcb",
+    board = "main.kicad_pcb",
+    schematic = ":sch",
+    design_rules = "main.kicad_dru",
+)
+```
+
+It runs no KiCad. It stages a KiCad project in `<name>_project/`: the
+board as `<root name>.kicad_pcb` next to the schematic's sheets (KiCad
+finds a board's schematic by that name), the design rules as
+`<root name>.kicad_dru`, the project file (`project`, else the
+schematic's), and library tables with the libraries of the schematic and
+of `deps`. Every rule that runs KiCad on the board reads `KicadPcbInfo`.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_pcb-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_pcb-deps"></a>deps |  More libraries (`kicad_library`), for footprints the schematic does not bring.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="kicad_pcb-board"></a>board |  The board.   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+| <a id="kicad_pcb-design_rules"></a>design_rules |  Custom design rules (.kicad_dru).   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `None`  |
+| <a id="kicad_pcb-netlist"></a>netlist |  A KiCad netlist, for a circuit with no schematic (such as one written in code). Give this or `schematic`.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `None`  |
+| <a id="kicad_pcb-project"></a>project |  The project file (.kicad_pro). Default: the schematic's, else an empty one.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `None`  |
+| <a id="kicad_pcb-schematic"></a>schematic |  The schematic (`kicad_schematic`). Give this or `netlist`.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `None`  |
+
+
+<a id="kicad_schematic"></a>
+
+## kicad_schematic
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_schematic")
+
+kicad_schematic(<a href="#kicad_schematic-name">name</a>, <a href="#kicad_schematic-deps">deps</a>, <a href="#kicad_schematic-srcs">srcs</a>, <a href="#kicad_schematic-project">project</a>, <a href="#kicad_schematic-root">root</a>)
+</pre>
+
+A KiCad schematic: the root sheet, its other sheets, and its libraries.
+
+```starlark
+kicad_schematic(
+    name = "sch",
+    root = "main.kicad_sch",
+    srcs = ["power.kicad_sch"],
+    deps = ["@kicad_libs//:standard"],
+)
+```
+
+It runs no KiCad. It stages the files as a KiCad project in
+`<name>_project/`: the sheets at their paths relative to the root's
+directory, `<root name>.kicad_pro`, and a `sym-lib-table` and an
+`fp-lib-table` whose paths are relative to the project. Every rule that
+runs KiCad on the schematic reads `KicadSchematicInfo`.
+
+Building the target checks that `srcs` holds exactly the sheets the root
+references, directly or through other sheets. Otherwise the build fails
+and names the sheet.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_schematic-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_schematic-deps"></a>deps |  Symbol and footprint libraries (`kicad_library`).   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="kicad_schematic-srcs"></a>srcs |  Every other sheet, in or below the root's directory.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="kicad_schematic-project"></a>project |  The project file (.kicad_pro). An empty one is used if not given.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `None`  |
+| <a id="kicad_schematic-root"></a>root |  The root sheet.   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+
+
 <a id="kicad_toolchain"></a>
 
 ## kicad_toolchain
@@ -193,6 +278,56 @@ Symbol and footprint libraries, by the nickname KiCad uses for each.
 | <a id="KicadLibraryInfo-symbols"></a>symbols |  dict: nickname to the `.kicad_sym` File.    |
 | <a id="KicadLibraryInfo-footprints"></a>footprints |  dict: nickname to the path of its `.pretty` directory, relative to the execution root.    |
 | <a id="KicadLibraryInfo-files"></a>files |  depset of every file of the libraries.    |
+
+
+<a id="KicadPcbInfo"></a>
+
+## KicadPcbInfo
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "KicadPcbInfo")
+
+KicadPcbInfo(<a href="#KicadPcbInfo-board">board</a>, <a href="#KicadPcbInfo-schematic">schematic</a>, <a href="#KicadPcbInfo-netlist">netlist</a>, <a href="#KicadPcbInfo-design_rules">design_rules</a>, <a href="#KicadPcbInfo-project">project</a>, <a href="#KicadPcbInfo-project_dir">project_dir</a>, <a href="#KicadPcbInfo-library">library</a>, <a href="#KicadPcbInfo-files">files</a>)
+</pre>
+
+A board, staged as a KiCad project with its schematic.
+
+**FIELDS**
+
+| Name  | Description |
+| :------------- | :------------- |
+| <a id="KicadPcbInfo-board"></a>board |  File: the board, <name>.kicad_pcb, in the project directory.    |
+| <a id="KicadPcbInfo-schematic"></a>schematic |  KicadSchematicInfo or None: the schematic the board follows.    |
+| <a id="KicadPcbInfo-netlist"></a>netlist |  File or None: the netlist the board follows, when there is no schematic.    |
+| <a id="KicadPcbInfo-design_rules"></a>design_rules |  File or None: <name>.kicad_dru, in the project directory.    |
+| <a id="KicadPcbInfo-project"></a>project |  File: the project file.    |
+| <a id="KicadPcbInfo-project_dir"></a>project_dir |  string: the project directory, relative to the execution root.    |
+| <a id="KicadPcbInfo-library"></a>library |  KicadLibraryInfo: the libraries the tables list.    |
+| <a id="KicadPcbInfo-files"></a>files |  depset of File: every file KiCad reads for this board, libraries included.    |
+
+
+<a id="KicadSchematicInfo"></a>
+
+## KicadSchematicInfo
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "KicadSchematicInfo")
+
+KicadSchematicInfo(<a href="#KicadSchematicInfo-root">root</a>, <a href="#KicadSchematicInfo-sheets">sheets</a>, <a href="#KicadSchematicInfo-project">project</a>, <a href="#KicadSchematicInfo-project_dir">project_dir</a>, <a href="#KicadSchematicInfo-library">library</a>, <a href="#KicadSchematicInfo-files">files</a>)
+</pre>
+
+A schematic, staged as a KiCad project.
+
+**FIELDS**
+
+| Name  | Description |
+| :------------- | :------------- |
+| <a id="KicadSchematicInfo-root"></a>root |  File: the root sheet, in the project directory.    |
+| <a id="KicadSchematicInfo-sheets"></a>sheets |  list of File: the other sheets, in the project directory.    |
+| <a id="KicadSchematicInfo-project"></a>project |  File: the project file, <root name>.kicad_pro.    |
+| <a id="KicadSchematicInfo-project_dir"></a>project_dir |  string: the project directory, relative to the execution root.    |
+| <a id="KicadSchematicInfo-library"></a>library |  KicadLibraryInfo: the libraries the tables list.    |
+| <a id="KicadSchematicInfo-files"></a>files |  depset of File: every file KiCad reads for this schematic, libraries included.    |
 
 
 <a id="KicadToolchainInfo"></a>

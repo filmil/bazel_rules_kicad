@@ -1,0 +1,21 @@
+(kicad_sch
+	(version 20250114)
+	(sheet
+		(at 0 0)
+		(property "Sheetname" "power"
+			(at 0 0 0)
+		)
+		(property "Sheetfile" "power.kicad_sch"
+			(at 0 0 0)
+		)
+	)
+	(sheet
+		(at 0 0)
+		(property "Sheetname" "sub/io"
+			(at 0 0 0)
+		)
+		(property "Sheetfile" "sub/io.kicad_sch"
+			(at 0 0 0)
+		)
+	)
+)
