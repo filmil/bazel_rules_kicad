@@ -215,6 +215,25 @@ What a KiCad toolchain offers beyond the `kicad_cli` tool.
 | <a id="KicadToolchainInfo-major"></a>major |  The major version as a string, such as "9". KiCad's library variables are named after it (KICAD9_SYMBOL_DIR).    |
 
 
+<a id="NormalizeToolchainInfo"></a>
+
+## NormalizeToolchainInfo
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "NormalizeToolchainInfo")
+
+NormalizeToolchainInfo(<a href="#NormalizeToolchainInfo-epoch">epoch</a>)
+</pre>
+
+What the normalize toolchain offers beyond the `normalize` tool.
+
+**FIELDS**
+
+| Name  | Description |
+| :------------- | :------------- |
+| <a id="NormalizeToolchainInfo-epoch"></a>epoch |  int: the time every time stamp becomes, in seconds since 1970 UTC.    |
+
+
 <a id="determinism_test"></a>
 
 ## determinism_test

@@ -10,12 +10,14 @@ bzl_library(
         "extensions.bzl",
         "kicad_toolchain.bzl",
         "library.bzl",
+        "normalize.bzl",
         "run_tool.bzl",
         "swap_test.bzl",
         "toolchains.bzl",
     ],
     # The kicad_toolchains repository loads kicad_toolchain.bzl.
     visibility = ["//visibility:public"],
+    deps = ["@bazel_skylib//rules:common_settings"],
 )
 
 # A setting that changes nothing but the configuration. determinism_test
