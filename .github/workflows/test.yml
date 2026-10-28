@@ -27,6 +27,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Steps in a container run under `sh` unless told otherwise, and Debian's
+# `sh` has no `pipefail`.
+defaults:
+  run:
+    shell: bash
+
 env:
   BAZELISK_VERSION: v1.29.0
   BAZELISK_SHA256: 5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992
