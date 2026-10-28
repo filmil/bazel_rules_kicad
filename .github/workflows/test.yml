@@ -67,10 +67,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      # The cache key carries the current UTC date, so an entry is only
-      # restored on the day it was written. That gives the build cache a 24
-      # hour lifetime. The restore-keys line still seeds a new day from the
-      # previous day's entry, so the first build of the day starts warm.
+      # Bazel keeps its disk cache and repository cache in two fixed
+      # directories, so the cache below holds only those, not an output
+      # base.
+      - name: Point Bazel at the cached directories
+        run: |
+          printf 'common --repository_cache=%s\nbuild --disk_cache=%s\n' \
+            "${HOME}/.cache/bazel-repo" "${HOME}/.cache/bazel-disk" \
+            | tee user.bazelrc integration/user.bazelrc
+
+      # The key carries the current UTC date and the run, so every run saves
+      # its cache, and a run restores only an entry written the same day.
+      # That gives the cache a 24 hour lifetime.
       - name: Compute the daily cache key
         id: cachekey
         run: echo "day=$(date -u +%Y-%m-%d)" >> "${GITHUB_OUTPUT}"
@@ -79,11 +87,12 @@ jobs:
         uses: actions/cache@v6
         with:
           path: |
-            ~/.cache/bazel
+            ~/.cache/bazel-repo
+            ~/.cache/bazel-disk
             ~/.cache/bazelisk
-          key: test-${{ runner.os }}-bazel-${{ steps.cachekey.outputs.day }}
+          key: test-${{ steps.cachekey.outputs.day }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            test-${{ runner.os }}-bazel-
+            test-${{ steps.cachekey.outputs.day }}-
 
       - name: Build
         run: bazel build //...
@@ -117,8 +126,24 @@ jobs:
           echo "${BAZELISK_SHA256}  /usr/local/bin/bazel" | sha256sum -c -
           chmod +x /usr/local/bin/bazel
 
+      # The point of the container: none of these may be present, so a
+      # rule that works here does not depend on them.
+      - name: No CAD tools on the host
+        run: |
+          for t in kicad-cli kicad freecadcmd FreeCAD openscad python3 python gcc cc; do
+            if command -v "$t" >/dev/null 2>&1; then
+              echo "unexpected host tool: $t"; exit 1
+            fi
+          done
+
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Point Bazel at the cached directories
+        run: |
+          printf 'common --repository_cache=%s\nbuild --disk_cache=%s\n' \
+            "${HOME}/.cache/bazel-repo" "${HOME}/.cache/bazel-disk" \
+            | tee user.bazelrc integration/user.bazelrc
 
       - name: Compute the daily cache key
         id: cachekey
@@ -128,11 +153,12 @@ jobs:
         uses: actions/cache@v6
         with:
           path: |
-            ~/.cache/bazel
+            ~/.cache/bazel-repo
+            ~/.cache/bazel-disk
             ~/.cache/bazelisk
-          key: integration-${{ matrix.bazel }}-${{ runner.os }}-bazel-${{ steps.cachekey.outputs.day }}
+          key: integration-${{ matrix.bazel }}-${{ steps.cachekey.outputs.day }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            integration-${{ matrix.bazel }}-${{ runner.os }}-bazel-
+            integration-${{ matrix.bazel }}-${{ steps.cachekey.outputs.day }}-
 
       # The registry presubmit resolves this module from the BCR alone.
       - name: Integration dependencies resolve from the BCR alone
