@@ -19,7 +19,12 @@ kicad.toolchain(<a href="#kicad.toolchain-version">version</a>)
 The prebuilt KiCad toolchain.
 
 rules_kicad registers it, so a user needs nothing to get KiCad
-9.0.9. The root module can pick another
+9.0.9. The extension also makes `@kicad_libs`, KiCad's symbol and
+footprint libraries of the same version: `@kicad_libs//:standard`,
+`:symbols` and `:footprints`, each a `kicad_library`. Bring it in with
+`use_repo(kicad, "kicad_libs")`.
+
+The root module can pick another
 version that rules_kicad has a prebuilt for:
 
 ```starlark

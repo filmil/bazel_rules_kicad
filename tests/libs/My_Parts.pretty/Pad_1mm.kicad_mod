@@ -1,0 +1,8 @@
+(footprint "Pad_1mm"
+  (version 20241229)
+  (generator "pcbnew")
+  (generator_version "9.0")
+  (layer "F.Cu")
+  (attr smd)
+  (pad "1" smd circle (at 0 0) (size 1 1) (layers "F.Cu" "F.Mask"))
+)

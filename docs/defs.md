@@ -12,6 +12,74 @@ The rules arrive in milestones M1 and M2 (see the issues of
 https://github.com/filmil/bazel_rules_kicad). This file is the only public
 entry point; everything under `//kicad/private` may change without notice.
 
+<a id="kicad_lib_tables"></a>
+
+## kicad_lib_tables
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_lib_tables")
+
+kicad_lib_tables(<a href="#kicad_lib_tables-name">name</a>, <a href="#kicad_lib_tables-library">library</a>)
+</pre>
+
+Writes `<name>/sym-lib-table` and `<name>/fp-lib-table` for a library.
+
+The project directory is `<name>/` next to the tables, as when a rule puts
+a design's files there. The rules that run KiCad write their own tables
+the same way.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_lib_tables-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_lib_tables-library"></a>library |  The libraries the tables list.   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+
+
+<a id="kicad_library"></a>
+
+## kicad_library
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_library")
+
+kicad_library(<a href="#kicad_library-name">name</a>, <a href="#kicad_library-deps">deps</a>, <a href="#kicad_library-footprints">footprints</a>, <a href="#kicad_library-symbols">symbols</a>)
+</pre>
+
+Symbol and footprint libraries for KiCad (spec H4).
+
+A symbol library is one `.kicad_sym` file; its nickname is the file name
+without the extension. A footprint library is a `<nickname>.pretty`
+directory; list its `.kicad_mod` files. Files of other kinds in
+`footprints` (a README) are ignored.
+
+```starlark
+kicad_library(
+    name = "my_parts",
+    symbols = ["My_Parts.kicad_sym"],
+    footprints = glob(["My_Parts.pretty/*.kicad_mod"]),
+    deps = ["@kicad_libs//:standard"],
+)
+```
+
+`@kicad_libs//:standard` holds the KiCad 9 symbol and footprint libraries,
+pinned by sha256. Rules that run KiCad on a design generate its
+`sym-lib-table` and `fp-lib-table` from these, with paths relative to the
+project (see `kicad_lib_tables`), so KiCad never reads a library from the
+host.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_library-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_library-deps"></a>deps |  Other libraries to include. A nickname may appear only once.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="kicad_library-footprints"></a>footprints |  The files of `.pretty` directories.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="kicad_library-symbols"></a>symbols |  `.kicad_sym` files.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+
+
 <a id="kicad_toolchain"></a>
 
 ## kicad_toolchain
@@ -106,6 +174,27 @@ toolchain(
 | <a id="tool_toolchain-tools"></a>tools |  Executable targets, each mapped to the name rules use for it.   | <a href="https://bazel.build/rules/lib/core/dict">Dictionary: Label -> String</a> | required |  |
 
 
+<a id="KicadLibraryInfo"></a>
+
+## KicadLibraryInfo
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "KicadLibraryInfo")
+
+KicadLibraryInfo(<a href="#KicadLibraryInfo-symbols">symbols</a>, <a href="#KicadLibraryInfo-footprints">footprints</a>, <a href="#KicadLibraryInfo-files">files</a>)
+</pre>
+
+Symbol and footprint libraries, by the nickname KiCad uses for each.
+
+**FIELDS**
+
+| Name  | Description |
+| :------------- | :------------- |
+| <a id="KicadLibraryInfo-symbols"></a>symbols |  dict: nickname to the `.kicad_sym` File.    |
+| <a id="KicadLibraryInfo-footprints"></a>footprints |  dict: nickname to the path of its `.pretty` directory, relative to the execution root.    |
+| <a id="KicadLibraryInfo-files"></a>files |  depset of every file of the libraries.    |
+
+
 <a id="KicadToolchainInfo"></a>
 
 ## KicadToolchainInfo
@@ -166,6 +255,41 @@ determinism_test(
 | <a id="determinism_test-name"></a>name |  the test's name.   |  none |
 | <a id="determinism_test-target"></a>target |  the target whose outputs must not change between builds.   |  none |
 | <a id="determinism_test-kwargs"></a>kwargs |  common test attributes, such as `size` and `tags`.   |  none |
+
+
+<a id="lib_table_test"></a>
+
+## lib_table_test
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "lib_table_test")
+
+lib_table_test(<a href="#lib_table_test-name">name</a>, <a href="#lib_table_test-tables">tables</a>, <a href="#lib_table_test-kwargs">**kwargs</a>)
+</pre>
+
+Fails if a library table names a path on the host (spec H4).
+
+Every library URI in the `sym-lib-table` and `fp-lib-table` outputs of
+`tables` must start with `${KIPRJMOD}/` and name no other variable. An
+absolute path, a home-relative path or a variable such as
+`${KICAD9_SYMBOL_DIR}` fails the test.
+
+```starlark
+lib_table_test(
+    name = "tables_test",
+    tables = [":tables"],
+)
+```
+
+
+**PARAMETERS**
+
+
+| Name  | Description | Default Value |
+| :------------- | :------------- | :------------- |
+| <a id="lib_table_test-name"></a>name |  the test's name.   |  none |
+| <a id="lib_table_test-tables"></a>tables |  targets whose table outputs are checked.   |  none |
+| <a id="lib_table_test-kwargs"></a>kwargs |  common test attributes, such as `size` and `tags`.   |  none |
 
 
 <a id="swap_test"></a>

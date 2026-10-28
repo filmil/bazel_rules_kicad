@@ -20,3 +20,7 @@ local_path_override(
 )
 
 bazel_dep(name = "bazel_skylib", version = "1.9.2")
+
+# The pinned KiCad libraries, as a user brings them in.
+kicad = use_extension("@rules_kicad//kicad:extensions.bzl", "kicad")
+use_repo(kicad, "kicad_libs")

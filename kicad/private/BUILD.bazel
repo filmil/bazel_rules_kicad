@@ -8,6 +8,7 @@ bzl_library(
         "determinism.bzl",
         "extensions.bzl",
         "kicad_toolchain.bzl",
+        "library.bzl",
         "run_tool.bzl",
         "swap_test.bzl",
         "toolchains.bzl",

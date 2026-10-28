@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# KiCad libraries and their generated tables (issue #11, spec H4).
+load("@rules_kicad//kicad:defs.bzl", "kicad_lib_tables", "kicad_library", "lib_table_test")
+load(":dup_test.bzl", "duplicate_nickname_test")
+
+# A project library on top of the pinned KiCad libraries.
+kicad_library(
+    name = "mine",
+    footprints = glob(["My_Parts.pretty/**"]),
+    symbols = ["My_Parts.kicad_sym"],
+    deps = ["@kicad_libs//:standard"],
+)
+
+kicad_lib_tables(
+    name = "tables",
+    library = ":mine",
+)
+
+# Every path in the generated tables is relative to the project.
+lib_table_test(
+    name = "tables_test",
+    size = "small",
+    tables = [":tables"],
+)
+
+# A table with an absolute path must fail the check (spec T3).
+lib_table_test(
+    name = "detects_host_path_test",
+    size = "small",
+    expect = "host",
+    tables = ["bad/sym-lib-table"],
+)
+
+# A second footprint library named Resistor_SMD clashes with KiCad's own.
+kicad_library(
+    name = "dup",
+    footprints = glob(["dup/Resistor_SMD.pretty/*"]),
+    tags = ["manual"],
+    deps = ["@kicad_libs//:footprints"],
+)
+
+duplicate_nickname_test(
+    name = "duplicate_nickname_test",
+    size = "small",
+    target_under_test = ":dup",
+)
