@@ -1,7 +1,0 @@
-# SPDX-License-Identifier: Apache-2.0
-# PLANTED, to be reverted: a rule that calls a host tool. CI must fail on it.
-genrule(
-    name = "planted_host_tool",
-    outs = ["kicad_version.txt"],
-    cmd = "kicad-cli version > $@",
-)
