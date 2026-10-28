@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 load("//kicad:defs.bzl", "determinism_test", "swap_test")
@@ -74,4 +75,16 @@ determinism_test(
     name = "determinism_test",
     size = "small",
     target = ":drl_a",
+)
+
+# A directory (a tree artifact) goes through the toolchain whole.
+normalized(
+    name = "tree",
+    src = "//kicad/private/swapdemo:demo_dir",
+)
+
+build_test(
+    name = "tree_test",
+    size = "small",
+    targets = [":tree"],
 )

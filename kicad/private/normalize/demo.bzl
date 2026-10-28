@@ -18,7 +18,10 @@ _epoch_transition = transition(
 )
 
 def _normalized_impl(ctx):
-    out = ctx.actions.declare_file(ctx.label.name + "/" + ctx.file.src.basename)
+    if ctx.file.src.is_directory:
+        out = ctx.actions.declare_directory(ctx.label.name)
+    else:
+        out = ctx.actions.declare_file(ctx.label.name + "/" + ctx.file.src.basename)
     normalize(ctx, ctx.file.src, out)
     return [DefaultInfo(files = depset([out]))]
 

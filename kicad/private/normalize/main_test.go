@@ -77,6 +77,9 @@ func TestEpochValueInEachFormat(t *testing.T) {
 		"board.pdf":          {"/CreationDate (D:19700102010101)"},
 		"board.step":         {"FILE_NAME('board.step','1970-01-02T01:01:01',"},
 		"drc.json":           {`"date": "1970-01-02T01:01:01+0000",`},
+		"erc.json":           {`"date": "1970-01-02T01:01:01+0000",`},
+		"sch.pdf":            {"/CreationDate (D:19700102010101)"},
+		"fixture-drl_map.gbr": {"%TF.CreationDate,1970-01-02T01:01:01+00:00*%"},
 	} {
 		n, _, err := Normalize(read(t, filepath.Join("testdata/a", name)), day2)
 		if err != nil {
@@ -112,6 +115,10 @@ func TestUnknownStampFormsFail(t *testing.T) {
 		"step without stamp":  "ISO-10303-21;\nHEADER;\nENDSEC;\n",
 		"report without date": "{\n    \"$schema\": \"https://schemas.kicad.org/drc.v1.json\",\n    \"source\": \"x\"\n}\n",
 		"job without date":    "{\n  \"Header\": {\n    \"GenerationSoftware\": {}\n  }\n}\n",
+		"gerber without date": "%FSLAX46Y46*%\nG04 Gerber Fmt 4.6*\n%MOMM*%\nM02*\n",
+		"gerber date in words": "%TF.CreationDate,yesterday*%\n%FSLAX46Y46*%\nM02*\n",
+		"pdf without date":    "%PDF-1.5\n1 0 obj\n<< /Producer (KiCad PDF) >>\nendobj\n%%EOF\n",
+		"pdf date in words":   "%PDF-1.5\n1 0 obj\n<< /CreationDate (yesterday) >>\nendobj\n%%EOF\n",
 	} {
 		if _, _, err := Normalize([]byte(text), ep); err == nil {
 			t.Errorf("%s: no error", name)
@@ -134,7 +141,7 @@ func TestEpoch(t *testing.T) {
 			t.Errorf("%q: %v %v", v, got, err)
 		}
 	}
-	for _, bad := range []string{"x", "-1", "1.5"} {
+	for _, bad := range []string{"x", "-1", "1.5", "253402300800"} {
 		if _, err := Epoch(bad); err == nil {
 			t.Errorf("%q: no error", bad)
 		}
@@ -161,5 +168,48 @@ func TestRunDirectory(t *testing.T) {
 	os.WriteFile(filepath.Join(in, "bad.drl"), []byte("M48\n; DRILL file {KiCad} date soon\n"), 0o644)
 	if err := Run(in, filepath.Join(t.TempDir(), "o2"), time.Unix(0, 0).UTC()); err == nil {
 		t.Error("a bad stamp in the tree did not fail the run")
+	}
+}
+
+// The X2 attribute in a G04 comment, which the fixtures do not use (KiCad
+// writes it so when Gerber X2 is off but its attributes are kept as
+// comments).
+func TestGerberX2InComment(t *testing.T) {
+	in := "G04 #@! TF.CreationDate,2026-10-28T23:39:14+01:00*\n%FSLAX46Y46*%\nM02*\n"
+	n, f, err := Normalize([]byte(in), time.Unix(0, 0).UTC())
+	if err != nil || f != Gerber || !bytes.Contains(n, []byte("G04 #@! TF.CreationDate,1970-01-01T00:00:00+00:00*")) {
+		t.Errorf("got %q %s %v", n, f, err)
+	}
+}
+
+// A byte order mark or blank lines before the content do not hide a format.
+func TestDetectSkipsBOMAndSpace(t *testing.T) {
+	drl := read(t, "testdata/a/fixture.drl")
+	for _, prefix := range []string{"\xef\xbb\xbf", "\n\n", "  \r\n"} {
+		if f := Detect(append([]byte(prefix), drl...)); f != Drill {
+			t.Errorf("%q: detected %s", prefix, f)
+		}
+	}
+}
+
+// A key named date inside a nested object is not the report's date.
+func TestReportNestedDateUntouched(t *testing.T) {
+	in := "{\n    \"$schema\": \"https://schemas.kicad.org/drc.v1.json\",\n    \"date\": \"2026-10-28T23:39:20+0100\",\n    \"items\": [\n        {\n            \"date\": \"keep\"\n        }\n    ]\n}\n"
+	n, _, err := Normalize([]byte(in), time.Unix(0, 0).UTC())
+	if err != nil || !bytes.Contains(n, []byte(`"date": "keep"`)) || bytes.Contains(n, []byte("2026")) {
+		t.Errorf("got %q %v", n, err)
+	}
+}
+
+// The mode of a file survives: an executable stays executable.
+func TestRunKeepsMode(t *testing.T) {
+	dir := t.TempDir()
+	in, out := filepath.Join(dir, "tool"), filepath.Join(dir, "out", "tool")
+	os.WriteFile(in, []byte("#!/x\n"), 0o755)
+	if err := Run(in, out, time.Unix(0, 0).UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Stat(out); err != nil || fi.Mode().Perm()&0o111 == 0 {
+		t.Errorf("mode %v, %v", fi.Mode(), err)
 	}
 }

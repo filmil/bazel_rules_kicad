@@ -53,24 +53,28 @@ const (
 	Report  Format = "kicad-report"
 )
 
-// Detect returns the format of a file from its first bytes.
+var reportSchemaRe = regexp.MustCompile(`"\$schema":\s*"https://schemas\.kicad\.org/(drc|erc)\.`)
+
+// Detect returns the format of a file from its first bytes. A UTF-8 byte
+// order mark and leading white space are skipped.
 func Detect(b []byte) Format {
 	head := b
 	if len(head) > 4096 {
 		head = head[:4096]
 	}
+	head = bytes.TrimLeft(bytes.TrimPrefix(head, []byte("\xef\xbb\xbf")), " \t\r\n")
 	switch {
-	case bytes.HasPrefix(b, []byte("%PDF-")):
+	case bytes.HasPrefix(head, []byte("%PDF-")):
 		return PDF
-	case bytes.HasPrefix(b, []byte("ISO-10303-21;")):
+	case bytes.HasPrefix(head, []byte("ISO-10303-21;")):
 		return STEP
-	case bytes.HasPrefix(b, []byte("M48")):
+	case bytes.HasPrefix(head, []byte("M48")):
 		return Drill
-	case bytes.HasPrefix(b, []byte("%TF.")) || bytes.HasPrefix(b, []byte("G04 ")) || bytes.HasPrefix(b, []byte("%FS")):
+	case bytes.HasPrefix(head, []byte("%TF.")) || bytes.HasPrefix(head, []byte("G04 ")) || bytes.HasPrefix(head, []byte("%FS")):
 		return Gerber
-	case bytes.HasPrefix(bytes.TrimSpace(head), []byte("{")) && bytes.Contains(head, []byte(`"GenerationSoftware"`)) && bytes.Contains(head, []byte(`"Header"`)):
+	case bytes.HasPrefix(head, []byte("{")) && bytes.Contains(head, []byte(`"GenerationSoftware"`)) && bytes.Contains(head, []byte(`"Header"`)):
 		return Job
-	case bytes.HasPrefix(bytes.TrimSpace(head), []byte("{")) && regexp.MustCompile(`"\$schema":\s*"https://schemas\.kicad\.org/(drc|erc)\.`).Match(head):
+	case bytes.HasPrefix(head, []byte("{")) && reportSchemaRe.Match(head):
 		return Report
 	}
 	return Unknown
@@ -84,6 +88,11 @@ type rule struct {
 	needed bool // the format always has it; a file without it is an error
 }
 
+// needAny lists the formats where at least one rule must match: KiCad
+// always writes a time stamp there, but which forms depends on options
+// (Gerber X2 attributes can be off).
+var needAny = map[Format]bool{Gerber: true}
+
 func layout(l string) func(time.Time, []byte) ([]byte, error) {
 	return func(t time.Time, _ []byte) ([]byte, error) { return []byte(t.Format(l)), nil }
 }
@@ -92,6 +101,9 @@ func layout(l string) func(time.Time, []byte) ([]byte, error) {
 // byte offset, so the file must not grow or shrink.
 func pdfDate(t time.Time, old []byte) ([]byte, error) {
 	base := t.Format("D:20060102150405")
+	if len(base) != 16 {
+		return nil, fmt.Errorf("the year of %s does not fit a PDF date", t)
+	}
 	switch {
 	case len(old) == len(base):
 		return []byte(base), nil
@@ -119,15 +131,16 @@ var rules = map[Format][]rule{
 		{re: regexp.MustCompile(`("CreationDate":\s*")([^"]*)(")`), stamp: layout("2006-01-02T15:04:05+00:00"), needed: true},
 	},
 	PDF: {
-		{re: regexp.MustCompile(`(/CreationDate\s*\()([^)]*)(\))`), stamp: pdfDate},
+		{re: regexp.MustCompile(`(/CreationDate\s*\()([^)]*)(\))`), stamp: pdfDate, needed: true},
 		{re: regexp.MustCompile(`(/ModDate\s*\()([^)]*)(\))`), stamp: pdfDate},
 	},
 	STEP: {
 		{re: regexp.MustCompile(`(FILE_NAME\(\s*'(?:[^']|'')*'\s*,\s*')([^']*)(')`), stamp: layout("2006-01-02T15:04:05"), needed: true},
 	},
 	Report: {
-		// The top-level key only: KiCad writes it at an indent of 4.
-		{re: regexp.MustCompile(`(\n    "date":\s*")([^"]*)(")`), stamp: layout("2006-01-02T15:04:05+0000"), needed: true},
+		// The top-level key only: KiCad indents by 4, so keys of nested
+		// objects start at 8 or more.
+		{re: regexp.MustCompile(`(?m)(^    "date":\s*")([^"]*)(")`), stamp: layout("2006-01-02T15:04:05+0000"), needed: true},
 	},
 }
 
@@ -140,6 +153,7 @@ var stampRe = regexp.MustCompile(`^(D:)?\d{4}-?\d{2}-?\d{2}[T ]?\d{2}:?\d{2}:?\d
 func Normalize(b []byte, t time.Time) ([]byte, Format, error) {
 	f := Detect(b)
 	out := b
+	anyFound := false
 	for _, r := range rules[f] {
 		found := false
 		var err error
@@ -163,6 +177,10 @@ func Normalize(b []byte, t time.Time) ([]byte, Format, error) {
 		if r.needed && !found {
 			return nil, f, fmt.Errorf("%s: no time stamp matches %s", f, r.re)
 		}
+		anyFound = anyFound || found
+	}
+	if needAny[f] && !anyFound {
+		return nil, f, fmt.Errorf("%s: no time stamp of a form this program knows", f)
 	}
 	if f == PDF && len(out) != len(b) {
 		return nil, f, fmt.Errorf("pdf: the length changed from %d to %d", len(b), len(out))
@@ -176,13 +194,18 @@ func Epoch(v string) (time.Time, error) {
 		return time.Unix(0, 0).UTC(), nil
 	}
 	n, err := strconv.ParseInt(v, 10, 64)
-	if err != nil || n < 0 {
-		return time.Time{}, fmt.Errorf("SOURCE_DATE_EPOCH=%q: want seconds since 1970", v)
+	// Up to the end of year 9999: every format here has a 4-digit year.
+	if err != nil || n < 0 || n >= 253402300800 {
+		return time.Time{}, fmt.Errorf("SOURCE_DATE_EPOCH=%q: want seconds since 1970, before the year 10000", v)
 	}
 	return time.Unix(n, 0).UTC(), nil
 }
 
 func normalizeFile(in, out string, t time.Time) error {
+	fi, err := os.Stat(in)
+	if err != nil {
+		return err
+	}
 	b, err := os.ReadFile(in)
 	if err != nil {
 		return err
@@ -194,7 +217,8 @@ func normalizeFile(in, out string, t time.Time) error {
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(out, n, 0o644)
+	// The mode of the input, so an executable stays one.
+	return os.WriteFile(out, n, fi.Mode().Perm()|0o200)
 }
 
 // Run normalizes in (a file or a directory) into out.
