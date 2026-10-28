@@ -26,6 +26,7 @@ config_setting(
 
 helpers_toolchain(
     name = "helpers_impl",
+    compare = "//kicad/private/detcompare",
     launcher = "//kicad/private/launcher",
     swapcheck = "//kicad/private/swapcheck",
 )

@@ -17,9 +17,12 @@ bazel_dep(name = "rules_go", version = "0.64.2")
 # The helpers toolchain, which every rule that runs a tool needs.
 register_toolchains("//kicad/toolchains:all")
 
-# The demonstration tool of the swap test template (kicad/private/swapdemo).
+# The demonstration tools of the swap test template
+# (kicad/private/swapdemo) and of determinism_test's own tests
+# (kicad/private/detdemo).
 register_toolchains(
     "//kicad/private/swapdemo:all",
+    "//kicad/private/detdemo:all",
     dev_dependency = True,
 )
 
