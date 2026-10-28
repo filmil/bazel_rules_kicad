@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The KiCad toolchain resolves, and kicad-cli runs through run_tool with a
+# private home and no host KiCad (issue #10). It lives under private/
+# because its rule uses run_tool.
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("//kicad:defs.bzl", "determinism_test", "swap_test")
+load(":version.bzl", "kicad_version")
+
+kicad_version(name = "version")
+
+diff_test(
+    name = "version_test",
+    size = "small",
+    file1 = ":version",
+    file2 = "expected_version.txt",
+)
+
+# Under the stub toolchain, the output comes from the stub.
+swap_test(
+    name = "swap_test",
+    size = "small",
+    targets = [":version"],
+)
+
+# The same output twice, in two configurations; CI also builds it in two
+# output bases (spec D1).
+determinism_test(
+    name = "version_determinism_test",
+    size = "small",
+    target = ":version",
+)

@@ -18,6 +18,7 @@ build_test(
         "@rules_kicad//:tools_prebuilt",
         "@rules_kicad//:tools_source",
         "@rules_kicad//kicad:defs",
+        "@rules_kicad//kicad:extensions",
     ],
 )
 

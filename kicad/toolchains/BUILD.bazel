@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+load("//kicad/private:extensions.bzl", "DEFAULT_KICAD_VERSION")
+load("//kicad/private:kicad_toolchain.bzl", "kicad_stub_toolchain")
 load("//kicad/private:toolchains.bzl", "helpers_toolchain", "unsupported_platform_toolchain")
 
 # --@rules_kicad//kicad/toolchains:use_stub swaps every tool for the stub.
@@ -58,4 +60,19 @@ toolchain(
     name = "unsupported",
     toolchain = ":unsupported_impl",
     toolchain_type = "//kicad:helpers_toolchain_type",
+)
+
+# swap_test's KiCad: the stub stands in for kicad-cli. The real toolchain
+# is in @kicad_toolchains (kicad/private/extensions.bzl).
+kicad_stub_toolchain(
+    name = "kicad_stub_impl",
+    stub = "//kicad/private/stub",
+    version = DEFAULT_KICAD_VERSION,
+)
+
+toolchain(
+    name = "kicad_stub",
+    target_settings = [":stub_on"],
+    toolchain = ":kicad_stub_impl",
+    toolchain_type = "//kicad:toolchain_type",
 )

@@ -6,11 +6,14 @@ bzl_library(
     name = "private",
     srcs = [
         "determinism.bzl",
+        "extensions.bzl",
+        "kicad_toolchain.bzl",
         "run_tool.bzl",
         "swap_test.bzl",
         "toolchains.bzl",
     ],
-    visibility = ["//kicad:__subpackages__"],
+    # The kicad_toolchains repository loads kicad_toolchain.bzl.
+    visibility = ["//visibility:public"],
 )
 
 # A setting that changes nothing but the configuration. determinism_test
