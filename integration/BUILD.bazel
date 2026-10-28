@@ -8,11 +8,17 @@ load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_kicad//kicad:defs.bzl", "RULES_KICAD_API_VERSION")
 
-# The public package loads and builds.
+# The public packages load and build: the rules, and the root package
+# with the --@rules_kicad//:tools flag that every user's build reads.
 build_test(
     name = "public_api_builds",
     size = "small",
-    targets = ["@rules_kicad//kicad:defs"],
+    targets = [
+        "@rules_kicad//:tools",
+        "@rules_kicad//:tools_prebuilt",
+        "@rules_kicad//:tools_source",
+        "@rules_kicad//kicad:defs",
+    ],
 )
 
 # The module resolved here is the one this consumer was written for.
