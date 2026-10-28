@@ -5,6 +5,8 @@
 # because its rule uses run_tool.
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("//kicad:defs.bzl", "determinism_test", "swap_test")
+load(":env.bzl", "kicad_env")
+load(":erc.bzl", "kicad_erc_report")
 load(":version.bzl", "kicad_version")
 
 kicad_version(name = "version")
@@ -29,4 +31,22 @@ determinism_test(
     name = "version_determinism_test",
     size = "small",
     target = ":version",
+)
+
+# The fixed environment of the real KiCad toolchain: UTF-8, and UTC
+# whatever the host's time zone.
+kicad_env(name = "env")
+
+diff_test(
+    name = "env_test",
+    size = "small",
+    file1 = ":env",
+    file2 = "expected_env.txt",
+)
+
+# A real kicad-cli run whose output holds a time stamp; utccheck reads it.
+kicad_erc_report(
+    name = "erc",
+    schematic = "empty.kicad_sch",
+    visibility = ["//kicad/private/kicadsmoke/utccheck:__pkg__"],
 )

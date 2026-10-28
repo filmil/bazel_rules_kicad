@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+load("@rules_go//go:def.bzl", "go_test")
+
+# kicad-cli's own output is in UTC: the ERC report of an empty schematic,
+# made through run_tool, has a date ending in +0000.
+go_test(
+    name = "utc_test",
+    size = "small",
+    srcs = ["utc_test.go"],
+    data = ["//kicad/private/kicadsmoke:erc"],
+    env = {"ERC_REPORT": "$(rootpath //kicad/private/kicadsmoke:erc)"},
+    pure = "on",
+)
