@@ -16,6 +16,7 @@ HelpersInfo = provider(
         "swapcheck": "DefaultInfo of the swap test's checker (a target binary).",
         "compare": "DefaultInfo of determinism_test's comparer (a target binary).",
         "tablecheck": "DefaultInfo of lib_table_test's checker (a target binary).",
+        "sheetcheck": "DefaultInfo of the sheet checker, for its own known-bad test (a target binary).",
     },
 )
 
@@ -25,7 +26,13 @@ def _helpers_toolchain_impl(ctx):
         swapcheck = ctx.attr.swapcheck[DefaultInfo],
         compare = ctx.attr.compare[DefaultInfo],
         tablecheck = ctx.attr.tablecheck[DefaultInfo],
-    ))]
+        sheetcheck = ctx.attr.sheetcheck_test[DefaultInfo],
+    ), tools = {
+        # Tools that rules run in actions through run_tool, so built for
+        # the execution platform: the sheet checker of kicad_schematic's
+        # validation action.
+        "sheetcheck": ctx.attr.sheetcheck[DefaultInfo].files_to_run,
+    })]
 
 helpers_toolchain = rule(
     implementation = _helpers_toolchain_impl,
@@ -35,6 +42,8 @@ helpers_toolchain = rule(
         "swapcheck": attr.label(mandatory = True, executable = True, cfg = "target"),
         "compare": attr.label(mandatory = True, executable = True, cfg = "target"),
         "tablecheck": attr.label(mandatory = True, executable = True, cfg = "target"),
+        "sheetcheck": attr.label(mandatory = True, executable = True, cfg = "exec"),
+        "sheetcheck_test": attr.label(mandatory = True, executable = True, cfg = "target"),
     },
 )
 

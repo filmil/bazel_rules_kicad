@@ -9,6 +9,7 @@ kicad_library(
     name = "mine",
     footprints = glob(["My_Parts.pretty/**"]),
     symbols = ["My_Parts.kicad_sym"],
+    visibility = ["//tests:__subpackages__"],
     deps = ["@kicad_libs//:standard"],
 )
 

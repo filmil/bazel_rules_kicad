@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The e2e design: a two-sheet schematic and its board, as a user of
+# rules_kicad writes them. README.md describes the design.
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@rules_kicad//kicad:defs.bzl", "kicad_pcb", "kicad_schematic")
+
+kicad_schematic(
+    name = "sch",
+    srcs = ["power.kicad_sch"],
+    project = "main.kicad_pro",
+    root = "main.kicad_sch",
+    deps = ["@kicad_libs//:standard"],
+)
+
+kicad_pcb(
+    name = "pcb",
+    board = "main.kicad_pcb",
+    schematic = ":sch",
+)
+
+# Both stage, and the schematic's sheet check passes.
+build_test(
+    name = "design_builds",
+    size = "small",
+    targets = [
+        ":pcb",
+        ":sch",
+    ],
+)

@@ -24,17 +24,36 @@ def _merge(into, nick, value, what, label):
         fail("%s: two %s libraries are named %r: %s and %s" % (label, what, nick, into[nick], value))
     into[nick] = value
 
-def _kicad_library_impl(ctx):
+def merge_libraries(label, infos):
+    """Returns one `KicadLibraryInfo` with every library of `infos`.
+
+    A nickname may appear twice only for the same library (a diamond).
+
+    Args:
+      label: the label to name in an error.
+      infos: a list of `KicadLibraryInfo`.
+
+    Returns:
+      A `KicadLibraryInfo`.
+    """
     symbols = {}
     footprints = {}
-    transitive = []
-    for dep in ctx.attr.deps:
-        info = dep[KicadLibraryInfo]
+    for info in infos:
         for nick, f in info.symbols.items():
-            _merge(symbols, nick, f, "symbol", ctx.label)
+            _merge(symbols, nick, f, "symbol", label)
         for nick, d in info.footprints.items():
-            _merge(footprints, nick, d, "footprint", ctx.label)
-        transitive.append(info.files)
+            _merge(footprints, nick, d, "footprint", label)
+    return KicadLibraryInfo(
+        symbols = symbols,
+        footprints = footprints,
+        files = depset(transitive = [i.files for i in infos]),
+    )
+
+def _kicad_library_impl(ctx):
+    deps = merge_libraries(ctx.label, [d[KicadLibraryInfo] for d in ctx.attr.deps])
+    symbols = dict(deps.symbols)
+    footprints = dict(deps.footprints)
+    transitive = [deps.files]
     for f in ctx.files.symbols:
         _merge(symbols, _nickname(f.path, ".kicad_sym"), f, "symbol", ctx.label)
     mods = [f for f in ctx.files.footprints if f.extension == "kicad_mod"]

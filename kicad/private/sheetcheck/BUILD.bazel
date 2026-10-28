@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: Apache-2.0
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load("//kicad/private:design.bzl", "sheet_check_test")
+
+go_library(
+    name = "sheetcheck_lib",
+    srcs = [
+        "main.go",
+        "sexpr.go",
+    ],
+    importpath = "github.com/filmil/bazel_rules_kicad/kicad/private/sheetcheck",
+    visibility = ["//visibility:private"],
+)
+
+# Pure Go, so a user of the module needs no C++ toolchain to build it.
+go_binary(
+    name = "sheetcheck",
+    embed = [":sheetcheck_lib"],
+    pure = "on",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "sheetcheck_test",
+    size = "small",
+    srcs = ["main_test.go"],
+    data = glob(["testdata/**"]),
+    embed = [":sheetcheck_lib"],
+    pure = "on",
+)
+
+# The check's own known-bad input (spec T3): root.kicad_sch references
+# power.kicad_sch, which is left out. The test passes only if the check
+# names it. //tests/design:sch_missing shows the same through a rule.
+sheet_check_test(
+    name = "detects_missing_sheet_test",
+    size = "small",
+    srcs = [
+        "testdata/leaf.kicad_sch",
+        "testdata/sub/io.kicad_sch",
+    ],
+    missing = "power.kicad_sch",
+    root = "testdata/root.kicad_sch",
+)

@@ -1,0 +1,18 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(uuid "0b5c9a7e-0000-4000-8000-000000000001")
+	(paper "A4")
+	(lib_symbols)
+	(sheet
+		(at 76.2 38.1)
+		(size 25.4 12.7)
+		(property "Sheetname" "power"
+			(at 76.2 37.3884 0)
+		)
+		(property "Sheetfile" "sheets/power.kicad_sch"
+			(at 76.2 51.3846 0)
+		)
+	)
+	(embedded_fonts no)
+)
