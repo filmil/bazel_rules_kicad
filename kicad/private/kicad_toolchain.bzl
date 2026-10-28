@@ -23,6 +23,11 @@ def _kicad_toolchain_impl(ctx):
             # has C.UTF-8 built in, so no locale files are read.
             "LC_ALL": "C.UTF-8",
             "LANG": "C.UTF-8",
+            # UTC, whatever the host's /etc/localtime says. KiCad writes
+            # local time into its outputs: without this, a DRC report made
+            # in CET just after midnight carries the next day's date. UTC0
+            # is a POSIX TZ string, so glibc reads no zone file for it.
+            "TZ": "UTC0",
         },
         path_env = {
             # Only the fonts of this toolchain; no host font directory.
