@@ -1,0 +1,77 @@
+# SPDX-License-Identifier: Apache-2.0
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load("//kicad:defs.bzl", "determinism_test", "swap_test")
+load(":demo.bzl", "normalized")
+
+go_library(
+    name = "normalize_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/filmil/bazel_rules_kicad/kicad/private/normalize",
+    visibility = ["//visibility:private"],
+)
+
+# Pure Go, so a user of the module needs no C++ toolchain to build it.
+go_binary(
+    name = "normalize",
+    embed = [":normalize_lib"],
+    pure = "on",
+    visibility = ["//visibility:public"],
+)
+
+# testdata/source/README.md says how the fixtures were made.
+go_test(
+    name = "normalize_test",
+    size = "small",
+    srcs = ["main_test.go"],
+    data = glob(["testdata/**"]),
+    embed = [":normalize_lib"],
+    pure = "on",
+)
+
+# Through the toolchain: the two runs' drill files become the same file.
+normalized(
+    name = "drl_a",
+    src = "testdata/a/fixture.drl",
+)
+
+normalized(
+    name = "drl_b",
+    src = "testdata/b/fixture.drl",
+)
+
+diff_test(
+    name = "runs_agree_test",
+    size = "small",
+    file1 = ":drl_a",
+    file2 = ":drl_b",
+)
+
+# --@rules_kicad//kicad:source_date_epoch reaches the tool. The expected
+# file is the fixture with its two dates edited by hand.
+normalized(
+    name = "drl_86400",
+    src = "testdata/a/fixture.drl",
+    epoch = 86400,
+)
+
+diff_test(
+    name = "epoch_flag_test",
+    size = "small",
+    file1 = ":drl_86400",
+    file2 = "testdata/expected_epoch_86400.drl",
+)
+
+swap_test(
+    name = "swap_test",
+    size = "small",
+    targets = [":drl_a"],
+)
+
+# Normalized output is the same in two configurations, and in two output
+# bases in CI (spec D1).
+determinism_test(
+    name = "determinism_test",
+    size = "small",
+    target = ":drl_a",
+)

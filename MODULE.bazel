@@ -29,6 +29,9 @@ register_toolchains(
     "@kicad_toolchains//:all",
     # swap_test's stand-in for kicad-cli.
     "//kicad/toolchains:kicad_stub",
+    # The normalizer and its stand-in.
+    "//kicad/toolchains:normalize",
+    "//kicad/toolchains:normalize_stub",
 )
 
 # The demonstration tools of the swap test template

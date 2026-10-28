@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("@bazel_skylib//rules:common_settings.bzl", "int_flag")
 
 bzl_library(
     name = "defs",
@@ -12,6 +13,20 @@ bzl_library(
 # every action runs through, and the stub and checker of swap_test.
 toolchain_type(
     name = "helpers_toolchain_type",
+    visibility = ["//visibility:public"],
+)
+
+# The toolchain type of the normalizer, which removes KiCad's time stamps.
+toolchain_type(
+    name = "normalize_toolchain_type",
+    visibility = ["//visibility:public"],
+)
+
+# The time every time stamp in an output becomes, in seconds since 1970
+# UTC (spec D2): --@rules_kicad//kicad:source_date_epoch=1700000000.
+int_flag(
+    name = "source_date_epoch",
+    build_setting_default = 0,
     visibility = ["//visibility:public"],
 )
 
