@@ -21,7 +21,6 @@ On 2026-10-29, KiCad 9.0.9 found the design clean when staged the way
 * DRC with every severity and schematic parity: 0 violations, 0 unconnected
   items, 0 parity issues.
 
-`tools/` holds the scripts that wrote the files: `mksch.py` writes both
-sheets from the library symbols, with fixed UUIDs; `mkpcb.py` writes the
-board with KiCad's own Python (`pcbnew`). Edit the design in KiCad from now
-on; the scripts are a record of where it came from.
+The files were first written by one-off scripts: the sheets from the
+library symbols, and the board with KiCad's own Python (`pcbnew`). The
+scripts are not kept. Edit the design in KiCad.
