@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Spec P1: other platforms fail at analysis time with a clear message.
-load(":platform_test.bzl", "unsupported_fails_test")
+load(":platform_test.bzl", "fallback_fails_test")
 
 # The fallback toolchain fails analysis with the message users see on an
 # unsupported host.
-unsupported_fails_test(
-    name = "unsupported_platform_test",
+fallback_fails_test(
+    name = "fallback_message_test",
     size = "small",
     target_under_test = "//kicad/toolchains:unsupported_impl",
 )
