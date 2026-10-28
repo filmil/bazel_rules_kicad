@@ -76,6 +76,12 @@ func Parse(args []string) (Request, error) {
 			}
 			r.EnvAbs = append(r.EnvAbs, v)
 		case "--stdout":
+			if v == "" {
+				return r, errors.New("--stdout needs a path")
+			}
+			if r.Stdout != "" {
+				return r, errors.New("--stdout given twice")
+			}
 			r.Stdout = v
 		case "--output":
 			r.Outputs = append(r.Outputs, v)
@@ -92,6 +98,23 @@ func Parse(args []string) (Request, error) {
 var Dropped = []string{
 	"DISPLAY", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS",
 	"XDG_RUNTIME_DIR", "XDG_CONFIG_DIRS", "XDG_DATA_DIRS", "XAUTHORITY",
+}
+
+// DroppedPrefixes start the names of variables that would point a tool at
+// host libraries, settings or fonts: KiCad's (KICAD9_SYMBOL_DIR and the
+// like) and fontconfig's. A toolchain sets the ones it needs with --env.
+var DroppedPrefixes = []string{"KICAD", "FONTCONFIG_", "FC_"}
+
+func dropped(k string, drop map[string]bool) bool {
+	if drop[k] {
+		return true
+	}
+	for _, p := range DroppedPrefixes {
+		if strings.HasPrefix(k, p) {
+			return true
+		}
+	}
+	return false
 }
 
 // Environ returns the tool's environment: base without the Dropped
@@ -112,7 +135,7 @@ func Environ(base []string, home, cwd string, r Request) []string {
 	}
 	for _, kv := range base {
 		k, v, _ := strings.Cut(kv, "=")
-		if !drop[k] {
+		if !dropped(k, drop) {
 			put(k, v)
 		}
 	}
@@ -126,6 +149,9 @@ func Environ(base []string, home, cwd string, r Request) []string {
 		put(n, filepath.Join(home, n))
 	}
 	put("RUN_TOOL_OUTPUTS", strings.Join(r.Outputs, "\n"))
+	if r.Stdout != "" {
+		put("RUN_TOOL_STDOUT", r.Stdout)
+	}
 	for _, kv := range r.Env {
 		k, v, _ := strings.Cut(kv, "=")
 		put(k, v)
@@ -160,8 +186,8 @@ func Dirs(home string, r Request) []string {
 }
 
 // Run runs the request with a fresh home under dir and returns the tool's
-// exit status.
-func Run(r Request, dir string) (int, error) {
+// exit status. Relative paths in r are relative to dir.
+func Run(r Request, dir string) (code int, err error) {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
 		return 0, err
@@ -180,11 +206,19 @@ func Run(r Request, dir string) (int, error) {
 	cmd.Env = Environ(os.Environ(), home, abs, r)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if r.Stdout != "" {
-		f, err := os.Create(r.Stdout)
-		if err != nil {
-			return 0, err
+		p := r.Stdout
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(abs, p)
 		}
-		defer f.Close()
+		f, ferr := os.Create(p)
+		if ferr != nil {
+			return 0, ferr
+		}
+		defer func() {
+			if cerr := f.Close(); cerr != nil && err == nil {
+				err = cerr
+			}
+		}()
 		cmd.Stdout = f
 	}
 	err = cmd.Run()

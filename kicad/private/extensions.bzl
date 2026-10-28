@@ -92,6 +92,8 @@ def _kicad_impl(mctx):
     version = DEFAULT_KICAD_VERSION
     for mod in mctx.modules:
         if mod.is_root and mod.tags.toolchain:
+            if len(mod.tags.toolchain) > 1:
+                fail("kicad.toolchain: the root module has %d tags; give one" % len(mod.tags.toolchain))
             version = mod.tags.toolchain[0].version
     if version not in _KICAD:
         fail("rules_kicad has no prebuilt KiCad %s; it has %s" % (version, sorted(_KICAD.keys())))

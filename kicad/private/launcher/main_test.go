@@ -18,7 +18,7 @@ func TestParse(t *testing.T) {
 		r.EnvAbs[0] != "F=x/f.conf" || r.Outputs[0] != "o/x" || r.Stdout != "o/out" {
 		t.Errorf("got %+v", r)
 	}
-	for _, bad := range [][]string{{"tool"}, {"--"}, {"--env", "NOEQUALS", "--", "t"}, {"--env-abs", "F=", "--", "t"}, {"--env-abs", "=p", "--", "t"}, {"--bogus", "x", "--", "t"}, {"--output"}} {
+	for _, bad := range [][]string{{"tool"}, {"--"}, {"--env", "NOEQUALS", "--", "t"}, {"--env-abs", "F=", "--", "t"}, {"--env-abs", "=p", "--", "t"}, {"--stdout", "", "--", "t"}, {"--stdout", "a", "--stdout", "b", "--", "t"}, {"--bogus", "x", "--", "t"}, {"--output"}} {
 		if _, err := Parse(bad); err == nil {
 			t.Errorf("%q: want an error", bad)
 		}
@@ -26,9 +26,9 @@ func TestParse(t *testing.T) {
 }
 
 func TestEnvironPointsInsideHome(t *testing.T) {
-	r := Request{HomeEnv: []string{"KICAD_CONFIG_HOME"}, Env: []string{"HOME=/never", "X=1"}, EnvAbs: []string{"REL=ext/f.conf", "ABS=/etc/f.conf"}, Outputs: []string{"a", "b"}}
+	r := Request{HomeEnv: []string{"KICAD_CONFIG_HOME"}, Env: []string{"HOME=/never", "X=1", "KICAD9_TEMPLATE_DIR=/pinned"}, EnvAbs: []string{"REL=ext/f.conf", "ABS=/etc/f.conf"}, Outputs: []string{"a", "b"}, Stdout: "b"}
 	env := map[string]string{}
-	for _, kv := range Environ([]string{"HOME=/host/home", "PATH=/bin:/usr/bin", "XDG_CONFIG_HOME=/host/cfg", "DISPLAY=:0", "XDG_RUNTIME_DIR=/run/user/1"}, "/act/h", "/act", r) {
+	for _, kv := range Environ([]string{"HOME=/host/home", "PATH=/bin:/usr/bin", "XDG_CONFIG_HOME=/host/cfg", "DISPLAY=:0", "XDG_RUNTIME_DIR=/run/user/1", "KICAD9_SYMBOL_DIR=/host/sym", "FONTCONFIG_PATH=/etc/fonts", "FC_DEBUG=1"}, "/act/h", "/act", r) {
 		k, v, _ := strings.Cut(kv, "=")
 		env[k] = v
 	}
@@ -42,6 +42,9 @@ func TestEnvironPointsInsideHome(t *testing.T) {
 		"RUN_TOOL_OUTPUTS":  "a\nb",
 		// --env-abs: relative paths resolve against the working directory.
 		"REL": "/act/ext/f.conf",
+		// A fixed --env value passes even with a dropped prefix.
+		"KICAD9_TEMPLATE_DIR": "/pinned",
+		"RUN_TOOL_STDOUT":     "b",
 		"ABS": "/etc/f.conf",
 		// A fixed --env value wins, even over HOME.
 		"HOME": "/never",
@@ -50,7 +53,7 @@ func TestEnvironPointsInsideHome(t *testing.T) {
 			t.Errorf("%s = %q, want %q", k, env[k], want)
 		}
 	}
-	for _, k := range []string{"DISPLAY", "XDG_RUNTIME_DIR"} {
+	for _, k := range []string{"DISPLAY", "XDG_RUNTIME_DIR", "KICAD9_SYMBOL_DIR", "FONTCONFIG_PATH", "FC_DEBUG"} {
 		if _, ok := env[k]; ok {
 			t.Errorf("%s reached the tool", k)
 		}
@@ -129,7 +132,8 @@ func TestRunStdoutToFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := filepath.Join(dir, "out.txt")
-	code, err := Run(Request{Env: []string{"LAUNCHER_TEST_TOOL=stdout"}, Stdout: out, Tool: self}, dir)
+	// A relative --stdout is relative to the action directory.
+	code, err := Run(Request{Env: []string{"LAUNCHER_TEST_TOOL=stdout"}, Stdout: "out.txt", Tool: self}, dir)
 	if err != nil || code != 0 {
 		t.Fatalf("code %d, err %v", code, err)
 	}

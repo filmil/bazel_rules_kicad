@@ -91,10 +91,33 @@ the XDG directories all point inside the action (spec H3), and
             doc = "A fontconfig file that names only `fonts` (spec H3: no host fonts).",
             mandatory = True,
             allow_single_file = True,
+            cfg = "exec",
         ),
         "version": attr.string(
             doc = "The KiCad version kicad-cli reports, such as \"9.0.9\".",
             mandatory = True,
         ),
+    },
+)
+
+def _kicad_stub_toolchain_impl(ctx):
+    return [platform_common.ToolchainInfo(
+        tools = {"kicad_cli": ctx.attr.stub[DefaultInfo].files_to_run},
+        kicad = KicadToolchainInfo(
+            version = ctx.attr.version,
+            major = ctx.attr.version.split(".")[0],
+        ),
+    )]
+
+kicad_stub_toolchain = rule(
+    implementation = _kicad_stub_toolchain_impl,
+    doc = """swap_test's KiCad toolchain: the stub stands in for kicad-cli.
+
+It offers the same `KicadToolchainInfo` as the real toolchain, so a rule
+that reads it analyzes the same way under the stub.
+""",
+    attrs = {
+        "stub": attr.label(mandatory = True, executable = True, cfg = "exec"),
+        "version": attr.string(mandatory = True),
     },
 )

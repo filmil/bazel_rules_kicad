@@ -81,6 +81,8 @@ tool_toolchain(
 
 toolchain(
     name = "my_kicad",
+    # So that swap_test can put the stub in its place.
+    target_settings = ["@rules_kicad//kicad/toolchains:stub_off"],
     toolchain = ":my_kicad_impl",
     toolchain_type = "//my:toolchain_type",
 )
