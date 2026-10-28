@@ -45,6 +45,19 @@ func TestDiff(t *testing.T) {
 		t.Errorf("got %q", got)
 	}
 
+	// Outputs in runfiles are symlinks, a directory output too.
+	link := filepath.Join(d, "link")
+	if err := os.Symlink(filepath.Join(a, "gerbers"), link); err != nil {
+		t.Fatal(err)
+	}
+	viaLink, err := Diff([]string{link}, []string{filepath.Join(b, "gerbers")})
+	if err != nil || len(viaLink) != 3 {
+		t.Errorf("through a symlink: got %q, %v", viaLink, err)
+	}
+	if got := Lines("a b/c.pdf\n\nd\n"); !reflect.DeepEqual(got, []string{"a b/c.pdf", "d"}) {
+		t.Errorf("Lines: got %q", got)
+	}
+
 	same, err := Diff([]string{filepath.Join(a, "board.pdf")}, []string{filepath.Join(b, "board.pdf")})
 	if err != nil || !reflect.DeepEqual(same, []string(nil)) {
 		t.Errorf("identical files: got %q, %v", same, err)

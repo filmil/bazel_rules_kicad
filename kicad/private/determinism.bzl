@@ -47,8 +47,9 @@ def _determinism_test_impl(ctx):
             runfiles = ctx.runfiles(files = a + b).merge(compare.default_runfiles),
         ),
         RunEnvironmentInfo(environment = {
-            "DET_A": " ".join([f.short_path for f in a]),
-            "DET_B": " ".join([f.short_path for f in b]),
+            # One path per line: a path may hold spaces.
+            "DET_A": "\n".join([f.short_path for f in a]),
+            "DET_B": "\n".join([f.short_path for f in b]),
             "DET_EXPECT": ctx.attr.expect,
         }),
     ]

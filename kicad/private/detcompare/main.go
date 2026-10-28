@@ -23,10 +23,15 @@ import (
 )
 
 // Hashes returns the SHA-256 of each regular file under root, keyed by its
-// path relative to root ("." for root itself when it is a file).
+// path relative to root ("." for root itself when it is a file). root may
+// be a symlink, as outputs in a test's runfiles are, also to a directory.
 func Hashes(root string) (map[string]string, error) {
 	out := map[string]string{}
-	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+	root, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return nil, err
+	}
+	err = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
 		}
@@ -92,8 +97,19 @@ func Diff(a, b []string) ([]string, error) {
 	return diffs, nil
 }
 
+// Lines splits a list of paths, one per line, so a path may hold spaces.
+func Lines(s string) []string {
+	var out []string
+	for _, l := range strings.Split(s, "\n") {
+		if l != "" {
+			out = append(out, l)
+		}
+	}
+	return out
+}
+
 func main() {
-	a, b := strings.Fields(os.Getenv("DET_A")), strings.Fields(os.Getenv("DET_B"))
+	a, b := Lines(os.Getenv("DET_A")), Lines(os.Getenv("DET_B"))
 	if len(a) == 0 {
 		fmt.Fprintln(os.Stderr, "detcompare: no outputs to compare")
 		os.Exit(1)
