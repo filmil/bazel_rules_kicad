@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# kicad_erc_test on the small two-sheet schematic of //tests/design
+# (issue #14): the report action through the KiCad and normalize toolchains,
+# the test, and the swap and determinism tests over the report.
+load("//kicad:defs.bzl", "determinism_test", "kicad_erc_test", "swap_test")
+
+# The root module's own ERC run, on the small two-sheet schematic: the
+# report action through the KiCad and normalize toolchains, the test, and
+# the swap and determinism tests over the report.
+kicad_erc_test(
+    name = "erc_test",
+    size = "small",
+    schematic = "//tests/design:sch",
+)
+
+swap_test(
+    name = "erc_swap_test",
+    size = "small",
+    targets = [":erc_test_report"],
+)
+
+determinism_test(
+    name = "erc_determinism_test",
+    size = "small",
+    target = ":erc_test_report",
+)

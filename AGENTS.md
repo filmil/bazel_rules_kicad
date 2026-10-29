@@ -58,6 +58,11 @@ the change.
 * **Documentation is generated.** After changing a `.bzl` file, run
   `bazel run //docs:update_docs`; `bazel test //...` fails until then.
 * **Linux x86_64 only** in v1.
+* **One test package per rule.** A rule's tests live in `tests/<rule>/`,
+  and its e2e checks in `integration/e2e/<rule>/`; `tests/design` and
+  `integration/e2e` hold only the designs. The aliases in `kicad/defs.bzl`
+  are sorted. Then pull requests that add rules in parallel touch
+  different lines, and git merges them without conflicts.
 * **Commits for a BCR pull request carry no `Co-Authored-By` trailer**
   (the `bazel-bcr-publish` skill says why).
 

@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The e2e schematic as a PDF, the same bytes in two configurations
+# (issue #18).
+load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_sch_pdf")
+
+kicad_sch_pdf(
+    name = "sch_pdf",
+    schematic = "//e2e:sch",
+)
+
+determinism_test(
+    name = "sch_pdf_determinism_test",
+    size = "small",
+    target = ":sch_pdf",
+)

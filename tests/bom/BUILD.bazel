@@ -3,8 +3,13 @@
 # kicad_bom on parts that group (issue #20): R1, R2 and R3 are 10k 0603
 # resistors, R4 is one too but marked do-not-populate, and C1 is a 100n
 # 0603 capacitor. The expected files are written by hand.
+#
+# Also kicad_bom on the parts-free schematic of //tests/design: the
+# action's options, its analysis failures, and swap and determinism tests.
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
-load("//kicad:defs.bzl", "determinism_test", "kicad_bom", "kicad_schematic")
+load("//kicad:defs.bzl", "determinism_test", "kicad_bom", "kicad_schematic", "swap_test")
+load("//tests:fails_test.bzl", "fails_test")
+load(":action_test.bzl", "bom_action_test")
 
 kicad_schematic(
     name = "sch",
@@ -88,4 +93,114 @@ diff_test(
     size = "small",
     file1 = ":custom.csv",
     file2 = "expected_custom.csv",
+)
+
+# The bill of materials (issue #20): every kicad-cli option given, through
+# the KiCad toolchain, the same bytes in two configurations.
+kicad_bom(
+    name = "bom",
+    schematic = "//tests/design:sch",
+)
+
+bom_action_test(
+    name = "bom_action_test",
+    size = "small",
+    target_under_test = ":bom",
+)
+
+swap_test(
+    name = "bom_swap_test",
+    size = "small",
+    targets = [":bom"],
+)
+
+determinism_test(
+    name = "bom_determinism_test",
+    size = "small",
+    target = ":bom",
+)
+
+kicad_bom(
+    name = "bom_mismatch",
+    labels = ["Refs"],
+    schematic = "//tests/design:sch",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "bom_mismatch_test",
+    size = "small",
+    message = "5 fields but 1 labels",
+    target_under_test = ":bom_mismatch",
+)
+
+kicad_bom(
+    name = "bom_comma",
+    fields = [
+        "Reference",
+        "Value,Footprint",
+    ],
+    labels = [
+        "Refs",
+        "Both",
+    ],
+    schematic = "//tests/design:sch",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "bom_comma_test",
+    size = "small",
+    message = "has a comma",
+    target_under_test = ":bom_comma",
+)
+
+kicad_bom(
+    name = "bom_no_fields",
+    fields = [],
+    labels = [],
+    schematic = "//tests/design:sch",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "bom_no_fields_test",
+    size = "small",
+    message = "fields is empty",
+    target_under_test = ":bom_no_fields",
+)
+
+kicad_bom(
+    name = "bom_empty_name",
+    schematic = "//tests/design:sch",
+    sort_field = "",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "bom_empty_name_test",
+    size = "small",
+    message = "an empty name",
+    target_under_test = ":bom_empty_name",
+)
+
+kicad_bom(
+    name = "bom_group_not_column",
+    fields = [
+        "Reference",
+        "Value",
+    ],
+    labels = [
+        "Refs",
+        "Value",
+    ],
+    schematic = "//tests/design:sch",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "bom_group_not_column_test",
+    size = "small",
+    message = "is not in fields; kicad-cli groups only by columns",
+    target_under_test = ":bom_group_not_column",
 )

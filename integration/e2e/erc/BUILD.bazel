@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The e2e schematic passes KiCad's electrical rules check (issue #14).
+load("@rules_kicad//kicad:defs.bzl", "kicad_erc_test")
+
+kicad_erc_test(
+    name = "erc_test",
+    size = "small",
+    schematic = "//e2e:sch",
+)

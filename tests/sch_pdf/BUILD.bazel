@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# kicad_sch_pdf on the schematic of //tests/design (issue #18).
+load("//kicad:defs.bzl", "determinism_test", "kicad_sch_pdf", "swap_test")
+load(":action_test.bzl", "sch_pdf_action_test")
+
+# The schematic as a PDF (issue #18): through the KiCad and normalize
+# toolchains, the same bytes in two configurations.
+kicad_sch_pdf(
+    name = "sch_pdf",
+    schematic = "//tests/design:sch",
+)
+
+swap_test(
+    name = "sch_pdf_swap_test",
+    size = "small",
+    targets = [":sch_pdf"],
+)
+
+determinism_test(
+    name = "sch_pdf_determinism_test",
+    size = "small",
+    target = ":sch_pdf",
+)
+
+# The plot action and the one output: <name>.pdf, or the name itself when
+# it already ends in .pdf.
+sch_pdf_action_test(
+    name = "sch_pdf_action_test",
+    size = "small",
+    output = "sch_pdf.pdf",
+    target_under_test = ":sch_pdf",
+)
+
+kicad_sch_pdf(
+    name = "named.pdf",
+    schematic = "//tests/design:sch",
+    tags = ["manual"],
+)
+
+sch_pdf_action_test(
+    name = "sch_pdf_named_test",
+    size = "small",
+    output = "named.pdf",
+    target_under_test = ":named.pdf",
+)
