@@ -9,7 +9,10 @@ _KICAD = Label("//kicad:toolchain_type")
 
 def _kicad_sch_pdf_impl(ctx):
     sch = ctx.attr.schematic[KicadSchematicInfo]
-    raw = ctx.actions.declare_file(ctx.label.name + ".raw.pdf")
+
+    # <name>.pdf, or <name> itself when it already ends in .pdf.
+    base = ctx.label.name[:-len(".pdf")] if ctx.label.name.endswith(".pdf") else ctx.label.name
+    raw = ctx.actions.declare_file(base + ".raw.pdf")
     run_tool(
         ctx,
         _KICAD,
@@ -20,7 +23,7 @@ def _kicad_sch_pdf_impl(ctx):
         mnemonic = "KicadSchPdf",
         progress_message = "Plotting %{label} to PDF",
     )
-    out = ctx.actions.declare_file(ctx.label.name + ".pdf")
+    out = ctx.actions.declare_file(base + ".pdf")
     normalize(ctx, raw, out)
     return [DefaultInfo(files = depset([out]))]
 
@@ -35,8 +38,11 @@ kicad_sch_pdf(
 )
 ```
 
-kicad-cli plots the schematic's staged project. The PDF's creation date is
-removed (spec D2), so the same schematic gives the same bytes.
+The output is `<name>.pdf` (or `<name>` when the name already ends in
+`.pdf`). kicad-cli plots the schematic's staged project. The PDF's creation
+date is set to `--@rules_kicad//kicad:source_date_epoch` (default
+1970-01-01; spec D2, no time stamps in outputs), so the same schematic
+gives the same bytes.
 """,
     attrs = {
         "schematic": attr.label(
