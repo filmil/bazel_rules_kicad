@@ -28,14 +28,15 @@ def _kicad_gerbers_impl(ctx):
     pcb = ctx.attr.pcb[KicadPcbInfo]
     if not ctx.attr.layers:
         fail("%s: layers is empty" % ctx.label)
-    for l in ctx.attr.layers:
-        if not l or "," in l:
-            fail("%s: layer %r is empty or has a comma" % (ctx.label, l))
+    for layer in ctx.attr.layers:
+        if not layer or "," in layer:
+            fail("%s: layer %r is empty or has a comma" % (ctx.label, layer))
     raw = ctx.actions.declare_directory(ctx.label.name + ".raw")
 
-    # The plot options are kicad-cli's defaults, given anyway, so a change
-    # in its defaults cannot change the files: Gerber X2 with netlist
-    # attributes, 6 decimals, Protel file extensions, the board's origin.
+    # kicad-cli's defaults: Gerber X2 with netlist attributes, Protel file
+    # extensions, absolute coordinates. It has flags only to turn these off,
+    # so they cannot be given; tests/gerbers checks them in the files. The
+    # precision has a flag, so it is given.
     run_tool(
         ctx,
         _KICAD,
@@ -92,7 +93,9 @@ same board gives the same bytes.
         ),
         "layers": attr.string_list(
             doc = "The layers to plot, by KiCad's names (F.Cu, In1.Cu, Edge.Cuts, ...). " +
-                  "Layers the board does not have are skipped.",
+                  "Layers the board does not have are skipped. The default is " +
+                  "`DEFAULT_GERBER_LAYERS` from `@rules_kicad//kicad:defs.bzl`; to add a " +
+                  "layer, write `layers = DEFAULT_GERBER_LAYERS + [\"F.Fab\"]`.",
             default = DEFAULT_GERBER_LAYERS,
         ),
     },

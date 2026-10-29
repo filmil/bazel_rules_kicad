@@ -2,6 +2,7 @@
 #
 # kicad_gerbers on the board of //tests/design (issue #22): through the
 # KiCad and normalize toolchains, the same bytes in two configurations.
+load("@rules_go//go:def.bzl", "go_test")
 load("//kicad:defs.bzl", "determinism_test", "kicad_gerbers", "swap_test")
 load("//tests:fails_test.bzl", "fails_test")
 load(":action_test.bzl", "gerbers_action_test")
@@ -55,4 +56,48 @@ fails_test(
     size = "small",
     message = "is empty or has a comma",
     target_under_test = ":gerbers_comma",
+)
+
+kicad_gerbers(
+    name = "gerbers_empty_layer",
+    layers = [
+        "F.Cu",
+        "",
+    ],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "gerbers_empty_layer_test",
+    size = "small",
+    message = "is empty or has a comma",
+    target_under_test = ":gerbers_empty_layer",
+)
+
+# Given layers replace the default list.
+kicad_gerbers(
+    name = "gerbers_some",
+    layers = [
+        "F.Cu",
+        "Edge.Cuts",
+    ],
+    pcb = "//tests/design:pcb",
+)
+
+# The files themselves: names, X2 and netlist attributes, format, dates.
+go_test(
+    name = "gerbers_files_test",
+    size = "small",
+    srcs = ["files_test.go"],
+    args = [
+        "--all=$(rlocationpath :gerbers)",
+        "--some=$(rlocationpath :gerbers_some)",
+    ],
+    data = [
+        ":gerbers",
+        ":gerbers_some",
+    ],
+    pure = "on",
+    deps = ["@rules_go//go/runfiles"],
 )
