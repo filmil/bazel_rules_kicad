@@ -24,6 +24,7 @@ var formats = map[string]Format{
 	"board.step":          STEP,
 	"drc.json":            Report,
 	"erc.json":            Report,
+	"e2e.net":             Netlist,
 }
 
 func read(t *testing.T, p string) []byte {
@@ -211,5 +212,33 @@ func TestRunKeepsMode(t *testing.T) {
 	}
 	if fi, err := os.Stat(out); err != nil || fi.Mode().Perm()&0o111 == 0 {
 		t.Errorf("mode %v, %v", fi.Mode(), err)
+	}
+}
+
+// The netlist fixtures are two exports of the e2e schematic, their paths
+// rewritten to two made-up action directories: the design's source and the
+// libraries' paths name the directory, which differs per configuration.
+func TestNetlist(t *testing.T) {
+	n, f, err := Normalize(read(t, "testdata/a/e2e.net"), time.Unix(86400, 0).UTC())
+	if err != nil || f != Netlist {
+		t.Fatalf("%s %v", f, err)
+	}
+	for _, want := range []string{
+		`(source "main.kicad_sch")
+    (date "1970-01-02T00:00:00+0000")`,
+		`(uri "Device.kicad_sym")`,
+		`(uri "Connector_Generic.kicad_sym")`,
+		// The title block's date is the designer's, and stays.
+		`(date "2026-10-29")`,
+	} {
+		if !bytes.Contains(n, []byte(want)) {
+			t.Errorf("no %q", want)
+		}
+	}
+	if bytes.Contains(n, []byte("/sandbox/")) {
+		t.Error("a path to the action directory is left")
+	}
+	if _, _, err := Normalize([]byte("(export (version \"E\")\n  (components))\n"), time.Unix(0, 0)); err == nil {
+		t.Error("a netlist without a design header must be an error")
 	}
 }
