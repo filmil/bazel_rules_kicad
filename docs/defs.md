@@ -100,6 +100,52 @@ rule appended; that report is the output group `canary`, and
 | <a id="kicad_drc_report-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 
 
+<a id="kicad_drill"></a>
+
+## kicad_drill
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_drill")
+
+kicad_drill(<a href="#kicad_drill-name">name</a>, <a href="#kicad_drill-map_format">map_format</a>, <a href="#kicad_drill-pcb">pcb</a>, <a href="#kicad_drill-separate_th">separate_th</a>)
+</pre>
+
+A board's drill files, Excellon, in one directory.
+
+```starlark
+kicad_drill(
+    name = "drill",
+    pcb = ":pcb",
+)
+```
+
+The output is the directory `<name>`, with `<board>.drl`, every hole of
+the board in one Excellon file, in millimetres with decimal coordinates
+from the board's origin. With `separate_th = True` there are two files
+instead, `<board>-PTH.drl` and `<board>-NPTH.drl`, for a board house that
+drills plated and unplated holes apart; kicad-cli writes the NPTH file even
+for a board with no unplated holes.
+
+With `map_format` set, each drill file gets a map beside it, a drawing of
+its holes by size: `<board>-drl_map.gbr` for `gerberx2`, or
+`<board>-drl_map.pdf` for `pdf` (`<board>-PTH-drl_map.gbr` and so on with
+`separate_th`).
+
+The time stamps, the date of the drill file's header and the map's, are set
+to `--@rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
+same board gives the same bytes.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_drill-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_drill-map_format"></a>map_format |  The drill map's format, `gerberx2` or `pdf`; empty for no map.   | String | optional |  `""`  |
+| <a id="kicad_drill-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+| <a id="kicad_drill-separate_th"></a>separate_th |  Plated and unplated holes in two files, `-PTH` and `-NPTH`, rather than one.   | Boolean | optional |  `False`  |
+
+
 <a id="kicad_erc_report"></a>
 
 ## kicad_erc_report

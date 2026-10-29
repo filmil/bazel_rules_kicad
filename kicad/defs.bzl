@@ -16,6 +16,7 @@ load("//kicad/private:bom.bzl", _kicad_bom = "kicad_bom")
 load("//kicad/private:design.bzl", _KicadPcbInfo = "KicadPcbInfo", _KicadSchematicInfo = "KicadSchematicInfo", _kicad_pcb = "kicad_pcb", _kicad_schematic = "kicad_schematic")
 load("//kicad/private:determinism.bzl", _determinism_test = "determinism_test")
 load("//kicad/private:drc.bzl", _kicad_drc_report = "kicad_drc_report", _kicad_drc_test = "kicad_drc_test")
+load("//kicad/private:drill.bzl", _DRILL_MAP_FORMATS = "DRILL_MAP_FORMATS", _kicad_drill = "kicad_drill")
 load("//kicad/private:erc.bzl", _kicad_erc_report = "kicad_erc_report", _kicad_erc_test = "kicad_erc_test")
 load("//kicad/private:gerbers.bzl", _DEFAULT_GERBER_LAYERS = "DEFAULT_GERBER_LAYERS", _kicad_gerbers = "kicad_gerbers")
 load("//kicad/private:kicad_toolchain.bzl", _KicadToolchainInfo = "KicadToolchainInfo", _kicad_toolchain = "kicad_toolchain")
@@ -29,6 +30,7 @@ load("//kicad/private:swap_test.bzl", _swap_test = "swap_test")
 load("//kicad/private:toolchains.bzl", _tool_toolchain = "tool_toolchain")
 
 DEFAULT_GERBER_LAYERS = _DEFAULT_GERBER_LAYERS
+DRILL_MAP_FORMATS = _DRILL_MAP_FORMATS
 KicadLibraryInfo = _KicadLibraryInfo
 KicadPcbInfo = _KicadPcbInfo
 KicadSchematicInfo = _KicadSchematicInfo
@@ -38,6 +40,7 @@ determinism_test = _determinism_test
 kicad_bom = _kicad_bom
 kicad_drc_report = _kicad_drc_report
 kicad_drc_test = _kicad_drc_test
+kicad_drill = _kicad_drill
 kicad_erc_report = _kicad_erc_report
 kicad_erc_test = _kicad_erc_test
 kicad_gerbers = _kicad_gerbers

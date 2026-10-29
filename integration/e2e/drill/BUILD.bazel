@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The e2e board's drill files, the same bytes in two configurations
+# (issue #23).
+load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_drill")
+
+kicad_drill(
+    name = "drill",
+    pcb = "//e2e:pcb",
+)
+
+determinism_test(
+    name = "drill_determinism_test",
+    size = "small",
+    target = ":drill",
+)
