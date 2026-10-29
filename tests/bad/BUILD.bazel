@@ -1,0 +1,69 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Known-bad designs (spec T3): each is the e2e design (integration/e2e)
+# with one fault, and each test passes only if KiCad reports that fault,
+# and nothing else. README.md lists the faults.
+load("//kicad:defs.bzl", "kicad_drc_test", "kicad_erc_test", "kicad_pcb", "kicad_schematic")
+
+# ERC: the wire from R1 to D1 is gone, so both pins are unconnected.
+kicad_schematic(
+    name = "erc_sch",
+    srcs = ["erc/power.kicad_sch"],
+    project = "erc/main.kicad_pro",
+    root = "erc/main.kicad_sch",
+    deps = ["@kicad_libs//:standard"],
+)
+
+kicad_erc_test(
+    name = "erc_test",
+    size = "small",
+    expect = "pin_not_connected",
+    schematic = ":erc_sch",
+)
+
+# DRC: the board's own rules ask for 1.5 mm between nets, more than it
+# has. Schematic parity is clean.
+kicad_schematic(
+    name = "drc_sch",
+    srcs = ["drc/power.kicad_sch"],
+    project = "drc/main.kicad_pro",
+    root = "drc/main.kicad_sch",
+    deps = ["@kicad_libs//:standard"],
+)
+
+kicad_pcb(
+    name = "drc_pcb",
+    board = "drc/main.kicad_pcb",
+    design_rules = "drc/main.kicad_dru",
+    schematic = ":drc_sch",
+)
+
+kicad_drc_test(
+    name = "drc_test",
+    size = "small",
+    expect = "clearance",
+    pcb = ":drc_pcb",
+)
+
+# Parity: D1 and its two tracks are gone from the board, so the board no
+# longer matches its schematic.
+kicad_schematic(
+    name = "parity_sch",
+    srcs = ["parity/power.kicad_sch"],
+    project = "parity/main.kicad_pro",
+    root = "parity/main.kicad_sch",
+    deps = ["@kicad_libs//:standard"],
+)
+
+kicad_pcb(
+    name = "parity_pcb",
+    board = "parity/main.kicad_pcb",
+    schematic = ":parity_sch",
+)
+
+kicad_drc_test(
+    name = "parity_test",
+    size = "small",
+    expect = "missing_footprint",
+    pcb = ":parity_pcb",
+)

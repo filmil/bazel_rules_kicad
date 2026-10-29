@@ -1,0 +1,4 @@
+(version 1)
+# Known bad: more clearance than the e2e board has between its nets.
+(rule "wide_clearance"
+  (constraint clearance (min 1.5mm)))
