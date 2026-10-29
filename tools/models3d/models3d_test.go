@@ -214,7 +214,10 @@ func TestTorrent(t *testing.T) {
 
 func TestPins(t *testing.T) {
 	_, libs := split(t, upstream(t, 10))
-	p := Pins("9.0.9", base, libs)
+	p, err := Pins("9.0.9", base, libs)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, want := range []string{
 		`MODELS_VERSION = "9.0.9"`,
 		`MODELS_BASE_URL = "` + base + `"`,
@@ -227,20 +230,116 @@ func TestPins(t *testing.T) {
 	}
 }
 
-func TestBadUpstream(t *testing.T) {
+// tarGz makes a .tar.gz of the given headers, each with its data.
+func tarGz(t *testing.T, hs []*tar.Header, data []string) []byte {
+	t.Helper()
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gz)
-	tw.WriteHeader(&tar.Header{Name: "top/../../evil", Typeflag: tar.TypeReg, Size: 1})
-	tw.Write([]byte("x"))
+	for i, h := range hs {
+		if h.Typeflag == tar.TypeReg {
+			h.Size = int64(len(data[i]))
+		}
+		if err := tw.WriteHeader(h); err != nil {
+			t.Fatal(err)
+		}
+		tw.Write([]byte(data[i]))
+	}
 	tw.Close()
 	gz.Close()
-	dir := t.TempDir()
-	if _, err := Split(&buf, filepath.Join(dir, "out"), filepath.Join(dir, "work"), base); err == nil {
-		t.Error("a path out of the tree must fail")
+	return buf.Bytes()
+}
+
+// Each bad entry comes with a valid upstream around it, so that only the
+// entry can make Split fail.
+func TestBadUpstream(t *testing.T) {
+	for name, bad := range map[string]*tar.Header{
+		"dot dot":         {Name: "top/../../evil", Typeflag: tar.TypeReg},
+		"dot dot deeper":  {Name: "top/A.3dshapes/../../../evil", Typeflag: tar.TypeReg},
+		"absolute":        {Name: "/evil", Typeflag: tar.TypeReg},
+		"absolute in top": {Name: "/top/A.3dshapes/x", Typeflag: tar.TypeReg},
+		"other top":       {Name: "other/A.3dshapes/x", Typeflag: tar.TypeReg},
+		"beside top":      {Name: "file", Typeflag: tar.TypeReg},
+		"symlink":         {Name: "top/A.3dshapes/l", Typeflag: tar.TypeSymlink, Linkname: "x"},
+		"hard link":       {Name: "top/A.3dshapes/h", Typeflag: tar.TypeLink, Linkname: "top/A.3dshapes/x"},
+	} {
+		up := tarGz(t, []*tar.Header{
+			{Name: "top/", Typeflag: tar.TypeDir},
+			{Name: "top/LICENSE.md", Typeflag: tar.TypeReg},
+			{Name: "top/A.3dshapes/x", Typeflag: tar.TypeReg},
+			bad,
+		}, []string{"", "license", "x", "bad"})
+		dir := t.TempDir()
+		if _, err := Split(bytes.NewReader(up), filepath.Join(dir, "out"), filepath.Join(dir, "work"), base); err == nil {
+			t.Errorf("%s (%q): want an error", name, bad.Name)
+		}
+		if _, err := os.Stat(filepath.Join(dir, "evil")); err == nil {
+			t.Errorf("%s: wrote outside the work directory", name)
+		}
 	}
-	if _, err := Split(bytes.NewReader(upstream(t, 1)), dir, dir, "https://no-slash"); err == nil {
-		t.Error("a base URL without a trailing / must fail")
+
+	// The same upstream without a bad entry passes: the cases above fail on
+	// the entry, not on something else.
+	good := tarGz(t, []*tar.Header{
+		{Name: "pax_global_header", Typeflag: tar.TypeXGlobalHeader, PAXRecords: map[string]string{"comment": "abc"}},
+		{Name: "top/", Typeflag: tar.TypeDir},
+		{Name: "top/LICENSE.md", Typeflag: tar.TypeReg},
+		{Name: "top/A.3dshapes/x", Typeflag: tar.TypeReg},
+	}, []string{"", "", "license", "x"})
+	dir := t.TempDir()
+	if _, err := Split(bytes.NewReader(good), filepath.Join(dir, "out"), filepath.Join(dir, "work"), base); err != nil {
+		t.Errorf("the good upstream: %v", err)
+	}
+
+	// A damaged gzip trailer.
+	up := upstream(t, 10)
+	up[len(up)-5] ^= 0xff
+	dir = t.TempDir()
+	if _, err := Split(bytes.NewReader(up), filepath.Join(dir, "out"), filepath.Join(dir, "work"), base); err == nil {
+		t.Error("a damaged gzip trailer must fail")
+	}
+
+	for _, b := range []string{"https://no-slash", "relative/", ""} {
+		dir := t.TempDir()
+		if _, err := Split(bytes.NewReader(upstream(t, 1)), filepath.Join(dir, "out"), filepath.Join(dir, "work"), b); err == nil {
+			t.Errorf("base URL %q must fail", b)
+		}
+	}
+
+	// An out directory with files from before.
+	dir = t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "out"), 0o755)
+	os.WriteFile(filepath.Join(dir, "out", "old.tar.gz"), []byte("x"), 0o644)
+	if _, err := Split(bytes.NewReader(upstream(t, 1)), filepath.Join(dir, "out"), filepath.Join(dir, "work"), base); err == nil {
+		t.Error("a non-empty out directory must fail")
+	}
+}
+
+// Entries of a directory follow it directly, before a sibling whose name
+// sorts between them byte-wise ("a-b/" sorts before "a/x").
+func TestSegmentOrder(t *testing.T) {
+	up := tarGz(t, []*tar.Header{
+		{Name: "top/", Typeflag: tar.TypeDir},
+		{Name: "top/LICENSE.md", Typeflag: tar.TypeReg},
+		{Name: "top/A.3dshapes/a-b/y", Typeflag: tar.TypeReg},
+		{Name: "top/A.3dshapes/a/x", Typeflag: tar.TypeReg},
+	}, []string{"", "l", "y", "x"})
+	out, _ := splitUp(t, up)
+	data, _ := os.ReadFile(filepath.Join(out, "A.3dshapes.tar.gz"))
+	want := "LICENSE.md A.3dshapes/ A.3dshapes/a/ A.3dshapes/a/x A.3dshapes/a-b/ A.3dshapes/a-b/y"
+	if got := strings.Join(entries(t, data), " "); got != want {
+		t.Errorf("entries\n got %s\nwant %s", got, want)
+	}
+}
+
+func splitUp(t *testing.T, up []byte) (string, []Library) {
+	t.Helper()
+	return split(t, up)
+}
+
+func TestFileURL(t *testing.T) {
+	if got := FileURL(base, "A+B c.3dshapes.tar.gz"); got != base+"A+B%20c.3dshapes.tar.gz" {
+		t.Errorf("FileURL = %s", got)
 	}
 }
 
@@ -248,9 +347,17 @@ func TestUpload(t *testing.T) {
 	out, libs := split(t, upstream(t, 10))
 	var mu sync.Mutex
 	stored := map[string][]byte{}
+	failed := map[string]bool{}
+	RetryDelay = 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
+		// The first PUT of each file fails with 503: Upload tries again.
+		if r.Method == http.MethodPut && !failed[r.URL.Path] {
+			failed[r.URL.Path] = true
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
 		switch r.Method {
 		case http.MethodPut:
 			if u, p, ok := r.BasicAuth(); !ok || u != "bt-upload" || p != "secret" {
@@ -261,6 +368,10 @@ func TestUpload(t *testing.T) {
 			stored[r.URL.Path] = b
 			w.WriteHeader(http.StatusCreated)
 		case http.MethodHead:
+			if u, p, ok := r.BasicAuth(); !ok || u != "bt-upload" || p != "secret" {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
 			b, ok := stored[r.URL.Path]
 			if !ok {
 				w.WriteHeader(http.StatusNotFound)

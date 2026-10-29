@@ -21,6 +21,7 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -28,6 +29,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // LicenseFile is the upstream license. It goes into every archive and
@@ -69,8 +71,12 @@ func ArchiveName(name string) string { return name + ".3dshapes.tar.gz" }
 // <name>.3dshapes/... and LICENSE.md. baseURL is where the files will be
 // served; it must end in "/". work is a directory for the extracted tree.
 func Split(upstream io.Reader, out, work, baseURL string) ([]Library, error) {
-	if !strings.HasSuffix(baseURL, "/") {
-		return nil, fmt.Errorf("base URL %q must end in /", baseURL)
+	if err := checkBase(baseURL); err != nil {
+		return nil, err
+	}
+	// A file left from an earlier run would be published with these.
+	if entries, err := os.ReadDir(out); err == nil && len(entries) > 0 {
+		return nil, fmt.Errorf("%s is not empty", out)
 	}
 	if err := extract(upstream, work); err != nil {
 		return nil, err
@@ -112,7 +118,7 @@ func Split(upstream io.Reader, out, work, baseURL string) ([]Library, error) {
 		if err := os.WriteFile(filepath.Join(out, lib.Archive), data, 0o644); err != nil {
 			return nil, err
 		}
-		t, err := Torrent(lib.Archive, data, baseURL+lib.Archive)
+		t, err := Torrent(lib.Archive, data, FileURL(baseURL, lib.Archive))
 		if err != nil {
 			return nil, err
 		}
@@ -125,32 +131,50 @@ func Split(upstream io.Reader, out, work, baseURL string) ([]Library, error) {
 }
 
 // extract unpacks the upstream .tar.gz into dir, without its top
-// directory. Only directories and regular files are kept; a path that
-// would leave dir is an error.
+// directory. Every entry must be under the same top directory, with no ".."
+// and no absolute path; only directories and regular files may occur,
+// besides the pax global header that GitLab writes. The gzip stream is read
+// to its end, so a damaged trailer fails.
 func extract(r io.Reader, dir string) error {
 	gz, err := gzip.NewReader(r)
 	if err != nil {
 		return err
 	}
 	tr := tar.NewReader(gz)
+	top := ""
 	for {
 		h, err := tr.Next()
 		if err == io.EOF {
-			return nil
+			break
 		}
 		if err != nil {
 			return err
 		}
-		name := path.Clean(h.Name)
-		i := strings.IndexByte(name, '/')
-		if i < 0 {
-			continue // the top directory, or a file beside it
+		if h.Typeflag == tar.TypeXGlobalHeader {
+			continue
 		}
-		rel := name[i+1:]
-		if rel == "" || rel == "." || strings.HasPrefix(rel, "../") || rel == ".." || path.IsAbs(rel) {
+		name := strings.TrimSuffix(h.Name, "/")
+		if name == "" || path.IsAbs(name) {
 			return fmt.Errorf("unsafe path %q", h.Name)
 		}
-		p := filepath.Join(dir, filepath.FromSlash(rel))
+		segs := strings.Split(name, "/")
+		for _, s := range segs {
+			if s == ".." || s == "." || s == "" {
+				return fmt.Errorf("unsafe path %q", h.Name)
+			}
+		}
+		if top == "" {
+			top = segs[0]
+		} else if segs[0] != top {
+			return fmt.Errorf("%q is not under the top directory %q", h.Name, top)
+		}
+		if len(segs) == 1 {
+			if h.Typeflag != tar.TypeDir {
+				return fmt.Errorf("%q beside the top directory", h.Name)
+			}
+			continue
+		}
+		p := filepath.Join(dir, filepath.FromSlash(strings.Join(segs[1:], "/")))
 		switch h.Typeflag {
 		case tar.TypeDir:
 			if err := os.MkdirAll(p, 0o755); err != nil {
@@ -171,8 +195,15 @@ func extract(r io.Reader, dir string) error {
 			if err := f.Close(); err != nil {
 				return err
 			}
+		default:
+			// A link would be left out of the archives without notice.
+			return fmt.Errorf("%q: entry type %q is not supported", h.Name, h.Typeflag)
 		}
 	}
+	if _, err := io.Copy(io.Discard, gz); err != nil {
+		return err
+	}
+	return gz.Close()
 }
 
 // archive writes the .tar.gz of dir/sub: LICENSE.md, then sub/ and its
@@ -201,7 +232,11 @@ func archive(dir, sub string, license []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	sort.Strings(paths)
+	// By path segment, so that a directory's entries follow it directly
+	// ("a/" and "a/x" before "a-b/").
+	sort.Slice(paths, func(i, j int) bool {
+		return strings.ReplaceAll(paths[i], "/", "\x00") < strings.ReplaceAll(paths[j], "/", "\x00")
+	})
 
 	var buf bytes.Buffer
 	gz, err := gzip.NewWriterLevel(&buf, gzip.BestCompression)
@@ -323,7 +358,10 @@ func bencode(b *bytes.Buffer, v any) error {
 
 // Pins returns the Starlark file that rules_kicad loads: the version, the
 // base URL, and each library's integrity.
-func Pins(version, baseURL string, libs []Library) string {
+func Pins(version, baseURL string, libs []Library) (string, error) {
+	if err := checkBase(baseURL); err != nil {
+		return "", err
+	}
 	var b strings.Builder
 	b.WriteString("# SPDX-License-Identifier: Apache-2.0\n")
 	b.WriteString(`"""The published KiCad 3D model libraries. Written by bazel run //tools:models3d; do not edit."""` + "\n\n")
@@ -335,42 +373,93 @@ func Pins(version, baseURL string, libs []Library) string {
 		fmt.Fprintf(&b, "    %q: %q,\n", l.Name, l.SHA256)
 	}
 	b.WriteString("}\n")
-	return b.String()
+	return b.String(), nil
 }
 
+// checkBase checks that a base URL is absolute and ends in "/".
+func checkBase(baseURL string) error {
+	u, err := url.Parse(baseURL)
+	if err != nil || !u.IsAbs() || !strings.HasSuffix(baseURL, "/") {
+		return fmt.Errorf("base URL %q must be absolute and end in /", baseURL)
+	}
+	return nil
+}
+
+// FileURL returns the URL of file name under baseURL, the name escaped.
+func FileURL(baseURL, name string) string { return baseURL + url.PathEscape(name) }
+
+// Tries is how often Upload tries each request before it gives up.
+const Tries = 3
+
 // Upload PUTs each named file of dir to baseURL with HTTP basic auth, then
-// reads its length back with HEAD. The server creates directories itself.
+// reads its length back with HEAD, also with the login. A request that
+// fails on the network or with a 5xx status is tried again, up to Tries
+// times. The server creates directories itself.
 func Upload(client *http.Client, dir, baseURL, user, password string, files []string, log io.Writer) error {
+	if err := checkBase(baseURL); err != nil {
+		return err
+	}
 	for _, f := range files {
 		data, err := os.ReadFile(filepath.Join(dir, f))
 		if err != nil {
 			return err
 		}
-		url := baseURL + f
-		req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(data))
+		u := FileURL(baseURL, f)
+		put := func() (*http.Request, error) {
+			req, err := http.NewRequest(http.MethodPut, u, bytes.NewReader(data))
+			if err != nil {
+				return nil, err
+			}
+			req.ContentLength = int64(len(data))
+			return req, nil
+		}
+		status, _, err := do(client, put, user, password)
 		if err != nil {
-			return err
+			return fmt.Errorf("PUT %s: %w", u, err)
 		}
-		req.SetBasicAuth(user, password)
-		req.ContentLength = int64(len(data))
-		resp, err := client.Do(req)
+		if status != http.StatusCreated && status != http.StatusNoContent && status != http.StatusOK {
+			return fmt.Errorf("PUT %s: status %d", u, status)
+		}
+		head := func() (*http.Request, error) { return http.NewRequest(http.MethodHead, u, nil) }
+		status, length, err := do(client, head, user, password)
 		if err != nil {
-			return err
+			return fmt.Errorf("HEAD %s: %w", u, err)
 		}
-		io.Copy(io.Discard, resp.Body)
-		resp.Body.Close()
-		if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("PUT %s: %s", url, resp.Status)
+		if status != http.StatusOK || length != int64(len(data)) {
+			return fmt.Errorf("HEAD %s after upload: status %d, %d bytes, want %d", u, status, length, len(data))
 		}
-		head, err := client.Head(url)
-		if err != nil {
-			return err
-		}
-		head.Body.Close()
-		if head.StatusCode != http.StatusOK || head.ContentLength != int64(len(data)) {
-			return fmt.Errorf("HEAD %s after upload: %s, %d bytes, want %d", url, head.Status, head.ContentLength, len(data))
-		}
-		fmt.Fprintf(log, "uploaded %s (%d bytes)\n", url, len(data))
+		fmt.Fprintf(log, "uploaded %s (%d bytes)\n", u, len(data))
 	}
 	return nil
 }
+
+// do sends the request that mk makes, with the login, up to Tries times
+// while it fails on the network or with a 5xx status.
+func do(client *http.Client, mk func() (*http.Request, error), user, password string) (int, int64, error) {
+	var last error
+	for try := 1; try <= Tries; try++ {
+		req, err := mk()
+		if err != nil {
+			return 0, 0, err
+		}
+		req.SetBasicAuth(user, password)
+		resp, err := client.Do(req)
+		if err == nil {
+			io.Copy(io.Discard, resp.Body)
+			resp.Body.Close()
+			if resp.StatusCode < 500 {
+				return resp.StatusCode, resp.ContentLength, nil
+			}
+			err = fmt.Errorf("status %s", resp.Status)
+		}
+		last = err
+		if try < Tries {
+			time.Sleep(time.Duration(try) * RetryDelay)
+		}
+	}
+	return 0, 0, fmt.Errorf("%d tries: %w", Tries, last)
+}
+
+// RetryDelay is the wait before the second try; the third waits twice as
+// long. Tests set it to 0.
+var RetryDelay = 5 * time.Second

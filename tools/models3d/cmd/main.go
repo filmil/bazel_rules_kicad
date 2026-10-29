@@ -23,6 +23,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/filmil/bazel_rules_kicad/tools/models3d"
@@ -44,15 +45,20 @@ func main() {
 	upload := flag.Bool("upload", false, "upload the files to --base_url (needs --user and $BT_UPLOAD_PASSWORD)")
 	user := flag.String("user", "", "the upload user")
 	flag.Parse()
-	if err := run(*archive, *out, *base, *pins, *upload, *user); err != nil {
+	if err := run(*archive, upstreamSHA256, *out, *base, *pins, *upload, *user, os.Getenv("BT_UPLOAD_PASSWORD")); err != nil {
 		fmt.Fprintln(os.Stderr, "models3d:", err)
 		os.Exit(1)
 	}
 }
 
-func run(archive, out, base, pins string, upload bool, user string) error {
+// run checks archive against wantSHA256, splits it into out, writes the
+// pins, and uploads when asked.
+func run(archive, wantSHA256, out, base, pins string, upload bool, user, password string) error {
 	if archive == "" || out == "" {
 		return fmt.Errorf("--archive and --out are required")
+	}
+	if upload && (user == "" || password == "") {
+		return fmt.Errorf("--upload needs --user and $BT_UPLOAD_PASSWORD")
 	}
 	f, err := os.Open(archive)
 	if err != nil {
@@ -63,13 +69,14 @@ func run(archive, out, base, pins string, upload bool, user string) error {
 	if _, err := io.Copy(h, f); err != nil {
 		return err
 	}
-	if got := hex.EncodeToString(h.Sum(nil)); got != upstreamSHA256 {
-		return fmt.Errorf("%s: sha256 %s, want %s (%s)", archive, got, upstreamSHA256, upstreamURL)
+	if got := hex.EncodeToString(h.Sum(nil)); got != wantSHA256 {
+		return fmt.Errorf("%s: sha256 %s, want %s (%s)", archive, got, wantSHA256, upstreamURL)
 	}
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
 	// The extracted upstream tree, beside --out, removed at the end.
+	out = filepath.Clean(out)
 	work := out + ".work"
 	if err := os.RemoveAll(work); err != nil {
 		return err
@@ -90,7 +97,11 @@ func run(archive, out, base, pins string, upload bool, user string) error {
 	}
 	fmt.Printf("%d libraries, %d bytes of archives, in %s\n", len(libs), total, out)
 	if pins != "" {
-		if err := os.WriteFile(pins, []byte(models3d.Pins(version, base, libs)), 0o644); err != nil {
+		p, err := models3d.Pins(version, base, libs)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(pins, []byte(p), 0o644); err != nil {
 			return err
 		}
 		fmt.Println("pins:", pins)
@@ -98,10 +109,6 @@ func run(archive, out, base, pins string, upload bool, user string) error {
 	if !upload {
 		fmt.Println("not uploaded; the operator adds --upload --user=bt-upload with $BT_UPLOAD_PASSWORD")
 		return nil
-	}
-	password := os.Getenv("BT_UPLOAD_PASSWORD")
-	if user == "" || password == "" {
-		return fmt.Errorf("--upload needs --user and $BT_UPLOAD_PASSWORD")
 	}
 	client := &http.Client{Timeout: 30 * time.Minute}
 	return models3d.Upload(client, out, base, user, password, files, os.Stdout)

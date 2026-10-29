@@ -24,6 +24,17 @@ go_test(
     pure = "on",
 )
 
+go_test(
+    name = "models3d_cmd_test",
+    size = "small",
+    srcs = [
+        "cmd/main.go",
+        "cmd/main_test.go",
+    ],
+    pure = "on",
+    deps = [":models3d_lib"],
+)
+
 go_binary(
     name = "models3d",
     srcs = ["cmd/main.go"],
