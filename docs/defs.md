@@ -519,6 +519,45 @@ and names the sheet.
 | <a id="kicad_schematic-root"></a>root |  The root sheet.   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 
 
+<a id="kicad_step"></a>
+
+## kicad_step
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_step")
+
+kicad_step(<a href="#kicad_step-name">name</a>, <a href="#kicad_step-pcb">pcb</a>)
+</pre>
+
+A board as a STEP model: `<name>.step`.
+
+```starlark
+kicad_step(
+    name = "step",
+    pcb = ":pcb",
+)
+```
+
+The model holds the board body: its outline, thickness and holes, as
+`<board>_PCB`. It holds no parts yet: their 3D models come with issue
+#43. It holds no copper: kicad-cli writes tracks, pads and zones in a
+different order on every run (issue #63).
+
+The time stamp in the header is set to
+`--@rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
+same board gives the same bytes on the same platform. Across platforms
+the geometry may differ in the last digits; rules_brep compares models
+by tolerance.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_step-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_step-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+
+
 <a id="kicad_toolchain"></a>
 
 ## kicad_toolchain
@@ -571,6 +610,58 @@ the XDG directories all point inside the action (spec H3), and
 | <a id="kicad_toolchain-fonts_conf"></a>fonts_conf |  A fontconfig file that names only `fonts` (spec H3: no host fonts).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 | <a id="kicad_toolchain-kicad_cli"></a>kicad_cli |  The kicad-cli executable.   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 | <a id="kicad_toolchain-version"></a>version |  The KiCad version kicad-cli reports, such as "9.0.9".   | String | required |  |
+
+
+<a id="timestamp_scan_test"></a>
+
+## timestamp_scan_test
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "timestamp_scan_test")
+
+timestamp_scan_test(<a href="#timestamp_scan_test-name">name</a>, <a href="#timestamp_scan_test-srcs">srcs</a>, <a href="#timestamp_scan_test-expect">expect</a>, <a href="#timestamp_scan_test-sources">sources</a>)
+</pre>
+
+Checks that outputs hold no date or time but the epoch (spec D2).
+
+```starlark
+timestamp_scan_test(
+    name = "timestamp_scan_test",
+    srcs = [
+        ":gerbers",
+        ":netlist",
+        ":sch_pdf",
+    ],
+    sources = [":sch"],
+)
+```
+
+The test scans every file of `srcs`, and every file in a directory
+output, for dates and times: `2026-10-29` or `2026/10/29` with an
+optional time and zone (`2026-10-29T08:31:59.5+01:00`), PDF dates
+(`D:20261029083159`) and ISO 8601 basic (`20261029T083159Z`). A number
+next to other digits is not a date, so a PDF's cross-reference offsets
+do not count.
+
+Each date must be `--@rules_kicad//kicad:source_date_epoch` (default
+1970-01-01T00:00:00 UTC) in every part it has: the date, then the hour,
+minute and second, with no zone, `Z` or a zero offset. A time out of
+range never passes. A date without a time that is also in one of
+`sources` passes as well: KiCad copies the date of a title block, which
+the designer wrote, into the netlist. A tool's time stamp has a time, so
+`sources` never lets one through.
+
+The test prints every date that fails, with its file and line.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="timestamp_scan_test-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="timestamp_scan_test-srcs"></a>srcs |  The outputs to scan: files, or rules whose outputs are files or directories.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | required |  |
+| <a id="timestamp_scan_test-expect"></a>expect |  "clean", or "stamped" for this rule's own known-bad test: srcs must then have a date that is not the epoch.   | String | optional |  `"clean"`  |
+| <a id="timestamp_scan_test-sources"></a>sources |  Design sources whose dates are allowed, such as the schematic (`kicad_schematic`) whose title blocks have a date.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 
 
 <a id="tool_toolchain"></a>

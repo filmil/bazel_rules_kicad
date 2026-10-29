@@ -23,7 +23,9 @@ bzl_library(
         "run_tool.bzl",
         "sch_pdf.bzl",
         "sch_render.bzl",
+        "step.bzl",
         "swap_test.bzl",
+        "timestamp_scan.bzl",
         "toolchains.bzl",
     ],
     # The kicad_toolchains repository loads kicad_toolchain.bzl.
