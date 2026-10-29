@@ -65,6 +65,12 @@ type Built struct {
 
 var hexSHA = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
+// safeName tells whether n is a plain file name: the tool joins tags and
+// asset names to directories.
+func safeName(n string) bool {
+	return n != "" && n != "." && n != ".." && !strings.ContainsAny(n, "/\\\x00")
+}
+
 // Parse reads and checks a manifest.
 func Parse(b []byte) (*Manifest, error) {
 	var m Manifest
@@ -73,13 +79,19 @@ func Parse(b []byte) (*Manifest, error) {
 	if err := d.Decode(&m); err != nil {
 		return nil, fmt.Errorf("manifest: %w", err)
 	}
+	if _, err := d.Token(); err != io.EOF {
+		return nil, fmt.Errorf("manifest: more data after the manifest")
+	}
+	if len(m.Releases) == 0 {
+		return nil, fmt.Errorf("manifest: no releases")
+	}
 	if !regexp.MustCompile(`^[\w.-]+/[\w.-]+$`).MatchString(m.Repo) {
 		return nil, fmt.Errorf("manifest: repo %q: want OWNER/NAME", m.Repo)
 	}
 	tags := map[string]bool{}
 	for _, r := range m.Releases {
-		if r.Tag == "" || tags[r.Tag] {
-			return nil, fmt.Errorf("manifest: tag %q is empty or repeated", r.Tag)
+		if !safeName(r.Tag) || tags[r.Tag] {
+			return nil, fmt.Errorf("manifest: tag %q is repeated, or not a plain file name", r.Tag)
 		}
 		tags[r.Tag] = true
 		if r.Title == "" || len(r.Assets) == 0 {
@@ -88,8 +100,8 @@ func Parse(b []byte) (*Manifest, error) {
 		names := map[string]bool{}
 		for _, a := range r.Assets {
 			where := fmt.Sprintf("manifest: %s/%s", r.Tag, a.Name)
-			if a.Name == "" || names[a.Name] || strings.ContainsAny(a.Name, "/\\") {
-				return nil, fmt.Errorf("%s: the name is empty, repeated or has a slash", where)
+			if !safeName(a.Name) || names[a.Name] {
+				return nil, fmt.Errorf("%s: the name is repeated, or not a plain file name", where)
 			}
 			names[a.Name] = true
 			if !hexSHA.MatchString(a.SHA256) {
@@ -233,4 +245,91 @@ func Quote(argv []string) string {
 		}
 	}
 	return strings.Join(out, " ")
+}
+
+// Runner runs a command and returns what it wrote to stderr.
+type Runner func(argv []string) (stderr string, err error)
+
+// MirrorOptions says what Mirror does.
+type MirrorOptions struct {
+	Options
+	// DryRun checks and prints the commands, and runs none.
+	DryRun bool
+	// Release limits the run to one tag; empty is every release.
+	Release string
+	// Run runs a gh command. Mirror calls it only when DryRun is false.
+	Run Runner
+}
+
+// Mirror checks every selected release first, each in its own directory
+// under o.WorkDir. Only when all of them match does it print, or run, the
+// gh commands: `gh release create` for a release that is missing, then
+// `gh release upload`.
+func Mirror(m *Manifest, o MirrorOptions) error {
+	type plan struct {
+		r     Release
+		files []string
+	}
+	var plans []plan
+	var problems []string
+	for _, r := range m.Releases {
+		if o.Release != "" && r.Tag != o.Release {
+			continue
+		}
+		ro := o.Options
+		ro.WorkDir = filepath.Join(o.WorkDir, r.Tag)
+		if err := os.MkdirAll(ro.WorkDir, 0o755); err != nil {
+			return err
+		}
+		ready, err := Check(r, ro)
+		if err != nil {
+			problems = append(problems, err.Error())
+			continue
+		}
+		p := plan{r: r}
+		for _, a := range r.Assets {
+			switch f, ok := ready[a.Name]; {
+			case ok:
+				p.files = append(p.files, f)
+			case o.DryRun:
+				// Where the upload will look for the built file.
+				p.files = append(p.files, filepath.Join("BUILT_DIR", a.Name))
+			default:
+				problems = append(problems, fmt.Sprintf("%s/%s: built by %s; give --built_dir to upload it", r.Tag, a.Name, a.Built.Script))
+			}
+		}
+		plans = append(plans, p)
+	}
+	if o.Release != "" && len(plans) == 0 && len(problems) == 0 {
+		return fmt.Errorf("no release %q in the manifest", o.Release)
+	}
+	if len(problems) > 0 {
+		return fmt.Errorf("nothing uploaded:\n%s", strings.Join(problems, "\n"))
+	}
+	for _, p := range plans {
+		create := CreateCommand(m.Repo, p.r)
+		upload := UploadCommand(m.Repo, p.r, p.files)
+		if o.DryRun {
+			fmt.Fprintln(o.Log, "would run, if the release is missing:", Quote(create))
+			fmt.Fprintln(o.Log, "would run:", Quote(upload))
+			continue
+		}
+		stderr, err := o.Run([]string{"gh", "release", "view", p.r.Tag, "--repo", m.Repo})
+		switch {
+		case err == nil:
+		case strings.Contains(stderr, "release not found"):
+			if _, err := o.Run(create); err != nil {
+				return fmt.Errorf("%s: %w", Quote(create), err)
+			}
+		default:
+			return fmt.Errorf("gh release view %s: %w", p.r.Tag, err)
+		}
+		if _, err := o.Run(upload); err != nil {
+			return fmt.Errorf("%s: %w", Quote(upload), err)
+		}
+	}
+	if o.DryRun {
+		fmt.Fprintln(o.Log, "dry run: every file checked matches the manifest; nothing uploaded")
+	}
+	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -102,6 +103,8 @@ func TestParseRejects(t *testing.T) {
 		"slash in name": `{"name": "d/a", "sha256": "` + sha + `", "url": "https://x/a"}`,
 		"no script":     `{"name": "a", "sha256": "` + sha + `", "built": {"source": "https://x/s", "source_sha256": "` + sha + `"}}`,
 		"unknown field": `{"name": "a", "sha256": "` + sha + `", "url": "https://x/a", "sha1": "x"}`,
+		"dot dot":       `{"name": "..", "sha256": "` + sha + `", "url": "https://x/a"}`,
+		"dot":           `{"name": ".", "sha256": "` + sha + `", "url": "https://x/a"}`,
 	} {
 		if _, err := Parse([]byte(strings.Replace(good, "ASSET", asset, 1))); err == nil {
 			t.Errorf("%s: parsed", name)
@@ -113,6 +116,15 @@ func TestParseRejects(t *testing.T) {
 	}
 	if _, err := Parse([]byte(`{"repo": "o/r", "releases": [{"tag": "t", "title": "T", "assets": [` + ok + `]}, {"tag": "t", "title": "T", "assets": [` + ok + `]}]}`)); err == nil {
 		t.Errorf("a repeated tag parsed")
+	}
+	for name, m := range map[string]string{
+		"slash in tag":  strings.Replace(strings.Replace(good, "ASSET", ok, 1), `"tag": "t"`, `"tag": "a/b"`, 1),
+		"trailing data": strings.Replace(good, "ASSET", ok, 1) + ` {}`,
+		"no releases":   `{"repo": "o/r", "releases": []}`,
+	} {
+		if _, err := Parse([]byte(m)); err == nil {
+			t.Errorf("%s: parsed", name)
+		}
 	}
 }
 
@@ -184,6 +196,23 @@ func TestCheck(t *testing.T) {
 	}
 }
 
+// extensions.bzl names the built prebuilt, not its source. The release
+// notes name the source, so the manifest's source must be the one there.
+func TestBuiltSourceInNotes(t *testing.T) {
+	for _, r := range readManifest(t).Releases {
+		for _, a := range r.Assets {
+			if a.Built == nil {
+				continue
+			}
+			for _, want := range []string{a.Built.Source, a.Built.SourceSHA256, a.Built.Script} {
+				if !strings.Contains(r.Notes, want) {
+					t.Errorf("%s/%s: the notes do not name %s", r.Tag, a.Name, want)
+				}
+			}
+		}
+	}
+}
+
 // The commands the operator sees and runs.
 func TestCommands(t *testing.T) {
 	r := Release{Tag: "prebuilt-kicad-libs-9.0.9", Title: "KiCad 9.0.9 libraries", Notes: "As GitLab served them; it's CC-BY-SA."}
@@ -194,5 +223,94 @@ func TestCommands(t *testing.T) {
 	if got, want := Quote(UploadCommand("filmil/bazel_rules_kicad", r, []string{"/tmp/w/a.tar.gz", "/tmp/w/b c.tar.gz"})),
 		`gh release upload prebuilt-kicad-libs-9.0.9 --repo filmil/bazel_rules_kicad /tmp/w/a.tar.gz '/tmp/w/b c.tar.gz'`; got != want {
 		t.Errorf("upload\n got %s\nwant %s", got, want)
+	}
+	if got, want := Quote([]string{"--notes", ""}), `--notes ''`; got != want {
+		t.Errorf("empty argument: got %s, want %s", got, want)
+	}
+}
+
+// Mirror, with a runner that records the commands instead of running gh.
+func TestMirror(t *testing.T) {
+	files := map[string]string{"/a": "aaa", "/b": "bbb", "/src": "source"}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if body, ok := files[r.URL.Path]; ok {
+			w.Write([]byte(body))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+	built := t.TempDir()
+	if err := os.WriteFile(filepath.Join(built, "k.tar.xz"), []byte("kicad"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	manifest := func(bSHA string) *Manifest {
+		return &Manifest{Repo: "o/r", Releases: []Release{
+			{Tag: "one", Title: "One", Assets: []Asset{{Name: "a", SHA256: sum("aaa"), URL: srv.URL + "/a"}}},
+			{Tag: "two", Title: "Two", Assets: []Asset{
+				{Name: "b", SHA256: bSHA, URL: srv.URL + "/b"},
+				{Name: "k.tar.xz", SHA256: sum("kicad"), Built: &Built{Source: srv.URL + "/src", SourceSHA256: sum("source"), Script: "make.sh"}},
+			}},
+		}}
+	}
+	type result struct {
+		ran []string
+		log string
+		err error
+	}
+	run := func(m *Manifest, dry bool, release, builtDir string, view func(tag string) (string, error)) result {
+		var r result
+		var log bytes.Buffer
+		r.err = Mirror(m, MirrorOptions{
+			Options: Options{Client: srv.Client(), WorkDir: t.TempDir(), BuiltDir: builtDir, Log: &log},
+			DryRun:  dry, Release: release,
+			Run: func(argv []string) (string, error) {
+				r.ran = append(r.ran, strings.Join(argv[:4], " "))
+				if argv[2] == "view" {
+					return view(argv[3])
+				}
+				return "", nil
+			},
+		})
+		r.log = log.String()
+		return r
+	}
+	exists := func(string) (string, error) { return "", nil }
+	missing := func(tag string) (string, error) {
+		if tag == "two" {
+			return "release not found", errors.New("exit status 1")
+		}
+		return "", nil
+	}
+
+	// A mismatch in the second release: no command runs, not even for the
+	// first, which matches.
+	if r := run(manifest(sum("other")), false, "", built, exists); r.err == nil || len(r.ran) != 0 {
+		t.Errorf("mismatch: err %v, ran %v; want an error and no command", r.err, r.ran)
+	}
+	// An upload without --built_dir: no command runs.
+	if r := run(manifest(sum("bbb")), false, "", "", exists); r.err == nil || !strings.Contains(r.err.Error(), "give --built_dir") || len(r.ran) != 0 {
+		t.Errorf("no built_dir: err %v, ran %v", r.err, r.ran)
+	}
+	// A dry run runs nothing, and prints both commands of each release.
+	if r := run(manifest(sum("bbb")), true, "", "", exists); r.err != nil || len(r.ran) != 0 || strings.Count(r.log, "would run") != 4 || !strings.Contains(r.log, "BUILT_DIR/k.tar.xz") {
+		t.Errorf("dry run: err %v, ran %v, log\n%s", r.err, r.ran, r.log)
+	}
+	// An upload: a missing release is created first.
+	r := run(manifest(sum("bbb")), false, "", built, missing)
+	if want := "gh release view one|gh release upload one|gh release view two|gh release create two|gh release upload two"; r.err != nil || strings.Join(r.ran, "|") != want {
+		t.Errorf("upload: err %v\n ran %v\nwant %s", r.err, r.ran, want)
+	}
+	// Any other failure of gh release view stops the upload.
+	r = run(manifest(sum("bbb")), false, "", built, func(string) (string, error) { return "HTTP 401: Bad credentials", errors.New("exit status 1") })
+	if r.err == nil || len(r.ran) != 1 {
+		t.Errorf("view fails: err %v, ran %v; want an error after the view", r.err, r.ran)
+	}
+	// --release picks one release; an unknown one is an error.
+	if r := run(manifest(sum("other")), true, "one", "", exists); r.err != nil || strings.Contains(r.log, " two") {
+		t.Errorf("--release=one: err %v, log\n%s", r.err, r.log)
+	}
+	if r := run(manifest(sum("bbb")), true, "three", "", exists); r.err == nil {
+		t.Errorf("--release=three: no error")
 	}
 }
