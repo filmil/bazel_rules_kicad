@@ -125,3 +125,36 @@ func TestRun(t *testing.T) {
 		t.Error("no TEST_SRCDIR must exit 2")
 	}
 }
+
+// testdata/canary_*.json are real DRC reports of the canary board, run with
+// a rule file and the canary appended (kicad/private/drucanary): loaded
+// with a good file, dropped with a file missing a closing parenthesis.
+func TestCanary(t *testing.T) {
+	if ok, err := CanaryFound(read(t, "canary_loaded.json")); !ok || err != nil {
+		t.Errorf("loaded: %v %v", ok, err)
+	}
+	if ok, err := CanaryFound(read(t, "canary_dropped.json")); ok || err != nil {
+		t.Errorf("dropped: %v %v", ok, err)
+	}
+	if _, err := CanaryFound(read(t, "clean_erc.json")); err == nil {
+		t.Error("an ERC report as the canary must be an error")
+	}
+	clean := read(t, "clean_drc.json")
+	for _, c := range []struct {
+		canary []byte
+		expect string
+		code   int
+		says   string
+	}{
+		{nil, "", 0, "no violations"},
+		{read(t, "canary_loaded.json"), "", 0, "no violations"},
+		{read(t, "canary_dropped.json"), "", 1, "design_rules_not_loaded"},
+		{read(t, "canary_dropped.json"), "design_rules_not_loaded", 0, "as expected"},
+		{read(t, "canary_loaded.json"), "design_rules_not_loaded", 1, "expected a design_rules_not_loaded violation"},
+	} {
+		msg, code := Check(clean, c.expect, c.canary)
+		if code != c.code || !strings.Contains(msg, c.says) {
+			t.Errorf("expect %q: code %d, want %d:\n%s", c.expect, code, c.code, msg)
+		}
+	}
+}

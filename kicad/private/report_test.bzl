@@ -44,15 +44,20 @@ def _report_test_impl(ctx):
         target_file = helpers.reportcheck.files_to_run.executable,
         is_executable = True,
     )
+    env = {
+        "REPORT": _rlocation_path(ctx, ctx.file.report),
+        "REPORT_EXPECT": ctx.attr.expect,
+    }
+    if len(ctx.files.canary) > 1 or [f for f in ctx.files.canary if f.extension != "json"]:
+        fail("%s: canary must be at most one .json report; it is %s" % (ctx.label, ctx.files.canary))
+    if ctx.files.canary:
+        env["CANARY_REPORT"] = _rlocation_path(ctx, ctx.files.canary[0])
     return [
         DefaultInfo(
             executable = exe,
-            runfiles = ctx.runfiles(files = [ctx.file.report]).merge(helpers.reportcheck.default_runfiles),
+            runfiles = ctx.runfiles(files = [ctx.file.report] + ctx.files.canary).merge(helpers.reportcheck.default_runfiles),
         ),
-        RunEnvironmentInfo(environment = {
-            "REPORT": _rlocation_path(ctx, ctx.file.report),
-            "REPORT_EXPECT": ctx.attr.expect,
-        }),
+        RunEnvironmentInfo(environment = env),
     ]
 
 raw_kicad_report_test = rule(
@@ -67,6 +72,12 @@ raw_kicad_report_test = rule(
         ),
         "expect": attr.string(
             doc = "Empty: no violations allowed. Else a violation type the report must have.",
+        ),
+        "canary": attr.label(
+            doc = "The DRC canary report, if any: it must have the canary rule's violation. " +
+                  "A target with no files (a board without design rules) means no canary.",
+            # Not [".json"]: that refuses a target with no files.
+            allow_files = True,
         ),
     },
     toolchains = [HELPERS_TOOLCHAIN_TYPE],

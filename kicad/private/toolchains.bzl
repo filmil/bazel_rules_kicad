@@ -18,6 +18,7 @@ HelpersInfo = provider(
         "tablecheck": "DefaultInfo of lib_table_test's checker (a target binary).",
         "sheetcheck": "DefaultInfo of the sheet checker, for its own known-bad test (a target binary).",
         "reportcheck": "DefaultInfo of the ERC and DRC report checker of kicad_erc_test (a target binary).",
+        "canary_board": "File: the canary board of kicad_drc_report's design rules check.",
     },
 )
 
@@ -29,11 +30,14 @@ def _helpers_toolchain_impl(ctx):
         tablecheck = ctx.attr.tablecheck[DefaultInfo],
         sheetcheck = ctx.attr.sheetcheck_test[DefaultInfo],
         reportcheck = ctx.attr.reportcheck[DefaultInfo],
+        canary_board = ctx.file.canary_board,
     ), tools = {
         # Tools that rules run in actions through run_tool, so built for
         # the execution platform: the sheet checker of kicad_schematic's
         # validation action.
         "sheetcheck": ctx.attr.sheetcheck[DefaultInfo].files_to_run,
+        # The rule file with the canary rule appended (kicad_drc_report).
+        "drucanary": ctx.attr.drucanary[DefaultInfo].files_to_run,
     })]
 
 helpers_toolchain = rule(
@@ -47,6 +51,8 @@ helpers_toolchain = rule(
         "sheetcheck": attr.label(mandatory = True, executable = True, cfg = "exec"),
         "sheetcheck_test": attr.label(mandatory = True, executable = True, cfg = "target"),
         "reportcheck": attr.label(mandatory = True, executable = True, cfg = "target"),
+        "drucanary": attr.label(mandatory = True, executable = True, cfg = "exec"),
+        "canary_board": attr.label(mandatory = True, allow_single_file = [".kicad_pcb"]),
     },
 )
 

@@ -29,7 +29,9 @@ config_setting(
 
 helpers_toolchain(
     name = "helpers_impl",
+    canary_board = "//kicad/private/drucanary:canary.kicad_pcb",
     compare = "//kicad/private/detcompare",
+    drucanary = "//kicad/private/drucanary",
     launcher = "//kicad/private/launcher",
     reportcheck = "//kicad/private/reportcheck",
     sheetcheck = "//kicad/private/sheetcheck",

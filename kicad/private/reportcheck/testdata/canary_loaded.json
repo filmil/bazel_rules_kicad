@@ -1,0 +1,45 @@
+{
+    "$schema": "https://schemas.kicad.org/drc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-10-29T01:23:37+0000",
+    "included_severities": [
+        "error",
+        "warning"
+    ],
+    "kicad_version": "9.0.9",
+    "schematic_parity": [],
+    "source": "canary.kicad_pcb",
+    "unconnected_items": [],
+    "violations": [
+        {
+            "description": "Track width (board setup constraints min width 47.1100 mm; actual 0.2500 mm)",
+            "items": [
+                {
+                    "description": "Track [<no net>] on F.Cu, length 4.0000 mm",
+                    "pos": {
+                        "x": 3.0,
+                        "y": 5.0
+                    },
+                    "uuid": "41146775-0b95-4e8f-a023-a109eea5f413"
+                }
+            ],
+            "severity": "error",
+            "type": "track_width"
+        },
+        {
+            "description": "Track has unconnected end",
+            "items": [
+                {
+                    "description": "Track [<no net>] on F.Cu, length 4.0000 mm",
+                    "pos": {
+                        "x": 3.0,
+                        "y": 5.0
+                    },
+                    "uuid": "41146775-0b95-4e8f-a023-a109eea5f413"
+                }
+            ],
+            "severity": "warning",
+            "type": "track_dangling"
+        }
+    ]
+}
