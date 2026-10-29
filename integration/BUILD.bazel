@@ -4,9 +4,8 @@
 # user of the published module would. The e2e design arrives with the
 # kicad_schematic and kicad_pcb rules (milestone M1).
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("@rules_kicad//kicad:defs.bzl", "RULES_KICAD_API_VERSION", "kicad_lib_tables", "lib_table_test")
+load("@rules_kicad//kicad:defs.bzl", "RULES_KICAD_API_VERSION", "golden_test", "kicad_lib_tables", "lib_table_test", "update_goldens")
 
 # The public packages load and build: the rules, and the root package
 # with the --@rules_kicad//:tools flag that every user's build reads.
@@ -32,11 +31,11 @@ write_file(
     ],
 )
 
-diff_test(
+golden_test(
     name = "api_version_test",
     size = "small",
-    file1 = ":api_version",
-    file2 = "expected_api_version.txt",
+    src = ":api_version",
+    golden = "expected_api_version.txt",
 )
 
 # The pinned KiCad libraries give tables with no host path.
@@ -49,4 +48,15 @@ lib_table_test(
     name = "tables_test",
     size = "small",
     tables = [":tables"],
+)
+
+# bazel run //:update_goldens, in integration/, writes the built files of
+# these tests over their golden files (spec rule 4).
+update_goldens(
+    name = "update_goldens",
+    tests = [
+        "//:api_version_test",
+        "//e2e/bom:bom_test",
+        "//e2e/pos:pos_test",
+    ],
 )

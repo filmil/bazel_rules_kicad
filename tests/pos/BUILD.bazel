@@ -12,8 +12,7 @@
 #
 # Also kicad_pos on the board of //tests/design: the action's options, and
 # swap and determinism tests.
-load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
-load("//kicad:defs.bzl", "determinism_test", "kicad_pcb", "kicad_pos", "swap_test")
+load("//kicad:defs.bzl", "determinism_test", "golden_test", "kicad_pcb", "kicad_pos", "swap_test")
 load(":action_test.bzl", "pos_action_test", "pos_flags_action_test")
 
 kicad_pcb(
@@ -28,11 +27,11 @@ kicad_pos(
     pcb = ":pcb",
 )
 
-diff_test(
+golden_test(
     name = "default_test",
     size = "small",
-    file1 = ":default",
-    file2 = "expected_default.csv",
+    src = ":default",
+    golden = "expected_default.csv",
 )
 
 determinism_test(
@@ -48,11 +47,11 @@ kicad_pos(
     smd_only = True,
 )
 
-diff_test(
+golden_test(
     name = "smd_test",
     size = "small",
-    file1 = ":smd",
-    file2 = "expected_smd.csv",
+    src = ":smd",
+    golden = "expected_smd.csv",
 )
 
 # Without parts that have a through-hole pad: no J1, but R2 stays.
@@ -62,11 +61,11 @@ kicad_pos(
     pcb = ":pcb",
 )
 
-diff_test(
+golden_test(
     name = "no_th_test",
     size = "small",
-    file1 = ":no_th",
-    file2 = "expected_no_th.csv",
+    src = ":no_th",
+    golden = "expected_no_th.csv",
 )
 
 # Without the do-not-populate part, and the name already ends in .csv.
@@ -76,11 +75,11 @@ kicad_pos(
     pcb = ":pcb",
 )
 
-diff_test(
+golden_test(
     name = "no_dnp_test",
     size = "small",
-    file1 = ":no_dnp.csv",
-    file2 = "expected_no_dnp.csv",
+    src = ":no_dnp.csv",
+    golden = "expected_no_dnp.csv",
 )
 
 # The bottom part's X negated.
@@ -90,11 +89,11 @@ kicad_pos(
     pcb = ":pcb",
 )
 
-diff_test(
+golden_test(
     name = "negate_x_test",
     size = "small",
-    file1 = ":negate_x",
-    file2 = "expected_negate_x.csv",
+    src = ":negate_x",
+    golden = "expected_negate_x.csv",
 )
 
 # Measured from the drill and place file origin.
@@ -104,11 +103,11 @@ kicad_pos(
     use_drill_file_origin = True,
 )
 
-diff_test(
+golden_test(
     name = "drill_origin_test",
     size = "small",
-    file1 = ":drill_origin",
-    file2 = "expected_drill_origin.csv",
+    src = ":drill_origin",
+    golden = "expected_drill_origin.csv",
 )
 
 # Every option the rule passes, on the action, and a name that already

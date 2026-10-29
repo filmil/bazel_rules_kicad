@@ -14,6 +14,7 @@ bzl_library(
         "erc.bzl",
         "extensions.bzl",
         "gerbers.bzl",
+        "golden.bzl",
         "kicad_toolchain.bzl",
         "library.bzl",
         "netlist.bzl",

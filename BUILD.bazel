@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("//kicad:defs.bzl", "update_goldens")
 
 # This package is loaded by every user of the module (the flag below), so
 # it names nothing from the dev dependencies; buildifier is //tools.
@@ -27,4 +28,28 @@ config_setting(
     name = "tools_source",
     flag_values = {":tools": "source"},
     visibility = ["//visibility:public"],
+)
+
+# bazel run //:update_goldens writes the built files of these tests over
+# their golden files (spec rule 4). It fails if a golden_test of this
+# module is missing here. integration/ has its own.
+update_goldens(
+    name = "update_goldens",
+    tests = [
+        "//kicad/private/kicadsmoke:env_test",
+        "//kicad/private/kicadsmoke:version_test",
+        "//kicad/private/normalize:epoch_flag_test",
+        "//kicad/private/swapdemo:real_tool_test",
+        "//tests/bom:custom_test",
+        "//tests/bom:default_test",
+        "//tests/bom:no_dnp_test",
+        "//tests/bom:ungrouped_test",
+        "//tests/golden:hello_test",
+        "//tests/pos:default_test",
+        "//tests/pos:drill_origin_test",
+        "//tests/pos:negate_x_test",
+        "//tests/pos:no_dnp_test",
+        "//tests/pos:no_th_test",
+        "//tests/pos:smd_test",
+    ],
 )

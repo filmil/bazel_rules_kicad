@@ -5,9 +5,8 @@
 # //kicad/toolchains:use_stub picks between them. Each module's e2e
 # targets get the same treatment once they run real tools. It lives under
 # private/ because its rule uses run_tool.
-load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@rules_go//go:def.bzl", "go_binary")
-load("//kicad:defs.bzl", "swap_test", "tool_toolchain")
+load("//kicad:defs.bzl", "golden_test", "swap_test", "tool_toolchain")
 load("//kicad/private:swap_test.bzl", "raw_swap_test")
 load(":echo.bzl", "echo_rule", "no_tool_rule")
 
@@ -50,11 +49,11 @@ echo_rule(
 )
 
 # Built normally, the demo runs the real tool.
-diff_test(
+golden_test(
     name = "real_tool_test",
     size = "small",
-    file1 = ":demo",
-    file2 = "expected_real.txt",
+    src = ":demo",
+    golden = "expected_real.txt",
 )
 
 # A tree artifact: the tool writes files into a directory Bazel made.
