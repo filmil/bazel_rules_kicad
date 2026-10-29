@@ -2,7 +2,9 @@
 """Analysis test: the render actions of each side and the outputs."""
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("//kicad:defs.bzl", "RENDER_SIDES")
+
+# The outputs a user relies on: one image per side.
+_SIDES = ["top", "bottom"]
 
 def _render_action_impl(ctx):
     env = analysistest.begin(ctx)
@@ -10,10 +12,17 @@ def _render_action_impl(ctx):
     renders = [a for a in actions if a.mnemonic == "KicadRender"]
     normalizes = [a for a in actions if a.mnemonic == "KicadNormalize"]
     outs = analysistest.target_under_test(env)[DefaultInfo].files.to_list()
-    asserts.equals(env, len(RENDER_SIDES), len(renders), "KicadRender actions")
-    asserts.equals(env, len(RENDER_SIDES), len(outs), "outputs")
+    asserts.equals(env, len(_SIDES), len(renders), "KicadRender actions")
+    asserts.equals(env, len(_SIDES), len(outs), "outputs")
     name = ctx.attr.target_under_test.label.name
-    for side, render, out in zip(RENDER_SIDES, renders, outs):
+    for side in _SIDES:
+        mine = [a for a in renders if a.argv[a.argv.index("--side") + 1] == side]
+        asserts.equals(env, 1, len(mine), "KicadRender actions for %s" % side)
+        out = [f for f in outs if f.path.endswith("/%s/%s.png" % (name, side))]
+        asserts.equals(env, 1, len(out), "outputs for %s" % side)
+        if len(mine) != 1 or len(out) != 1:
+            continue
+        render, out = mine[0], out[0]
         args = render.argv[render.argv.index("--") + 2:]
         raw = render.outputs.to_list()
         asserts.equals(env, 1, len(raw), "one raw output")

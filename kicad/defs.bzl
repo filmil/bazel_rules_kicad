@@ -21,7 +21,7 @@ load("//kicad/private:kicad_toolchain.bzl", _KicadToolchainInfo = "KicadToolchai
 load("//kicad/private:library.bzl", _KicadLibraryInfo = "KicadLibraryInfo", _kicad_lib_tables = "kicad_lib_tables", _kicad_library = "kicad_library", _lib_table_test = "lib_table_test")
 load("//kicad/private:netlist.bzl", _kicad_netlist = "kicad_netlist")
 load("//kicad/private:normalize.bzl", _NormalizeToolchainInfo = "NormalizeToolchainInfo")
-load("//kicad/private:render.bzl", _RENDER_SIDES = "RENDER_SIDES", _kicad_render = "kicad_render")
+load("//kicad/private:render.bzl", _kicad_render = "kicad_render")
 load("//kicad/private:sch_pdf.bzl", _kicad_sch_pdf = "kicad_sch_pdf")
 load("//kicad/private:sch_render.bzl", _kicad_sch_render = "kicad_sch_render")
 load("//kicad/private:swap_test.bzl", _swap_test = "swap_test")
@@ -32,7 +32,6 @@ KicadPcbInfo = _KicadPcbInfo
 KicadSchematicInfo = _KicadSchematicInfo
 KicadToolchainInfo = _KicadToolchainInfo
 NormalizeToolchainInfo = _NormalizeToolchainInfo
-RENDER_SIDES = _RENDER_SIDES
 determinism_test = _determinism_test
 kicad_bom = _kicad_bom
 kicad_drc_report = _kicad_drc_report

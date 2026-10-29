@@ -65,7 +65,7 @@ fails_test(
 
 kicad_render(
     name = "render_flat",
-    height = 0,
+    height = 63,
     pcb = "//tests/design:pcb",
     tags = ["manual"],
 )
@@ -73,7 +73,7 @@ kicad_render(
 fails_test(
     name = "render_flat_test",
     size = "small",
-    message = "height is 0; it must be at least 64",
+    message = "height is 63; it must be at least 64",
     target_under_test = ":render_flat",
 )
 

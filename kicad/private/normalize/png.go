@@ -40,10 +40,11 @@ func StripPNG(b []byte) ([]byte, error) {
 		if len(rest) < 12 {
 			return nil, fmt.Errorf("png: cut short, or no IEND chunk")
 		}
-		n := binary.BigEndian.Uint32(rest[:4])
-		if uint64(n) > uint64(len(rest)-12) {
-			return nil, fmt.Errorf("png: a chunk of %d bytes runs past the end", n)
+		n32 := binary.BigEndian.Uint32(rest[:4])
+		if uint64(n32) > uint64(len(rest)-12) {
+			return nil, fmt.Errorf("png: a chunk of %d bytes runs past the end", n32)
 		}
+		n := int(n32)
 		kind := string(rest[4:8])
 		chunk := rest[:12+n]
 		rest = rest[12+n:]

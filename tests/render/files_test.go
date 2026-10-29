@@ -50,14 +50,25 @@ func decode(t *testing.T, p string) ([]byte, image.Image) {
 	return b, img
 }
 
-// chunks returns the types of the PNG chunks of b, in order.
+// chunks returns the types of the PNG chunks of b, in order. The image
+// must end with IEND, with nothing after it.
 func chunks(t *testing.T, b []byte) []string {
 	t.Helper()
+	if len(b) < 8 {
+		t.Fatalf("%d bytes: no PNG signature", len(b))
+	}
 	var kinds []string
-	for rest := b[8:]; len(rest) >= 12; {
+	rest := b[8:]
+	for len(rest) >= 12 {
 		n := binary.BigEndian.Uint32(rest[:4])
+		if uint64(n) > uint64(len(rest)-12) {
+			t.Fatalf("a chunk of %d bytes runs past the end", n)
+		}
 		kinds = append(kinds, string(rest[4:8]))
-		rest = rest[12+n:]
+		rest = rest[12+int(n):]
+	}
+	if len(rest) != 0 || len(kinds) == 0 || kinds[len(kinds)-1] != "IEND" {
+		t.Fatalf("chunks %v, then %d bytes: want IEND last and nothing after it", kinds, len(rest))
 	}
 	return kinds
 }
@@ -97,14 +108,16 @@ func TestSize(t *testing.T) {
 	}
 }
 
-// No chunk holds text, a time or Exif data.
+// No chunk holds text, a time or Exif data, in either render.
 func TestNoMetadata(t *testing.T) {
-	for name, p := range outputs(t, *render) {
-		b, _ := decode(t, p)
-		for _, k := range chunks(t, b) {
-			switch k {
-			case "tEXt", "zTXt", "iTXt", "tIME", "eXIf":
-				t.Errorf("%s: has a %s chunk", name, k)
+	for _, set := range []string{*render, *small} {
+		for name, p := range outputs(t, set) {
+			b, _ := decode(t, p)
+			for _, k := range chunks(t, b) {
+				switch k {
+				case "tEXt", "zTXt", "iTXt", "tIME", "eXIf":
+					t.Errorf("%s: has a %s chunk", name, k)
+				}
 			}
 		}
 	}
