@@ -21,7 +21,8 @@
 //   - Gerber job (.gbrjob): "CreationDate" of the header;
 //   - PDF: /CreationDate and /ModDate, with a value of the same length, so
 //     the cross-reference offsets stay right;
-//   - STEP: the time stamp of FILE_NAME;
+//   - STEP: the time stamp of FILE_NAME, and the numbering of the
+//     entities, made canonical (step.go, issue #63);
 //   - KiCad ERC and DRC JSON reports: the top-level "date";
 //   - KiCad netlists (s-expression): the date of the (design ...) header,
 //     and the paths of its source and of each library, which name the
@@ -215,6 +216,13 @@ func Normalize(b []byte, t time.Time) ([]byte, Format, error) {
 	}
 	if needAny[f] && !anyFound {
 		return nil, f, fmt.Errorf("%s: no time stamp of a form this program knows", f)
+	}
+	if f == STEP {
+		c, err := CanonicalSTEP(out)
+		if err != nil {
+			return nil, f, err
+		}
+		out = c
 	}
 	if f == PDF && len(out) != len(b) {
 		return nil, f, fmt.Errorf("pdf: the length changed from %d to %d", len(b), len(out))
