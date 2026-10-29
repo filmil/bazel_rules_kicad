@@ -16,7 +16,7 @@ def _kicad_drc_report_impl(ctx):
     # Parity needs the schematic, which kicad_pcb stages next to the board
     # under the same name. A board that follows a netlist has none; its
     # nets are checked by netlist_parity_test instead.
-    if pcb.schematic:
+    if pcb.schematic != None:
         args.append("--schematic-parity")
 
     # No --exit-code-violations: the report is the output, and the test

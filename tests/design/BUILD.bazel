@@ -4,7 +4,7 @@
 # and kicad_erc_test on the small schematic here (issue #14). The sheets
 # here hold no parts; the e2e design in integration/e2e is the full one.
 load("//kicad:defs.bzl", "determinism_test", "kicad_drc_report", "kicad_erc_test", "kicad_library", "kicad_pcb", "kicad_schematic", "swap_test")
-load(":design_test.bzl", "fails_test", "netlist_pcb_info_test", "pcb_info_test", "schematic_info_test")
+load(":design_test.bzl", "drc_action_test", "fails_test", "netlist_pcb_info_test", "pcb_info_test", "schematic_info_test")
 
 kicad_schematic(
     name = "sch",
@@ -152,4 +152,22 @@ determinism_test(
     name = "drc_determinism_test",
     size = "small",
     target = ":drc_report",
+)
+
+# The DRC action: --schematic-parity only for a board with a schematic,
+# and the design rules, staged as main.kicad_dru, among its inputs.
+drc_action_test(
+    name = "drc_action_test",
+    size = "small",
+    parity = True,
+    rules = True,
+    target_under_test = ":drc_report",
+)
+
+drc_action_test(
+    name = "drc_netlist_action_test",
+    size = "small",
+    parity = False,
+    rules = False,
+    target_under_test = ":drc_netlist_report",
 )
