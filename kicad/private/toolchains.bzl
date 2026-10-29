@@ -19,6 +19,7 @@ HelpersInfo = provider(
         "sheetcheck": "DefaultInfo of the sheet checker, for its own known-bad test (a target binary).",
         "reportcheck": "DefaultInfo of the report checker of kicad_erc_test and kicad_drc_test, with the DRC canary check (a target binary).",
         "canary_board": "File: the canary board of kicad_drc_report's design rules check.",
+        "stampscan": "DefaultInfo of timestamp_scan_test's scanner (a target binary).",
     },
 )
 
@@ -31,6 +32,7 @@ def _helpers_toolchain_impl(ctx):
         sheetcheck = ctx.attr.sheetcheck_test[DefaultInfo],
         reportcheck = ctx.attr.reportcheck[DefaultInfo],
         canary_board = ctx.file.canary_board,
+        stampscan = ctx.attr.stampscan[DefaultInfo],
     ), tools = {
         # Tools that rules run in actions through run_tool, so built for
         # the execution platform: the sheet checker of kicad_schematic's
@@ -53,6 +55,7 @@ helpers_toolchain = rule(
         "reportcheck": attr.label(mandatory = True, executable = True, cfg = "target"),
         "drucanary": attr.label(mandatory = True, executable = True, cfg = "exec"),
         "canary_board": attr.label(mandatory = True, allow_single_file = [".kicad_pcb"]),
+        "stampscan": attr.label(mandatory = True, executable = True, cfg = "target"),
     },
 )
 

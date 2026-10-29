@@ -7,6 +7,7 @@ load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_gerbers")
 kicad_gerbers(
     name = "gerbers",
     pcb = "//e2e:pcb",
+    visibility = ["//e2e/timestamp_scan:__pkg__"],
 )
 
 determinism_test(
