@@ -3,7 +3,7 @@
 # The e2e design: a two-sheet schematic and its board, as a user of
 # rules_kicad writes them. README.md describes the design.
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@rules_kicad//kicad:defs.bzl", "kicad_erc_test", "kicad_pcb", "kicad_schematic")
+load("@rules_kicad//kicad:defs.bzl", "kicad_drc_test", "kicad_erc_test", "kicad_pcb", "kicad_schematic")
 
 kicad_schematic(
     name = "sch",
@@ -34,4 +34,12 @@ kicad_erc_test(
     name = "erc_test",
     size = "small",
     schematic = ":sch",
+)
+
+# The e2e board passes KiCad's design rules check, with schematic parity
+# (issue #15).
+kicad_drc_test(
+    name = "drc_test",
+    size = "small",
+    pcb = ":pcb",
 )
