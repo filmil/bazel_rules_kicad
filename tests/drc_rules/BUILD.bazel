@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Does KiCad read the design rules? (issue #17) KiCad drops a rule file it
+# cannot read and then reports no violation at all, so kicad_drc_test
+# checks that a canary rule appended to a copy of the file takes effect.
+#
+# The board is a bare 10 mm square, clean under any rules here.
+load("//kicad:defs.bzl", "kicad_drc_test", "kicad_pcb")
+
+kicad_pcb(
+    name = "good_pcb",
+    board = "board.kicad_pcb",
+    design_rules = "good.kicad_dru",
+    netlist = "board.net",
+)
+
+# A good rule file loads: the canary shows, and the board is clean.
+kicad_drc_test(
+    name = "good_rules_test",
+    size = "small",
+    pcb = ":good_pcb",
+)
+
+# Known bad (spec T3): the file lacks a closing parenthesis. Without the
+# canary, KiCad's DRC would pass this board.
+kicad_pcb(
+    name = "broken_pcb",
+    board = "board.kicad_pcb",
+    design_rules = "broken.kicad_dru",
+    netlist = "board.net",
+)
+
+kicad_drc_test(
+    name = "broken_rules_test",
+    size = "small",
+    expect = "design_rules_not_loaded",
+    pcb = ":broken_pcb",
+)
+
+# A board without design rules has no canary; the test still runs.
+kicad_pcb(
+    name = "plain_pcb",
+    board = "board.kicad_pcb",
+    netlist = "board.net",
+)
+
+kicad_drc_test(
+    name = "no_rules_test",
+    size = "small",
+    pcb = ":plain_pcb",
+)

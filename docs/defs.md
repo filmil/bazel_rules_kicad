@@ -84,6 +84,13 @@ every violation of severity error or warning, and every unconnected item;
 which checks have which severity is the design's own setting. The report's
 date is removed (spec D2), so the same board gives the same bytes.
 
+KiCad drops a design rules file it cannot read, without a word: its
+built-in checks still run, but none of the file's rules do, and DRC still
+passes (kicad#25848). So with `design_rules`, the rule also
+runs DRC on a canary board, with a copy of the rule file that has a canary
+rule appended; that report is the output group `canary`, and
+`kicad_drc_test` fails unless it has the canary's violation.
+
 **ATTRIBUTES**
 
 
@@ -554,7 +561,7 @@ kicad_drc_test(
 | :------------- | :------------- | :------------- |
 | <a id="kicad_drc_test-name"></a>name |  the test's name.   |  none |
 | <a id="kicad_drc_test-pcb"></a>pcb |  the board (`kicad_pcb`).   |  none |
-| <a id="kicad_drc_test-expect"></a>expect |  empty for a board that must be clean. For a known-bad board (spec T3), a violation type, such as `clearance`: the test then passes only if the report has violations of that type and of no other.   |  `""` |
+| <a id="kicad_drc_test-expect"></a>expect |  empty for a board that must be clean. For a known-bad board (spec T3), a violation type, such as `clearance`: the test then passes only if the report has violations of that type and of no other. `design_rules_not_loaded` is the type of a rule file that KiCad did not read.   |  `""` |
 | <a id="kicad_drc_test-kwargs"></a>kwargs |  common test attributes, such as `size` and `tags`.   |  none |
 
 

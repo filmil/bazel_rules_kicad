@@ -17,6 +17,12 @@
 // Entries with severity "exclusion" (marked as excluded in the design)
 // or "ignore" do not count.
 //
+// CANARY_REPORT, when set, is the runfiles path of the DRC report of the
+// canary board, run with the design rules and a canary rule appended
+// (kicad_drc_report, issue #17). It must have the canary rule's violation:
+// if not, KiCad did not read the rule file, and the check reports the
+// violation type design_rules_not_loaded.
+//
 // It copies the report into TEST_UNDECLARED_OUTPUTS_DIR, so `bazel test`
 // keeps it in bazel-testlogs.
 package main
@@ -134,11 +140,51 @@ func Summary(kind string, vs []Violation) string {
 	return b.String()
 }
 
-// Check returns the test's message and exit status.
-func Check(b []byte, expect string) (string, int) {
+// CanaryWidth is the canary rule's minimum track width as KiCad writes it in
+// a DRC report (kicad/private/drucanary).
+const CanaryWidth = "min width 47.1100 mm"
+
+// CanaryFound reports whether a canary DRC report has the canary rule's
+// violation.
+func CanaryFound(b []byte) (bool, error) {
+	kind, vs, err := Parse(b)
+	if err != nil {
+		return false, err
+	}
+	if kind != "DRC" {
+		return false, fmt.Errorf("the canary report is an %s report, not DRC", kind)
+	}
+	for _, v := range vs {
+		if v.Type == "track_width" && strings.Contains(v.Description, CanaryWidth) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// NotLoaded is the violation that stands for a rule file KiCad dropped.
+var NotLoaded = Violation{
+	Kind:        "violation",
+	Severity:    "error",
+	Type:        "design_rules_not_loaded",
+	Description: "KiCad did not read the design rules (.kicad_dru): the canary rule appended to them had no effect. Check the rule file's syntax; KiCad drops a file it cannot read without a word (https://gitlab.com/kicad/code/kicad/-/work_items/25848).",
+}
+
+// Check returns the test's message and exit status. canary is the canary
+// report, or nil when the board has no design rules.
+func Check(b []byte, expect string, canary ...[]byte) (string, int) {
 	kind, vs, err := Parse(b)
 	if err != nil {
 		return "reportcheck: " + err.Error(), 2
+	}
+	if len(canary) > 0 && canary[0] != nil {
+		ok, err := CanaryFound(canary[0])
+		if err != nil {
+			return "reportcheck: canary: " + err.Error(), 2
+		}
+		if !ok {
+			vs = append([]Violation{NotLoaded}, vs...)
+		}
 	}
 	msg := Summary(kind, vs)
 	if expect == "" {
@@ -165,9 +211,9 @@ func Check(b []byte, expect string) (string, int) {
 	return msg + fmt.Sprintf("found only %s violations, as expected", expect), 0
 }
 
-// Run is the test: it reads the report at srcdir/report, keeps a copy in
-// outdir (when set), and checks it.
-func Run(srcdir, report, outdir, expect string) (string, int) {
+// Run is the test: it reads the report at srcdir/report (and the canary
+// report, when set), keeps copies in outdir (when set), and checks them.
+func Run(srcdir, report, outdir, expect string, canaryReport ...string) (string, int) {
 	if srcdir == "" || report == "" {
 		return "reportcheck: TEST_SRCDIR and REPORT must be set; run it as a test", 2
 	}
@@ -176,16 +222,30 @@ func Run(srcdir, report, outdir, expect string) (string, int) {
 	if err != nil {
 		return "reportcheck: " + err.Error(), 2
 	}
+	var canary []byte
+	if len(canaryReport) > 0 && canaryReport[0] != "" {
+		canary, err = os.ReadFile(filepath.Join(srcdir, filepath.FromSlash(canaryReport[0])))
+		if err != nil {
+			return "reportcheck: " + err.Error(), 2
+		}
+	}
 	if outdir != "" {
 		if err := os.WriteFile(filepath.Join(outdir, filepath.Base(p)), b, 0o644); err != nil {
 			return "reportcheck: " + err.Error(), 2
 		}
+		if canary != nil {
+			// Named after the main report, so the two never collide.
+			name := strings.TrimSuffix(filepath.Base(p), ".json") + ".canary.json"
+			if err := os.WriteFile(filepath.Join(outdir, name), canary, 0o644); err != nil {
+				return "reportcheck: " + err.Error(), 2
+			}
+		}
 	}
-	return Check(b, expect)
+	return Check(b, expect, canary)
 }
 
 func main() {
-	msg, code := Run(os.Getenv("TEST_SRCDIR"), os.Getenv("REPORT"), os.Getenv("TEST_UNDECLARED_OUTPUTS_DIR"), os.Getenv("REPORT_EXPECT"))
+	msg, code := Run(os.Getenv("TEST_SRCDIR"), os.Getenv("REPORT"), os.Getenv("TEST_UNDECLARED_OUTPUTS_DIR"), os.Getenv("REPORT_EXPECT"), os.Getenv("CANARY_REPORT"))
 	fmt.Println(msg)
 	os.Exit(code)
 }

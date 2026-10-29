@@ -125,3 +125,58 @@ func TestRun(t *testing.T) {
 		t.Error("no TEST_SRCDIR must exit 2")
 	}
 }
+
+// testdata/canary_*.json are real DRC reports of the canary board, run with
+// a rule file and the canary appended (kicad/private/drucanary): loaded
+// with a good file, dropped with a file missing a closing parenthesis.
+func TestCanary(t *testing.T) {
+	if ok, err := CanaryFound(read(t, "canary_loaded.json")); !ok || err != nil {
+		t.Errorf("loaded: %v %v", ok, err)
+	}
+	if ok, err := CanaryFound(read(t, "canary_dropped.json")); ok || err != nil {
+		t.Errorf("dropped: %v %v", ok, err)
+	}
+	if _, err := CanaryFound(read(t, "clean_erc.json")); err == nil {
+		t.Error("an ERC report as the canary must be an error")
+	}
+	clean := read(t, "clean_drc.json")
+	for _, c := range []struct {
+		canary []byte
+		expect string
+		code   int
+		says   string
+	}{
+		{nil, "", 0, "no violations"},
+		{read(t, "canary_loaded.json"), "", 0, "no violations"},
+		{read(t, "canary_dropped.json"), "", 1, "design_rules_not_loaded"},
+		{read(t, "canary_dropped.json"), "design_rules_not_loaded", 0, "as expected"},
+		{read(t, "canary_loaded.json"), "design_rules_not_loaded", 1, "expected a design_rules_not_loaded violation"},
+	} {
+		msg, code := Check(clean, c.expect, c.canary)
+		if code != c.code || !strings.Contains(msg, c.says) {
+			t.Errorf("expect %q: code %d, want %d:\n%s", c.expect, code, c.code, msg)
+		}
+	}
+}
+
+// Run with a canary: both reports are read, both are kept (the canary
+// under a name of its own), and a missing canary file is an error.
+func TestRunWithCanary(t *testing.T) {
+	src, out := t.TempDir(), t.TempDir()
+	os.MkdirAll(src+"/_main/pkg", 0o755)
+	os.WriteFile(src+"/_main/pkg/canary.json", read(t, "clean_drc.json"), 0o644)
+	os.WriteFile(src+"/_main/pkg/c.json", read(t, "canary_dropped.json"), 0o644)
+	// A main report named canary.json must not be overwritten.
+	msg, code := Run(src, "_main/pkg/canary.json", out, "", "_main/pkg/c.json")
+	if code != 1 || !strings.Contains(msg, "design_rules_not_loaded") {
+		t.Errorf("dropped canary: %d %s", code, msg)
+	}
+	main, _ := os.ReadFile(out + "/canary.json")
+	kept, _ := os.ReadFile(out + "/canary.canary.json")
+	if string(main) != string(read(t, "clean_drc.json")) || string(kept) != string(read(t, "canary_dropped.json")) {
+		t.Error("the outputs directory does not hold both reports under their own names")
+	}
+	if _, code := Run(src, "_main/pkg/canary.json", "", "", "_main/pkg/missing.json"); code != 2 {
+		t.Error("a missing canary report must exit 2")
+	}
+}
