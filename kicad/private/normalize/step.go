@@ -18,41 +18,38 @@ import (
 // them differently as soon as a model has copper or parts. The order is
 // made canonical so:
 //
-//  1. Each entity gets a content hash: its text, with each reference
-//     replaced by the hash of the entity it names, and the number of
+//  1. Each entity gets a content key: its text, with each reference
+//     replaced by the key of the entity it names, and the number of
 //     entities that refer to it.
-//  2. The entities that nothing refers to are the roots. They are sorted
-//     by hash.
-//  3. A depth-first walk from the roots, in that order, visits each
-//     entity's references in the order they appear in its text, and
-//     numbers each entity from 1 the first time it reaches it.
+//  2. The entities that nothing refers to are the roots. They are taken
+//     in key order. Among roots with the same key, the one whose entities
+//     would be written as the smallest text next is taken first, so the
+//     choice does not depend on the input's order.
+//  3. A depth-first walk from each root visits an entity's references in
+//     the order they appear in its text, and numbers each entity from 1
+//     the first time it reaches it.
 //
-// Whitespace outside strings is dropped (the writer's line breaks depend
-// on the width of the old numbers), and each entity is written on a line
-// of its own. The header and the trailer are kept as they are.
+// Comments are dropped. Whitespace outside strings is dropped too, except
+// a single space between two word characters; the writer's line breaks
+// depend on the width of the old numbers. Lines are wrapped after a comma
+// at 80 columns. The header and the trailer are kept as they are.
 //
-// The result is checked: it must hold the same multiset of entity hashes
-// as the input, so the renumbering cannot change what the file says.
+// The result is checked: it must hold the same multiset of entity keys as
+// the input, so the renumbering cannot change what the file says.
 func CanonicalSTEP(b []byte) ([]byte, error) {
-	start := bytes.Index(b, []byte("\nDATA;"))
-	if start < 0 {
-		return nil, fmt.Errorf("step: no DATA section")
+	start, end, err := dataSection(b)
+	if err != nil {
+		return nil, err
 	}
-	start += len("\nDATA;")
-	end := bytes.Index(b[start:], []byte("ENDSEC;"))
-	if end < 0 {
-		return nil, fmt.Errorf("step: the DATA section has no ENDSEC")
-	}
-	end += start
 	ents, order, err := parseEntities(b[start:end])
 	if err != nil {
 		return nil, err
 	}
-	hashes, err := entityHashes(ents)
+	keys, err := entityKeys(ents)
 	if err != nil {
 		return nil, err
 	}
-	number := canonicalNumbers(ents, order, hashes)
+	number := canonicalNumbers(ents, order, keys)
 
 	var out bytes.Buffer
 	out.Write(b[:start])
@@ -62,34 +59,113 @@ func CanonicalSTEP(b []byte) ([]byte, error) {
 		byNumber[n-1] = old
 	}
 	for i, old := range byNumber {
-		fmt.Fprintf(&out, "#%d = ", i+1)
-		writeRenumbered(&out, ents[old].body, number)
-		out.WriteString(";\n")
+		writeWrapped(&out, fmt.Sprintf("#%d = ", i+1), renumbered(ents[old].body, number))
 	}
 	out.Write(b[end:])
 
 	// The check: the same entities, whatever their numbers.
-	ents2, _, err := parseEntities(out.Bytes()[start : bytes.Index(out.Bytes()[start:], []byte("ENDSEC;"))+start])
+	s2, e2, err := dataSection(out.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("step: the renumbered file: %w", err)
+	}
+	ents2, _, err := parseEntities(out.Bytes()[s2:e2])
 	if err != nil {
 		return nil, fmt.Errorf("step: the renumbered file does not parse: %w", err)
 	}
-	hashes2, err := entityHashes(ents2)
+	keys2, err := entityKeys(ents2)
 	if err != nil {
 		return nil, err
 	}
-	if !sameMultiset(hashes, hashes2) {
+	if !sameMultiset(keys, keys2) {
 		return nil, fmt.Errorf("step: renumbering changed the entities")
 	}
 	return out.Bytes(), nil
 }
 
+// dataSection returns where the DATA section's instances start (just after
+// "DATA;") and end (at its "ENDSEC;"). Both are found as keywords, outside
+// strings and comments.
+func dataSection(b []byte) (int, int, error) {
+	start := -1
+	for i := 0; i < len(b); i++ {
+		switch {
+		case b[i] == '\'':
+			i = stringEnd(b, i)
+		case b[i] == '/' && i+1 < len(b) && b[i+1] == '*':
+			j := bytes.Index(b[i+2:], []byte("*/"))
+			if j < 0 {
+				return 0, 0, fmt.Errorf("step: an unclosed comment")
+			}
+			i += j + 3
+		case isWord(b[i]) && (i == 0 || !isWord(b[i-1])):
+			j := i
+			for j < len(b) && isWord(b[j]) {
+				j++
+			}
+			word := string(b[i:j])
+			k := j
+			for k < len(b) && isSpace(b[k]) {
+				k++
+			}
+			if k < len(b) && b[k] == ';' {
+				switch {
+				case word == "DATA" && start < 0:
+					start = k + 1
+				case word == "ENDSEC" && start >= 0:
+					return start, i, nil
+				}
+			}
+			i = j - 1
+		}
+	}
+	if start < 0 {
+		return 0, 0, fmt.Errorf("step: no DATA section")
+	}
+	return 0, 0, fmt.Errorf("step: the DATA section has no ENDSEC")
+}
+
+// stringEnd returns the index of the quote that closes the string opened
+// at i (two quotes in a row stand for one quote inside it), or len(b)-1
+// when it is not closed.
+func stringEnd(b []byte, i int) int {
+	for j := i + 1; j < len(b); j++ {
+		if b[j] == '\'' {
+			if j+1 < len(b) && b[j+1] == '\'' {
+				j++
+				continue
+			}
+			return j
+		}
+	}
+	return len(b) - 1
+}
+
 // entity is one instance of the DATA section.
 type entity struct {
-	// body is the text after "#N =", without whitespace outside strings
+	// body is the text after "#N =" without comments, without whitespace
+	// outside strings (but for one space between two word characters),
 	// and without the final ";".
 	body []byte
 	// refs are the entities it names, in the order of its text.
 	refs []int
+}
+
+// instanceNumber reads "#N" at b[i]: N must be a positive number with no
+// leading zero. It returns N and the index after it.
+func instanceNumber(b []byte, i int) (int, int, error) {
+	j := i + 1
+	for j < len(b) && isDigit(b[j]) {
+		j++
+	}
+	digits := string(b[i+1 : j])
+	if digits == "" || digits[0] == '0' {
+		return 0, 0, fmt.Errorf("step: %q is not an instance name (#1 or more, no leading zero)", clip(b[i:]))
+	}
+	n, err := strconv.Atoi(digits)
+	if err != nil {
+		return 0, 0, fmt.Errorf("step: %q is not an instance name", clip(b[i:]))
+	}
+	return n, j, nil
 }
 
 // parseEntities reads "#N = body;" instances. It returns them by number,
@@ -117,13 +193,9 @@ func parseEntities(data []byte) (map[int]*entity, []int, error) {
 		if data[i] != '#' {
 			return nil, nil, fmt.Errorf("step: want an instance '#N =', found %q", clip(data[i:]))
 		}
-		j := i + 1
-		for j < len(data) && isDigit(data[j]) {
-			j++
-		}
-		n, err := strconv.Atoi(string(data[i+1 : j]))
+		n, j, err := instanceNumber(data, i)
 		if err != nil {
-			return nil, nil, fmt.Errorf("step: a bad instance number at %q", clip(data[i:]))
+			return nil, nil, err
 		}
 		for j < len(data) && isSpace(data[j]) {
 			j++
@@ -134,45 +206,47 @@ func parseEntities(data []byte) (map[int]*entity, []int, error) {
 		e := &entity{}
 		k := j + 1
 		closed := false
+		pendingSpace := false // whitespace or a comment since the last byte
+		emit := func(p []byte) {
+			if pendingSpace && len(e.body) > 0 && isWord(e.body[len(e.body)-1]) && isWord(p[0]) {
+				e.body = append(e.body, ' ')
+			}
+			pendingSpace = false
+			e.body = append(e.body, p...)
+		}
 		for k < len(data) && !closed {
 			c := data[k]
 			switch {
 			case c == '\'':
-				// A string, with '' for a quote: copied as it is.
-				s := k
-				for k++; k < len(data); k++ {
-					if data[k] == '\'' {
-						if k+1 < len(data) && data[k+1] == '\'' {
-							k++
-							continue
-						}
-						break
-					}
-				}
-				if k >= len(data) {
+				m := stringEnd(data, k)
+				if data[m] != '\'' || m == k {
 					return nil, nil, fmt.Errorf("step: #%d has an unclosed string", n)
 				}
-				e.body = append(e.body, data[s:k+1]...)
-				k++
-			case c == '#':
-				m := k + 1
-				for m < len(data) && isDigit(data[m]) {
-					m++
+				emit(data[k : m+1])
+				k = m + 1
+			case c == '/' && k+1 < len(data) && data[k+1] == '*':
+				m := bytes.Index(data[k+2:], []byte("*/"))
+				if m < 0 {
+					return nil, nil, fmt.Errorf("step: #%d has an unclosed comment", n)
 				}
-				r, err := strconv.Atoi(string(data[k+1 : m]))
+				k += m + 4
+				pendingSpace = true
+			case c == '#':
+				r, m, err := instanceNumber(data, k)
 				if err != nil {
-					return nil, nil, fmt.Errorf("step: #%d has a bad reference", n)
+					return nil, nil, fmt.Errorf("step: #%d: %w", n, err)
 				}
 				e.refs = append(e.refs, r)
-				e.body = append(e.body, data[k:m]...)
+				emit(data[k:m])
 				k = m
 			case c == ';':
 				closed = true
 				k++
 			case isSpace(c):
+				pendingSpace = true
 				k++
 			default:
-				e.body = append(e.body, c)
+				emit(data[k : k+1])
 				k++
 			}
 		}
@@ -188,10 +262,10 @@ func parseEntities(data []byte) (map[int]*entity, []int, error) {
 	}
 }
 
-// entityHashes returns each entity's content hash: its body with each
-// reference replaced by the referred entity's hash, and its number of
+// entityKeys returns each entity's content key: its body with each
+// reference replaced by the referred entity's key, and its number of
 // referrers. A reference to an undefined entity, or a cycle, is an error.
-func entityHashes(ents map[int]*entity) (map[int]string, error) {
+func entityKeys(ents map[int]*entity) (map[int]string, error) {
 	referrers := map[int]int{}
 	for n, e := range ents {
 		for _, r := range e.refs {
@@ -201,71 +275,80 @@ func entityHashes(ents map[int]*entity) (map[int]string, error) {
 			referrers[r]++
 		}
 	}
-	hashes := map[int]string{}
+	keys := map[int]string{}
 	visiting := map[int]bool{}
-	var hash func(n int) (string, error)
-	hash = func(n int) (string, error) {
-		if h, ok := hashes[n]; ok {
-			return h, nil
+	var key func(n int) (string, error)
+	key = func(n int) (string, error) {
+		if k, ok := keys[n]; ok {
+			return k, nil
 		}
 		if visiting[n] {
 			return "", fmt.Errorf("step: a reference cycle through #%d", n)
 		}
 		visiting[n] = true
-		e := ents[n]
 		var buf bytes.Buffer
-		ri := 0
-		body := e.body
-		for i := 0; i < len(body); i++ {
-			switch c := body[i]; {
-			case c == '\'':
-				j := i + 1
-				for ; j < len(body); j++ {
-					if body[j] == '\'' {
-						if j+1 < len(body) && body[j+1] == '\'' {
-							j++
-							continue
-						}
-						break
-					}
-				}
-				buf.Write(body[i : j+1])
-				i = j
-			case c == '#':
-				j := i + 1
-				for j < len(body) && isDigit(body[j]) {
-					j++
-				}
-				h, err := hash(e.refs[ri])
-				if err != nil {
-					return "", err
-				}
-				ri++
-				buf.WriteString("@" + h)
-				i = j - 1
-			default:
-				buf.WriteByte(c)
+		var err error
+		eachPart(ents[n].body, func(text []byte, ref int) {
+			if err != nil {
+				return
 			}
+			if ref == 0 {
+				buf.Write(text)
+				return
+			}
+			var k string
+			k, err = key(ref)
+			buf.WriteString("@" + k)
+		})
+		if err != nil {
+			return "", err
 		}
 		fmt.Fprintf(&buf, "|%d", referrers[n])
 		sum := sha256.Sum256(buf.Bytes())
-		h := fmt.Sprintf("%x", sum[:12])
-		hashes[n] = h
+		k := fmt.Sprintf("%x", sum[:12])
+		keys[n] = k
 		visiting[n] = false
-		return h, nil
+		return k, nil
 	}
 	for n := range ents {
-		if _, err := hash(n); err != nil {
+		if _, err := key(n); err != nil {
 			return nil, err
 		}
 	}
-	return hashes, nil
+	return keys, nil
 }
 
-// canonicalNumbers numbers the entities by a depth-first walk from the
-// roots sorted by hash. Roots with the same hash keep their file order:
-// their subgraphs, and so the output, are the same either way.
-func canonicalNumbers(ents map[int]*entity, order []int, hashes map[int]string) map[int]int {
+// eachPart calls f on the parts of a body in order: a run of text (with
+// ref 0), or a reference (its text and its number).
+func eachPart(body []byte, f func(text []byte, ref int)) {
+	s := 0
+	for i := 0; i < len(body); i++ {
+		switch body[i] {
+		case '\'':
+			i = stringEnd(body, i)
+		case '#':
+			if i > s {
+				f(body[s:i], 0)
+			}
+			j := i + 1
+			for j < len(body) && isDigit(body[j]) {
+				j++
+			}
+			r, _ := strconv.Atoi(string(body[i+1 : j]))
+			f(body[i:j], r)
+			s = j
+			i = j - 1
+		}
+	}
+	if s < len(body) {
+		f(body[s:], 0)
+	}
+}
+
+// canonicalNumbers numbers the entities: roots in key order, each with a
+// depth-first walk. Roots with the same key are taken in the order of the
+// text they would write next, smallest first.
+func canonicalNumbers(ents map[int]*entity, order []int, keys map[int]string) map[int]int {
 	referred := map[int]bool{}
 	for _, e := range ents {
 		for _, r := range e.refs {
@@ -278,54 +361,119 @@ func canonicalNumbers(ents map[int]*entity, order []int, hashes map[int]string) 
 			roots = append(roots, n)
 		}
 	}
-	sort.SliceStable(roots, func(i, j int) bool { return hashes[roots[i]] < hashes[roots[j]] })
+	sort.SliceStable(roots, func(i, j int) bool { return keys[roots[i]] < keys[roots[j]] })
+
 	number := map[int]int{}
-	var visit func(n int)
-	visit = func(n int) {
+	// walk numbers the entities reachable from n that have no number, in
+	// depth-first order, into into (n's new numbers start at next).
+	var walk func(n int, into map[int]int, next *int, seq *[]int)
+	walk = func(n int, into map[int]int, next *int, seq *[]int) {
 		if _, ok := number[n]; ok {
 			return
 		}
-		number[n] = len(number) + 1
+		if _, ok := into[n]; ok {
+			return
+		}
+		into[n] = *next
+		*next++
+		*seq = append(*seq, n)
 		for _, r := range ents[n].refs {
-			visit(r)
+			walk(r, into, next, seq)
 		}
 	}
-	for _, r := range roots {
-		visit(r)
+	// preview is the text that walking from root would write now.
+	preview := func(root int) string {
+		into := map[int]int{}
+		next := len(number) + 1
+		var seq []int
+		walk(root, into, &next, &seq)
+		lookup := func(old int) int {
+			if v, ok := number[old]; ok {
+				return v
+			}
+			return into[old]
+		}
+		var buf bytes.Buffer
+		for _, n := range seq {
+			buf.Write(renumberedBy(ents[n].body, lookup))
+			buf.WriteByte(';')
+		}
+		return buf.String()
+	}
+	commit := func(root int) {
+		next := len(number) + 1
+		var seq []int
+		walk(root, number, &next, &seq)
+	}
+	for i := 0; i < len(roots); {
+		j := i + 1
+		for j < len(roots) && keys[roots[j]] == keys[roots[i]] {
+			j++
+		}
+		group := append([]int(nil), roots[i:j]...)
+		for len(group) > 0 {
+			best, bestText := 0, preview(group[0])
+			for g := 1; g < len(group); g++ {
+				if t := preview(group[g]); t < bestText {
+					best, bestText = g, t
+				}
+			}
+			commit(group[best])
+			group = append(group[:best], group[best+1:]...)
+		}
+		i = j
 	}
 	return number
 }
 
-// writeRenumbered writes body with each reference replaced by its new
-// number.
-func writeRenumbered(out *bytes.Buffer, body []byte, number map[int]int) {
+// renumbered returns body with each reference replaced by its new number.
+func renumbered(body []byte, number map[int]int) []byte {
+	return renumberedBy(body, func(old int) int { return number[old] })
+}
+
+// renumberedBy is renumbered with the new numbers given by a function.
+func renumberedBy(body []byte, number func(int) int) []byte {
+	var out bytes.Buffer
+	eachPart(body, func(text []byte, ref int) {
+		if ref == 0 {
+			out.Write(text)
+			return
+		}
+		fmt.Fprintf(&out, "#%d", number(ref))
+	})
+	return out.Bytes()
+}
+
+// writeWrapped writes head, body and ";" as one instance, broken after a
+// comma (outside strings) when a line would pass 80 columns. Continuation
+// lines are indented by two spaces.
+func writeWrapped(out *bytes.Buffer, head string, body []byte) {
+	const width = 80
+	line := len(head)
+	out.WriteString(head)
+	// Chunks end just after a comma outside strings.
+	s := 0
+	first := true
+	flush := func(chunk []byte) {
+		if line+len(chunk) > width && !first {
+			out.WriteString("\n  ")
+			line = 2
+		}
+		out.Write(chunk)
+		line += len(chunk)
+		first = false
+	}
 	for i := 0; i < len(body); i++ {
-		switch c := body[i]; {
-		case c == '\'':
-			j := i + 1
-			for ; j < len(body); j++ {
-				if body[j] == '\'' {
-					if j+1 < len(body) && body[j+1] == '\'' {
-						j++
-						continue
-					}
-					break
-				}
-			}
-			out.Write(body[i : j+1])
-			i = j
-		case c == '#':
-			j := i + 1
-			for j < len(body) && isDigit(body[j]) {
-				j++
-			}
-			old, _ := strconv.Atoi(string(body[i+1 : j]))
-			fmt.Fprintf(out, "#%d", number[old])
-			i = j - 1
-		default:
-			out.WriteByte(c)
+		switch body[i] {
+		case '\'':
+			i = stringEnd(body, i)
+		case ',':
+			flush(body[s : i+1])
+			s = i + 1
 		}
 	}
+	flush(append(append([]byte(nil), body[s:]...), ';'))
+	out.WriteByte('\n')
 }
 
 func sameMultiset(a, b map[int]string) bool {
@@ -333,11 +481,11 @@ func sameMultiset(a, b map[int]string) bool {
 		return false
 	}
 	count := map[string]int{}
-	for _, h := range a {
-		count[h]++
+	for _, k := range a {
+		count[k]++
 	}
-	for _, h := range b {
-		count[h]--
+	for _, k := range b {
+		count[k]--
 	}
 	for _, c := range count {
 		if c != 0 {
@@ -350,6 +498,13 @@ func sameMultiset(a, b map[int]string) bool {
 func isSpace(c byte) bool { return c == ' ' || c == '\t' || c == '\n' || c == '\r' }
 
 func isDigit(c byte) bool { return '0' <= c && c <= '9' }
+
+// isWord tells whether c can be part of a keyword, a number or an
+// enumeration, which a space must keep apart from a neighbour of the same
+// kind.
+func isWord(c byte) bool {
+	return 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || isDigit(c) || c == '_' || c == '.' || c == '!' || c == '-' || c == '+'
+}
 
 func clip(b []byte) []byte {
 	if len(b) > 40 {
