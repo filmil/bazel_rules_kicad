@@ -12,6 +12,32 @@ The rules arrive in milestones M1 and M2 (see the issues of
 https://github.com/filmil/bazel_rules_kicad). This file is the only public
 entry point; everything under `//kicad/private` may change without notice.
 
+<a id="kicad_erc_report"></a>
+
+## kicad_erc_report
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_erc_report")
+
+kicad_erc_report(<a href="#kicad_erc_report-name">name</a>, <a href="#kicad_erc_report-schematic">schematic</a>)
+</pre>
+
+KiCad's ERC report of a schematic, in JSON.
+
+kicad-cli runs on the schematic's staged project, so it finds symbols and
+footprints only through the project's library tables. The report keeps
+errors and warnings; its date is removed (spec D2), so the same schematic
+gives the same bytes.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_erc_report-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_erc_report-schematic"></a>schematic |  The schematic (`kicad_schematic`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+
+
 <a id="kicad_lib_tables"></a>
 
 ## kicad_lib_tables
@@ -412,6 +438,41 @@ determinism_test(
 | <a id="determinism_test-name"></a>name |  the test's name.   |  none |
 | <a id="determinism_test-target"></a>target |  the target whose outputs must not change between builds.   |  none |
 | <a id="determinism_test-kwargs"></a>kwargs |  common test attributes, such as `size` and `tags`.   |  none |
+
+
+<a id="kicad_erc_test"></a>
+
+## kicad_erc_test
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_erc_test")
+
+kicad_erc_test(<a href="#kicad_erc_test-name">name</a>, <a href="#kicad_erc_test-schematic">schematic</a>, <a href="#kicad_erc_test-expect">expect</a>, <a href="#kicad_erc_test-kwargs">**kwargs</a>)
+</pre>
+
+Fails if KiCad's electrical rules check finds a violation.
+
+It makes `<name>_report`, the ERC report (`kicad_erc_report`), and a
+test that prints a summary of it and keeps it among the test's outputs
+(`bazel-testlogs/<package>/<name>/test.outputs/`).
+
+```starlark
+kicad_erc_test(
+    name = "erc_test",
+    schematic = ":sch",
+)
+```
+
+
+**PARAMETERS**
+
+
+| Name  | Description | Default Value |
+| :------------- | :------------- | :------------- |
+| <a id="kicad_erc_test-name"></a>name |  the test's name.   |  none |
+| <a id="kicad_erc_test-schematic"></a>schematic |  the schematic (`kicad_schematic`).   |  none |
+| <a id="kicad_erc_test-expect"></a>expect |  empty for a schematic that must be clean. For a known-bad schematic (spec T3), a violation type, such as `pin_not_connected`: the test then passes only if the report has a violation of that type.   |  `""` |
+| <a id="kicad_erc_test-kwargs"></a>kwargs |  common test attributes, such as `size` and `tags`.   |  none |
 
 
 <a id="lib_table_test"></a>
