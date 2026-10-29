@@ -19,6 +19,7 @@ load("//kicad/private:drc.bzl", _kicad_drc_report = "kicad_drc_report", _kicad_d
 load("//kicad/private:drill.bzl", _DRILL_MAP_FORMATS = "DRILL_MAP_FORMATS", _kicad_drill = "kicad_drill")
 load("//kicad/private:erc.bzl", _kicad_erc_report = "kicad_erc_report", _kicad_erc_test = "kicad_erc_test")
 load("//kicad/private:gerbers.bzl", _DEFAULT_GERBER_LAYERS = "DEFAULT_GERBER_LAYERS", _kicad_gerbers = "kicad_gerbers")
+load("//kicad/private:golden.bzl", _GoldenInfo = "GoldenInfo", _golden_test = "golden_test", _update_goldens = "update_goldens")
 load("//kicad/private:kicad_toolchain.bzl", _KicadToolchainInfo = "KicadToolchainInfo", _kicad_toolchain = "kicad_toolchain")
 load("//kicad/private:library.bzl", _KicadLibraryInfo = "KicadLibraryInfo", _kicad_lib_tables = "kicad_lib_tables", _kicad_library = "kicad_library", _lib_table_test = "lib_table_test")
 load("//kicad/private:netlist.bzl", _kicad_netlist = "kicad_netlist")
@@ -34,12 +35,14 @@ load("//kicad/private:toolchains.bzl", _tool_toolchain = "tool_toolchain")
 
 DEFAULT_GERBER_LAYERS = _DEFAULT_GERBER_LAYERS
 DRILL_MAP_FORMATS = _DRILL_MAP_FORMATS
+GoldenInfo = _GoldenInfo
 KicadLibraryInfo = _KicadLibraryInfo
 KicadPcbInfo = _KicadPcbInfo
 KicadSchematicInfo = _KicadSchematicInfo
 KicadToolchainInfo = _KicadToolchainInfo
 NormalizeToolchainInfo = _NormalizeToolchainInfo
 determinism_test = _determinism_test
+golden_test = _golden_test
 kicad_bom = _kicad_bom
 kicad_drc_report = _kicad_drc_report
 kicad_drc_test = _kicad_drc_test
@@ -62,6 +65,7 @@ lib_table_test = _lib_table_test
 swap_test = _swap_test
 timestamp_scan_test = _timestamp_scan_test
 tool_toolchain = _tool_toolchain
+update_goldens = _update_goldens
 
 # The release this file belongs to. It lets a consumer check, in a test,
 # that the module it resolved is the one it expects.

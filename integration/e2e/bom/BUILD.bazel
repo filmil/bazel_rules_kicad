@@ -2,8 +2,7 @@
 #
 # The e2e bill of materials, with the default columns (issue #20). The
 # expected file is written by hand: it is what rules_fab will read.
-load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
-load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_bom")
+load("@rules_kicad//kicad:defs.bzl", "determinism_test", "golden_test", "kicad_bom")
 
 kicad_bom(
     name = "bom",
@@ -17,9 +16,9 @@ determinism_test(
     target = ":bom",
 )
 
-diff_test(
+golden_test(
     name = "bom_test",
     size = "small",
-    file1 = ":bom",
-    file2 = "expected_bom.csv",
+    src = ":bom",
+    golden = "expected_bom.csv",
 )

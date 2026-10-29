@@ -754,6 +754,26 @@ toolchain(
 | <a id="tool_toolchain-tools"></a>tools |  Executable targets, each mapped to the name rules use for it.   | <a href="https://bazel.build/rules/lib/core/dict">Dictionary: Label -> String</a> | required |  |
 
 
+<a id="GoldenInfo"></a>
+
+## GoldenInfo
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "GoldenInfo")
+
+GoldenInfo(<a href="#GoldenInfo-built">built</a>, <a href="#GoldenInfo-golden">golden</a>)
+</pre>
+
+A golden file and the built file that must equal it.
+
+**FIELDS**
+
+| Name  | Description |
+| :------------- | :------------- |
+| <a id="GoldenInfo-built"></a>built |  File: the built file.    |
+| <a id="GoldenInfo-golden"></a>golden |  File: the golden file, a source file of the main repository.    |
+
+
 <a id="KicadLibraryInfo"></a>
 
 ## KicadLibraryInfo
@@ -906,6 +926,48 @@ determinism_test(
 | <a id="determinism_test-kwargs"></a>kwargs |  common test attributes, such as `size` and `tags`.   |  none |
 
 
+<a id="golden_test"></a>
+
+## golden_test
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "golden_test")
+
+golden_test(<a href="#golden_test-name">name</a>, <a href="#golden_test-src">src</a>, <a href="#golden_test-golden">golden</a>, <a href="#golden_test-visibility">visibility</a>, <a href="#golden_test-kwargs">**kwargs</a>)
+</pre>
+
+Checks that a built file equals a checked-in golden file, byte for byte.
+
+```starlark
+golden_test(
+    name = "bom_test",
+    size = "small",
+    src = ":bom",
+    golden = "expected_bom.csv",
+)
+```
+
+When the files differ, the test prints the first line that differs and
+fails. If the change is intended, `bazel run //:update_goldens` (an
+`update_goldens` target that lists this test) writes the built file
+over the golden file.
+
+The test is visible to the module's root package, where
+`//:update_goldens` lists it, unless `visibility` says otherwise.
+
+
+**PARAMETERS**
+
+
+| Name  | Description | Default Value |
+| :------------- | :------------- | :------------- |
+| <a id="golden_test-name"></a>name |  the test's name.   |  none |
+| <a id="golden_test-src"></a>src |  the built file.   |  none |
+| <a id="golden_test-golden"></a>golden |  the golden file, a checked-in file of this repository.   |  none |
+| <a id="golden_test-visibility"></a>visibility |  the test's visibility; default `["//:__pkg__"]`.   |  `None` |
+| <a id="golden_test-kwargs"></a>kwargs |  common test attributes, such as `size` and `tags`.   |  none |
+
+
 <a id="kicad_drc_test"></a>
 
 ## kicad_drc_test
@@ -1049,5 +1111,53 @@ swap_test(
 | <a id="swap_test-name"></a>name |  the test's name.   |  none |
 | <a id="swap_test-targets"></a>targets |  targets whose outputs must all come from the stub.   |  none |
 | <a id="swap_test-kwargs"></a>kwargs |  common test attributes, such as `size` and `tags`.   |  none |
+
+
+<a id="update_goldens"></a>
+
+## update_goldens
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "update_goldens")
+
+update_goldens(<a href="#update_goldens-name">name</a>, <a href="#update_goldens-tests">tests</a>, <a href="#update_goldens-kwargs">**kwargs</a>)
+</pre>
+
+Writes the built files of golden tests over their golden files.
+
+```starlark
+update_goldens(
+    name = "update_goldens",
+    tests = [
+        "//e2e/bom:bom_test",
+        "//e2e/pos:pos_test",
+    ],
+)
+```
+
+Run it with `bazel run //:update_goldens` in the module's directory.
+It builds the files the tests compare, then copies each one that
+differs over its golden file and names it. Commit the result with the
+reason for the change.
+
+It fails, before writing anything, if a `golden_test` in the module's
+BUILD files is missing from `tests`: an update then covers every golden
+file. The scan reads the `golden_test` calls written in BUILD files; a
+`golden_test` made inside a macro of yours is not seen, so list it by
+hand. A module nested in the directory (with its own `MODULE.bazel`)
+has its own `update_goldens`.
+
+The target is `testonly`, since it depends on tests; `bazel run` runs
+it all the same.
+
+
+**PARAMETERS**
+
+
+| Name  | Description | Default Value |
+| :------------- | :------------- | :------------- |
+| <a id="update_goldens-name"></a>name |  the target's name.   |  none |
+| <a id="update_goldens-tests"></a>tests |  every `golden_test` of the module.   |  none |
+| <a id="update_goldens-kwargs"></a>kwargs |  common attributes, such as `tags`.   |  none |
 
 

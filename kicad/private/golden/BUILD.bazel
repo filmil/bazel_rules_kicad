@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: Apache-2.0
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+# The program behind golden_test and update_goldens (issue #30).
+
+go_library(
+    name = "golden",
+    srcs = ["golden.go"],
+    importpath = "github.com/filmil/bazel_rules_kicad/kicad/private/golden",
+    visibility = ["//visibility:private"],
+)
+
+go_test(
+    name = "golden_test",
+    size = "small",
+    srcs = ["golden_test.go"],
+    embed = [":golden"],
+    pure = "on",
+)
+
+# Pure Go, so a user of the module needs no C++ toolchain to build it.
+go_binary(
+    name = "cmd",
+    srcs = ["cmd/main.go"],
+    pure = "on",
+    # Only the helpers toolchain names it.
+    visibility = ["//kicad/toolchains:__pkg__"],
+    deps = [
+        ":golden",
+        "@rules_go//go/runfiles",
+    ],
+)

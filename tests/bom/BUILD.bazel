@@ -6,8 +6,7 @@
 #
 # Also kicad_bom on the parts-free schematic of //tests/design: the
 # action's options, its analysis failures, and swap and determinism tests.
-load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
-load("//kicad:defs.bzl", "determinism_test", "kicad_bom", "kicad_schematic", "swap_test")
+load("//kicad:defs.bzl", "determinism_test", "golden_test", "kicad_bom", "kicad_schematic", "swap_test")
 load("//tests:fails_test.bzl", "fails_test")
 load(":action_test.bzl", "bom_action_test")
 
@@ -24,11 +23,11 @@ kicad_bom(
     schematic = ":sch",
 )
 
-diff_test(
+golden_test(
     name = "default_test",
     size = "small",
-    file1 = ":default",
-    file2 = "expected_default.csv",
+    src = ":default",
+    golden = "expected_default.csv",
 )
 
 determinism_test(
@@ -44,11 +43,11 @@ kicad_bom(
     schematic = ":sch",
 )
 
-diff_test(
+golden_test(
     name = "ungrouped_test",
     size = "small",
-    file1 = ":ungrouped",
-    file2 = "expected_ungrouped.csv",
+    src = ":ungrouped",
+    golden = "expected_ungrouped.csv",
 )
 
 # Without the do-not-populate part.
@@ -58,11 +57,11 @@ kicad_bom(
     schematic = ":sch",
 )
 
-diff_test(
+golden_test(
     name = "no_dnp_test",
     size = "small",
-    file1 = ":no_dnp",
-    file2 = "expected_no_dnp.csv",
+    src = ":no_dnp",
+    golden = "expected_no_dnp.csv",
 )
 
 # Other columns, sorted by value; the name already ends in .csv.
@@ -88,11 +87,11 @@ kicad_bom(
     sort_field = "Value",
 )
 
-diff_test(
+golden_test(
     name = "custom_test",
     size = "small",
-    file1 = ":custom.csv",
-    file2 = "expected_custom.csv",
+    src = ":custom.csv",
+    golden = "expected_custom.csv",
 )
 
 # The bill of materials (issue #20): every kicad-cli option given, through

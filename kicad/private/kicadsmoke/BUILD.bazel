@@ -3,19 +3,18 @@
 # The KiCad toolchain resolves, and kicad-cli runs through run_tool with a
 # private home and no host KiCad (issue #10). It lives under private/
 # because its rule uses run_tool.
-load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
-load("//kicad:defs.bzl", "determinism_test", "swap_test")
+load("//kicad:defs.bzl", "determinism_test", "golden_test", "swap_test")
 load(":env.bzl", "kicad_env")
 load(":erc.bzl", "kicad_erc_report")
 load(":version.bzl", "kicad_version")
 
 kicad_version(name = "version")
 
-diff_test(
+golden_test(
     name = "version_test",
     size = "small",
-    file1 = ":version",
-    file2 = "expected_version.txt",
+    src = ":version",
+    golden = "expected_version.txt",
 )
 
 # Under the stub toolchain, the output comes from the stub.
@@ -37,11 +36,11 @@ determinism_test(
 # whatever the host's time zone.
 kicad_env(name = "env")
 
-diff_test(
+golden_test(
     name = "env_test",
     size = "small",
-    file1 = ":env",
-    file2 = "expected_env.txt",
+    src = ":env",
+    golden = "expected_env.txt",
 )
 
 # A real kicad-cli run whose output holds a time stamp; utccheck reads it.

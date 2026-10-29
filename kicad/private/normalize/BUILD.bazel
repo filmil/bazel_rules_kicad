@@ -2,7 +2,7 @@
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
 load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
-load("//kicad:defs.bzl", "determinism_test", "swap_test")
+load("//kicad:defs.bzl", "determinism_test", "golden_test", "swap_test")
 load(":demo.bzl", "normalized")
 
 go_library(
@@ -62,11 +62,11 @@ normalized(
     epoch = 86400,
 )
 
-diff_test(
+golden_test(
     name = "epoch_flag_test",
     size = "small",
-    file1 = ":drl_86400",
-    file2 = "testdata/expected_epoch_86400.drl",
+    src = ":drl_86400",
+    golden = "testdata/expected_epoch_86400.drl",
 )
 
 swap_test(
