@@ -17,6 +17,7 @@ HelpersInfo = provider(
         "compare": "DefaultInfo of determinism_test's comparer (a target binary).",
         "tablecheck": "DefaultInfo of lib_table_test's checker (a target binary).",
         "sheetcheck": "DefaultInfo of the sheet checker, for its own known-bad test (a target binary).",
+        "reportcheck": "DefaultInfo of the ERC and DRC report checker of kicad_erc_test (a target binary).",
     },
 )
 
@@ -27,6 +28,7 @@ def _helpers_toolchain_impl(ctx):
         compare = ctx.attr.compare[DefaultInfo],
         tablecheck = ctx.attr.tablecheck[DefaultInfo],
         sheetcheck = ctx.attr.sheetcheck_test[DefaultInfo],
+        reportcheck = ctx.attr.reportcheck[DefaultInfo],
     ), tools = {
         # Tools that rules run in actions through run_tool, so built for
         # the execution platform: the sheet checker of kicad_schematic's
@@ -44,6 +46,7 @@ helpers_toolchain = rule(
         "tablecheck": attr.label(mandatory = True, executable = True, cfg = "target"),
         "sheetcheck": attr.label(mandatory = True, executable = True, cfg = "exec"),
         "sheetcheck_test": attr.label(mandatory = True, executable = True, cfg = "target"),
+        "reportcheck": attr.label(mandatory = True, executable = True, cfg = "target"),
     },
 )
 

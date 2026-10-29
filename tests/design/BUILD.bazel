@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# kicad_schematic and kicad_pcb: what they stage and provide (issue #13).
-# The sheets here only reference each other; the e2e design in
-# integration/e2e is the one KiCad runs on.
-load("//kicad:defs.bzl", "kicad_library", "kicad_pcb", "kicad_schematic")
+# kicad_schematic and kicad_pcb: what they stage and provide (issue #13),
+# and kicad_erc_test on the small schematic here (issue #14). The sheets
+# here hold no parts; the e2e design in integration/e2e is the full one.
+load("//kicad:defs.bzl", "determinism_test", "kicad_erc_test", "kicad_library", "kicad_pcb", "kicad_schematic", "swap_test")
 load(":design_test.bzl", "fails_test", "netlist_pcb_info_test", "pcb_info_test", "schematic_info_test")
 
 kicad_schematic(
@@ -102,4 +102,25 @@ kicad_schematic(
     name = "sch_missing",
     root = "bad/main.kicad_sch",
     tags = ["manual"],
+)
+
+# The root module's own ERC run, on the small two-sheet schematic: the
+# report action through the KiCad and normalize toolchains, the test, and
+# the swap and determinism tests over the report.
+kicad_erc_test(
+    name = "erc_test",
+    size = "small",
+    schematic = ":sch",
+)
+
+swap_test(
+    name = "erc_swap_test",
+    size = "small",
+    targets = [":erc_test_report"],
+)
+
+determinism_test(
+    name = "erc_determinism_test",
+    size = "small",
+    target = ":erc_test_report",
 )
