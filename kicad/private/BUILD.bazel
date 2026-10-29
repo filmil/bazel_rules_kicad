@@ -16,6 +16,7 @@ bzl_library(
         "library.bzl",
         "netlist.bzl",
         "normalize.bzl",
+        "render.bzl",
         "report_test.bzl",
         "run_tool.bzl",
         "sch_pdf.bzl",

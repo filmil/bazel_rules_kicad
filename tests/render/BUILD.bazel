@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# kicad_render on the board of //tests/design (issue #26): through the KiCad
+# and normalize toolchains, the same bytes in two configurations.
+load("@rules_go//go:def.bzl", "go_test")
+load("//kicad:defs.bzl", "determinism_test", "kicad_render", "swap_test")
+load("//tests:fails_test.bzl", "fails_test")
+load(":action_test.bzl", "render_action_test")
+
+kicad_render(
+    name = "render",
+    pcb = "//tests/design:pcb",
+)
+
+render_action_test(
+    name = "render_action_test",
+    size = "small",
+    height = 900,
+    target_under_test = ":render",
+    width = 1600,
+)
+
+swap_test(
+    name = "render_swap_test",
+    size = "small",
+    targets = [":render"],
+)
+
+determinism_test(
+    name = "render_determinism_test",
+    size = "small",
+    target = ":render",
+)
+
+kicad_render(
+    name = "render_small",
+    height = 180,
+    pcb = "//tests/design:pcb",
+    width = 320,
+)
+
+render_action_test(
+    name = "render_small_action_test",
+    size = "small",
+    height = 180,
+    target_under_test = ":render_small",
+    width = 320,
+)
+
+# kicad-cli hangs on a side of 34 pixels or less, so the rule stops
+# below 64.
+kicad_render(
+    name = "render_narrow",
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+    width = 63,
+)
+
+fails_test(
+    name = "render_narrow_test",
+    size = "small",
+    message = "width is 63; it must be at least 64",
+    target_under_test = ":render_narrow",
+)
+
+kicad_render(
+    name = "render_flat",
+    height = 0,
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "render_flat_test",
+    size = "small",
+    message = "height is 0; it must be at least 64",
+    target_under_test = ":render_flat",
+)
+
+# The images themselves: names, size, no metadata, and the pixels of each
+# side.
+go_test(
+    name = "render_files_test",
+    size = "small",
+    srcs = ["files_test.go"],
+    # Each target has two files; the quotes keep the two paths in one
+    # argument.
+    args = [
+        "--render='$(rlocationpaths :render)'",
+        "--small='$(rlocationpaths :render_small)'",
+    ],
+    data = [
+        ":render",
+        ":render_small",
+    ],
+    pure = "on",
+    deps = ["@rules_go//go/runfiles"],
+)
