@@ -25,6 +25,7 @@ load("//kicad/private:normalize.bzl", _NormalizeToolchainInfo = "NormalizeToolch
 load("//kicad/private:render.bzl", _kicad_render = "kicad_render")
 load("//kicad/private:sch_pdf.bzl", _kicad_sch_pdf = "kicad_sch_pdf")
 load("//kicad/private:sch_render.bzl", _kicad_sch_render = "kicad_sch_render")
+load("//kicad/private:step.bzl", _kicad_step = "kicad_step")
 load("//kicad/private:swap_test.bzl", _swap_test = "swap_test")
 load("//kicad/private:toolchains.bzl", _tool_toolchain = "tool_toolchain")
 
@@ -49,6 +50,7 @@ kicad_render = _kicad_render
 kicad_sch_pdf = _kicad_sch_pdf
 kicad_sch_render = _kicad_sch_render
 kicad_schematic = _kicad_schematic
+kicad_step = _kicad_step
 kicad_toolchain = _kicad_toolchain
 lib_table_test = _lib_table_test
 swap_test = _swap_test
