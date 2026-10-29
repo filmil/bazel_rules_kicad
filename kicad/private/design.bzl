@@ -32,7 +32,8 @@ KicadPcbInfo = provider(
                      "project directory, next to the board.",
         "netlist": "File or None: the netlist the board follows, when there is no schematic; " +
                    "staged as <board name>.net.",
-        "design_rules": "File or None: the design rules, staged with the board's name (.kicad_dru).",
+        "design_rules": "File or None: the design rules, staged with the same name as `board` " +
+                        "(<root>.kicad_dru, or with a netlist <board name>.kicad_dru).",
         "project": "File: the project file.",
         "project_dir": "string: the project directory, relative to the execution root.",
         "library": "KicadLibraryInfo: the libraries the tables list.",
@@ -48,9 +49,10 @@ def _stage(ctx, dir, rel, target_file):
 def relative_path(short_path, base_dir):
     """Returns short_path below base_dir, or None if it is not below it.
 
-    Both are short paths (`File.short_path`, `File.dirname` of one), which
-    are the same for source and generated files. An empty base_dir is the
-    root package.
+    Both are short paths: `File.short_path`, and the directory part of
+    another file's `short_path` (not `File.dirname`, which includes the
+    output root of a generated file). Short paths are the same for source
+    and generated files. An empty base_dir is the root package.
 
     Args:
       short_path: the path of a file.
@@ -220,7 +222,8 @@ def _kicad_pcb_impl(ctx):
     if sch:
         infos.append(sch.library)
     library = merge_libraries(ctx.label, infos)
-    staged.extend(_tables(ctx, dir, library, project_dir))
+    tables = _tables(ctx, dir, library, project_dir)
+    staged.extend(tables)
 
     # The schematic's own staged files come along, so the symlinks above
     # resolve wherever the action runs.
@@ -235,7 +238,11 @@ def _kicad_pcb_impl(ctx):
             project = project,
             project_dir = project_dir,
             library = library,
-            files = files,
+            # The schematic's files only, not the board's or its rules.
+            files = depset(
+                [sch_root] + sch_sheets + [project] + tables,
+                transitive = [library.files, sch.files],
+            ),
         )
     return [
         KicadPcbInfo(

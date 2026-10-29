@@ -72,6 +72,9 @@ func TestRun(t *testing.T) {
 	if _, code := run(missing, "unused:power.kicad_sch"); code != 1 {
 		t.Error("expect unused for a missing sheet must fail")
 	}
+	if _, code := run(missing, "missing"); code != 2 {
+		t.Error("an expectation without a colon must exit 2")
+	}
 	if _, code := run(missing, "bogus:power.kicad_sch"); code != 2 {
 		t.Error("an unknown expectation must exit 2")
 	}
@@ -104,5 +107,50 @@ func TestCircular(t *testing.T) {
 	files["r/sub/b.kicad_sch"] = "(kicad_sch)"
 	if got, err := Problems("r/root.kicad_sch", []string{"r/sub/b.kicad_sch"}, read); err != nil || len(got) != 0 {
 		t.Errorf("reused sheet: %q, %v", got, err)
+	}
+}
+
+// Cycles are found however the walk first reaches their sheets: a sheet is
+// marked seen only when the depth-first walk enters it, so a seen sheet is
+// either on the current chain or fully explored.
+func TestCircularAfterSharedSheet(t *testing.T) {
+	sch := func(refs ...string) string {
+		s := "(kicad_sch"
+		for _, r := range refs {
+			s += " (sheet (property \"Sheetfile\" \"" + r + "\"))"
+		}
+		return s + ")"
+	}
+	for name, c := range map[string]struct {
+		files map[string]string
+		want  string
+	}{
+		// root -> B -> C, root -> A -> B, C -> A: the cycle A -> B -> C -> A.
+		"through a shared sheet": {map[string]string{
+			"r/root.kicad_sch": sch("B.kicad_sch", "A.kicad_sch"),
+			"r/A.kicad_sch":    sch("B.kicad_sch"),
+			"r/B.kicad_sch":    sch("C.kicad_sch"),
+			"r/C.kicad_sch":    sch("A.kicad_sch"),
+		}, "is one of its own parents"},
+		"a sheet that places itself": {map[string]string{
+			"r/root.kicad_sch": sch("A.kicad_sch"),
+			"r/A.kicad_sch":    sch("A.kicad_sch"),
+		}, `sheet "A.kicad_sch", which A.kicad_sch references, is one of its own parents`},
+		"the root placed again": {map[string]string{
+			"r/root.kicad_sch": sch("A.kicad_sch"),
+			"r/A.kicad_sch":    sch("root.kicad_sch"),
+		}, `sheet "root.kicad_sch", which A.kicad_sch references, is one of its own parents`},
+	} {
+		read := func(p string) (string, error) { return c.files[filepath.ToSlash(p)], nil }
+		var given []string
+		for f := range c.files {
+			if f != "r/root.kicad_sch" {
+				given = append(given, f)
+			}
+		}
+		got, err := Problems("r/root.kicad_sch", given, read)
+		if err != nil || len(got) != 1 || !strings.Contains(got[0], c.want) {
+			t.Errorf("%s: got %q, %v", name, got, err)
+		}
 	}
 }
