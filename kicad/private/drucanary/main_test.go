@@ -27,3 +27,12 @@ func TestAppend(t *testing.T) {
 		t.Error("Rule and Width disagree")
 	}
 }
+
+// An empty rule file gets the canary alone (KiCad then drops it for lack of
+// a (version 1) header, which the check reports, as for any broken file).
+func TestAppendEmpty(t *testing.T) {
+	out := string(Append(nil))
+	if !strings.HasSuffix(out, Rule) || strings.HasPrefix(out, "\n\n") {
+		t.Errorf("got %q", out)
+	}
+}

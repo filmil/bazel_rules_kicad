@@ -17,7 +17,7 @@ HelpersInfo = provider(
         "compare": "DefaultInfo of determinism_test's comparer (a target binary).",
         "tablecheck": "DefaultInfo of lib_table_test's checker (a target binary).",
         "sheetcheck": "DefaultInfo of the sheet checker, for its own known-bad test (a target binary).",
-        "reportcheck": "DefaultInfo of the ERC and DRC report checker of kicad_erc_test (a target binary).",
+        "reportcheck": "DefaultInfo of the report checker of kicad_erc_test and kicad_drc_test, with the DRC canary check (a target binary).",
         "canary_board": "File: the canary board of kicad_drc_report's design rules check.",
     },
 )

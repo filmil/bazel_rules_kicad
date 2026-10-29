@@ -7,8 +7,9 @@
 //
 //	drucanary IN OUT
 //
-// KiCad drops a rule file it cannot read without a word: DRC then finds no
-// violation and exits 0, even with --exit-code-violations
+// KiCad drops a rule file it cannot read without a word: DRC then runs
+// only its built-in checks, so none of the file's rules can fail it, and
+// exits 0 even with --exit-code-violations
 // (https://gitlab.com/kicad/code/kicad/-/work_items/25848). The canary
 // rule asks for tracks at least 47.11 mm wide. kicad_drc_report runs DRC
 // with OUT on a canary board that has one narrow track: if the report has

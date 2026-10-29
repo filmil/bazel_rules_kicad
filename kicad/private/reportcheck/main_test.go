@@ -158,3 +158,25 @@ func TestCanary(t *testing.T) {
 		}
 	}
 }
+
+// Run with a canary: both reports are read, both are kept (the canary
+// under a name of its own), and a missing canary file is an error.
+func TestRunWithCanary(t *testing.T) {
+	src, out := t.TempDir(), t.TempDir()
+	os.MkdirAll(src+"/_main/pkg", 0o755)
+	os.WriteFile(src+"/_main/pkg/canary.json", read(t, "clean_drc.json"), 0o644)
+	os.WriteFile(src+"/_main/pkg/c.json", read(t, "canary_dropped.json"), 0o644)
+	// A main report named canary.json must not be overwritten.
+	msg, code := Run(src, "_main/pkg/canary.json", out, "", "_main/pkg/c.json")
+	if code != 1 || !strings.Contains(msg, "design_rules_not_loaded") {
+		t.Errorf("dropped canary: %d %s", code, msg)
+	}
+	main, _ := os.ReadFile(out + "/canary.json")
+	kept, _ := os.ReadFile(out + "/canary.canary.json")
+	if string(main) != string(read(t, "clean_drc.json")) || string(kept) != string(read(t, "canary_dropped.json")) {
+		t.Error("the outputs directory does not hold both reports under their own names")
+	}
+	if _, code := Run(src, "_main/pkg/canary.json", "", "", "_main/pkg/missing.json"); code != 2 {
+		t.Error("a missing canary report must exit 2")
+	}
+}

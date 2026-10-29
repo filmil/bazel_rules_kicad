@@ -33,8 +33,9 @@ every violation of severity error or warning, and every unconnected item;
 which checks have which severity is the design's own setting. The report's
 date is removed (spec D2), so the same board gives the same bytes.
 
-KiCad drops a design rules file it cannot read, and its DRC then reports
-no violation at all (kicad#25848). So with `design_rules`, the rule also
+KiCad drops a design rules file it cannot read, without a word: its
+built-in checks still run, but none of the file's rules do, and DRC still
+passes (kicad#25848). So with `design_rules`, the rule also
 runs DRC on a canary board, with a copy of the rule file that has a canary
 rule appended; that report is the output group `canary`, and
 `kicad_drc_test` fails unless it has the canary's violation.

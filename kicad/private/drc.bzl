@@ -44,8 +44,8 @@ def _kicad_drc_report_impl(ctx):
 def _canary(ctx, rules):
     """DRC with the design rules and a canary rule, on the canary board.
 
-    KiCad drops a rule file it cannot read and reports no violation
-    (kicad#25848). The canary rule, last in a copy of the file, must show
+    KiCad drops a rule file it cannot read and runs only its built-in
+    checks (kicad#25848). The canary rule, last in a copy of the file, must show
     up in this report; the test fails if it does not (issue #17).
     """
     dir = ctx.label.name + "_canary"
@@ -98,8 +98,9 @@ every violation of severity error or warning, and every unconnected item;
 which checks have which severity is the design's own setting. The report's
 date is removed (spec D2), so the same board gives the same bytes.
 
-KiCad drops a design rules file it cannot read, and its DRC then reports
-no violation at all (kicad#25848). So with `design_rules`, the rule also
+KiCad drops a design rules file it cannot read, without a word: its
+built-in checks still run, but none of the file's rules do, and DRC still
+passes (kicad#25848). So with `design_rules`, the rule also
 runs DRC on a canary board, with a copy of the rule file that has a canary
 rule appended; that report is the output group `canary`, and
 `kicad_drc_test` fails unless it has the canary's violation.

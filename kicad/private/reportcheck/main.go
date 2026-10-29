@@ -234,7 +234,9 @@ func Run(srcdir, report, outdir, expect string, canaryReport ...string) (string,
 			return "reportcheck: " + err.Error(), 2
 		}
 		if canary != nil {
-			if err := os.WriteFile(filepath.Join(outdir, "canary.json"), canary, 0o644); err != nil {
+			// Named after the main report, so the two never collide.
+			name := strings.TrimSuffix(filepath.Base(p), ".json") + ".canary.json"
+			if err := os.WriteFile(filepath.Join(outdir, name), canary, 0o644); err != nil {
 				return "reportcheck: " + err.Error(), 2
 			}
 		}
