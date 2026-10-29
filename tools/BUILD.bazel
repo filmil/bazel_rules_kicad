@@ -9,6 +9,13 @@ alias(
     actual = "//tools/mirror",
 )
 
+# bazel run //tools:models3d: splits and publishes the 3D models
+# (tools/models3d).
+alias(
+    name = "models3d",
+    actual = "//tools/models3d",
+)
+
 # bazel run //tools:buildifier
 buildifier(
     name = "buildifier",

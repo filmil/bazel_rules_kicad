@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: Apache-2.0
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+# The publisher of KiCad's 3D models (issue #43): one archive per library,
+# a web-seeded .torrent each, the license, and the pins.
+#
+#   bazel run //tools:models3d -- --archive=... --out=...   splits, checks
+#
+# The operator uploads with --upload (see cmd/main.go). The tests use a
+# small made-up upstream and a local server, never the network.
+
+go_library(
+    name = "models3d_lib",
+    srcs = ["models3d.go"],
+    importpath = "github.com/filmil/bazel_rules_kicad/tools/models3d",
+    visibility = ["//visibility:private"],
+)
+
+go_test(
+    name = "models3d_test",
+    size = "small",
+    srcs = ["models3d_test.go"],
+    embed = [":models3d_lib"],
+    pure = "on",
+)
+
+go_test(
+    name = "models3d_cmd_test",
+    size = "small",
+    srcs = [
+        "cmd/main.go",
+        "cmd/main_test.go",
+    ],
+    pure = "on",
+    deps = [":models3d_lib"],
+)
+
+go_binary(
+    name = "models3d",
+    srcs = ["cmd/main.go"],
+    pure = "on",
+    visibility = ["//tools:__pkg__"],
+    deps = [":models3d_lib"],
+)
