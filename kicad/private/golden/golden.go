@@ -86,7 +86,8 @@ func Check(p Pair, resolve func(string) (string, error), w io.Writer) error {
 		return nil
 	}
 	fmt.Fprintf(w, "%s differs from the golden file %s, first at line %d:\n", p.Built, p.Source, line)
-	fmt.Fprintf(w, "  built:  %q\n  golden: %q\n", strings.TrimSuffix(got, "\n"), strings.TrimSuffix(exp, "\n"))
+	// Quoted as they are, newline included: the files may differ only in it.
+	fmt.Fprintf(w, "  built:  %q\n  golden: %q\n", got, exp)
 	fmt.Fprintf(w, "If the change is intended, update the golden files with the module's update_goldens\n"+
 		"target (bazel run //:update_goldens), and give the reason in the commit message.\n")
 	return fmt.Errorf("%s: the built file differs from %s", p.Test, p.Source)
@@ -111,17 +112,40 @@ func Update(pairs []Pair, root string, resolve func(string) (string, error), w i
 			fmt.Fprintf(w, "unchanged %s\n", p.Source)
 			continue
 		}
-		fi, err := os.Stat(dst)
-		if err != nil {
-			return changed, err
-		}
-		if err := os.WriteFile(dst, built, fi.Mode().Perm()); err != nil {
-			return changed, err
+		if err := replace(dst, built); err != nil {
+			return changed, fmt.Errorf("%s: %w", p.Test, err)
 		}
 		changed++
 		fmt.Fprintf(w, "updated   %s (from %s)\n", p.Source, p.Test)
 	}
 	return changed, nil
+}
+
+// replace writes b over the file dst through a new file in the same
+// directory, renamed over it: an interrupted run leaves dst whole. The new
+// file gets dst's mode, so a read-only golden file stays read-only.
+func replace(dst string, b []byte) error {
+	fi, err := os.Stat(dst)
+	if err != nil {
+		return err
+	}
+	f, err := os.CreateTemp(filepath.Dir(dst), "."+filepath.Base(dst)+".*")
+	if err != nil {
+		return err
+	}
+	tmp := f.Name()
+	defer os.Remove(tmp) // gone after the rename; cleans up on an error
+	if _, err := f.Write(b); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(tmp, fi.Mode().Perm()); err != nil {
+		return err
+	}
+	return os.Rename(tmp, dst)
 }
 
 func readRunfile(resolve func(string) (string, error), rpath string) ([]byte, error) {
@@ -132,32 +156,115 @@ func readRunfile(resolve func(string) (string, error), rpath string) ([]byte, er
 	return os.ReadFile(p)
 }
 
-var goldenTestRe = regexp.MustCompile(`(?m)^golden_test\(\s*\n\s*name\s*=\s*"([^"]+)"`)
+var callRe = regexp.MustCompile(`(^|[^\w.])golden_test\s*\(`)
+
+var nameRe = regexp.MustCompile(`(^|[(,\s])name\s*=\s*(?:"([^"]*)"|'([^']*)')`)
+
+// TestNames returns the names of the golden_test calls in a BUILD file:
+// for each call, the name attribute within its parentheses, wherever it
+// is. Comments are dropped and strings are skipped when the parentheses
+// are matched.
+func TestNames(b []byte) []string {
+	var names []string
+	for _, m := range callRe.FindAllIndex(b, -1) {
+		body := b[m[1]:]
+		var args []byte // the call's arguments, without comments
+		depth, closed := 1, false
+		for i := 0; i < len(body) && !closed; i++ {
+			switch c := body[i]; c {
+			case '"', '\'':
+				// Copy the string literal whole, with its escapes.
+				j := i + 1
+				for ; j < len(body) && body[j] != c; j++ {
+					if body[j] == '\\' {
+						j++
+					}
+				}
+				if j >= len(body) {
+					j = len(body) - 1
+				}
+				args = append(args, body[i:j+1]...)
+				i = j
+			case '#':
+				for i < len(body) && body[i] != '\n' {
+					i++
+				}
+				args = append(args, '\n')
+			case '(', '[', '{':
+				depth++
+				args = append(args, c)
+			case ')', ']', '}':
+				depth--
+				if depth == 0 {
+					closed = true
+				} else {
+					args = append(args, c)
+				}
+			default:
+				args = append(args, c)
+			}
+		}
+		if !closed {
+			continue
+		}
+		if n := nameRe.FindSubmatch(args); n != nil {
+			names = append(names, string(n[2])+string(n[3]))
+		}
+	}
+	return names
+}
+
+// nestedRepo names the files that make a directory the root of another
+// module or repository.
+var nestedRepo = []string{"MODULE.bazel", "REPO.bazel", "WORKSPACE", "WORKSPACE.bazel"}
 
 // Unregistered returns the golden_test targets in the workspace at root
 // that are not in registered, as labels. It reads the BUILD files of the
-// module at root, and not those of a module nested in it (such as
-// integration/), nor the bazel-* output links.
+// module at root, and not those of a module or repository nested in it
+// (such as integration/), of a directory .bazelignore names, or behind a
+// symbolic link (such as the bazel-* output links).
 func Unregistered(root string, registered []string) ([]string, error) {
+	root, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return nil, err
+	}
+	ignored := map[string]bool{}
+	if b, err := os.ReadFile(filepath.Join(root, ".bazelignore")); err == nil {
+		for _, l := range Lines(string(b)) {
+			if !strings.HasPrefix(l, "#") {
+				ignored[filepath.Clean(l)] = true
+			}
+		}
+	}
 	known := map[string]bool{}
 	for _, l := range registered {
 		known[l] = true
 	}
 	var missing []string
-	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+	err = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(root, p)
 		if err != nil {
 			return err
 		}
 		if d.IsDir() {
-			name := d.Name()
-			if p != root && (strings.HasPrefix(name, ".") || strings.HasPrefix(name, "bazel-")) {
+			if p == root {
+				return nil
+			}
+			if strings.HasPrefix(d.Name(), ".") || ignored[rel] {
 				return filepath.SkipDir
 			}
-			if p != root && exists(filepath.Join(p, "MODULE.bazel")) {
-				return filepath.SkipDir
+			for _, f := range nestedRepo {
+				if exists(filepath.Join(p, f)) {
+					return filepath.SkipDir
+				}
 			}
 			return nil
 		}
+		// WalkDir does not follow symbolic links, so the bazel-* links,
+		// which are not directories to it, are never entered.
 		if d.Name() != "BUILD.bazel" && d.Name() != "BUILD" {
 			return nil
 		}
@@ -165,17 +272,12 @@ func Unregistered(root string, registered []string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		rel, err := filepath.Rel(root, filepath.Dir(p))
-		if err != nil {
-			return err
-		}
-		pkg := filepath.ToSlash(rel)
+		pkg := filepath.ToSlash(filepath.Dir(rel))
 		if pkg == "." {
 			pkg = ""
 		}
-		for _, m := range goldenTestRe.FindAllSubmatch(b, -1) {
-			l := "//" + pkg + ":" + string(m[1])
-			if !known[l] {
+		for _, name := range TestNames(b) {
+			if l := "//" + pkg + ":" + name; !known[l] {
 				missing = append(missing, l)
 			}
 		}
@@ -200,4 +302,51 @@ func Lines(s string) []string {
 		}
 	}
 	return out
+}
+
+// Main runs the program as getenv says (GOLDEN_MODE, GOLDEN_PAIRS,
+// GOLDEN_REGISTERED and BUILD_WORKSPACE_DIRECTORY), resolving runfiles
+// paths with resolve and reporting to w.
+func Main(getenv func(string) string, resolve func(string) (string, error), w io.Writer) error {
+	pairs, err := ParsePairs(getenv("GOLDEN_PAIRS"))
+	if err != nil {
+		return err
+	}
+	if len(pairs) == 0 {
+		return fmt.Errorf("GOLDEN_PAIRS is empty")
+	}
+	switch mode := getenv("GOLDEN_MODE"); mode {
+	case "check":
+		var failed []string
+		for _, p := range pairs {
+			if err := Check(p, resolve, w); err != nil {
+				failed = append(failed, err.Error())
+			}
+		}
+		if len(failed) > 0 {
+			return fmt.Errorf("%s", strings.Join(failed, "\n"))
+		}
+		return nil
+	case "update":
+		root := getenv("BUILD_WORKSPACE_DIRECTORY")
+		if root == "" {
+			return fmt.Errorf("BUILD_WORKSPACE_DIRECTORY is not set: run this with `bazel run`")
+		}
+		missing, err := Unregistered(root, Lines(getenv("GOLDEN_REGISTERED")))
+		if err != nil {
+			return err
+		}
+		if len(missing) > 0 {
+			return fmt.Errorf("these golden_test targets are not in the tests of this update_goldens target; "+
+				"add them, so that their golden files are updated too:\n  %s", strings.Join(missing, "\n  "))
+		}
+		n, err := Update(pairs, root, resolve, w)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(w, "%d of %d golden files updated. Give the reason in the commit message.\n", n, len(pairs))
+		return nil
+	default:
+		return fmt.Errorf("GOLDEN_MODE=%q: want check or update", mode)
+	}
 }

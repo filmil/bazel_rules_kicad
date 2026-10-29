@@ -7,7 +7,7 @@ load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("//kicad:defs.bzl", "golden_test", "update_goldens")
 load("//tests:fails_test.bzl", "fails_test")
 load(":bad.bzl", "generated_golden_test")
-load(":env_test.bzl", "update_env_test")
+load(":env_test.bzl", "golden_test_env_test", "update_env_test")
 
 write_file(
     name = "hello",
@@ -26,10 +26,18 @@ golden_test(
 )
 
 # A second update_goldens, with this test only, to look at what it hands
-# its program. //:update_goldens is the one to run.
+# its program. It is not for running: it lists one test of the module, so
+# it would refuse to run. //:update_goldens is the one to run.
 update_goldens(
     name = "update_hello",
+    tags = ["manual"],
     tests = [":hello_test"],
+)
+
+golden_test_env_test(
+    name = "golden_test_env_test",
+    size = "small",
+    target_under_test = ":hello_test",
 )
 
 update_env_test(

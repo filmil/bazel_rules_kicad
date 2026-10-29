@@ -1142,10 +1142,12 @@ reason for the change.
 
 It fails, before writing anything, if a `golden_test` in the module's
 BUILD files is missing from `tests`: an update then covers every golden
-file. The scan reads the `golden_test` calls written in BUILD files; a
-`golden_test` made inside a macro of yours is not seen, so list it by
-hand. A module nested in the directory (with its own `MODULE.bazel`)
-has its own `update_goldens`.
+file. The scan reads every `golden_test(...)` call written in a BUILD
+file of the module, whatever its layout. A `golden_test` made inside a
+macro of yours is not seen by it, so list that one by hand. The scan
+skips the directories that `.bazelignore` names and those of a nested
+module or repository (with its own `MODULE.bazel`, `REPO.bazel` or
+`WORKSPACE`), which has its own `update_goldens`.
 
 The target is `testonly`, since it depends on tests; `bazel run` runs
 it all the same.

@@ -81,7 +81,7 @@ func TestCheck(t *testing.T) {
 	if err == nil {
 		t.Fatal("a stale golden file passed")
 	}
-	for _, want := range []string{"first at line 2", `"1,2"`, `"1,3"`, "bazel run //:update_goldens"} {
+	for _, want := range []string{"first at line 2", `"1,2\n"`, `"1,3\n"`, "bazel run //:update_goldens"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("output lacks %q:\n%s", want, out.String())
 		}
@@ -153,17 +153,132 @@ func TestUnregistered(t *testing.T) {
 		"BUILD.bazel": "golden_test(\n    name = \"root_test\",\n)\n",
 		"tests/bom/BUILD.bazel": "golden_test(\n    name = \"default_test\",\n    size = \"small\",\n)\n\n" +
 			"golden_test(\n    name = \"custom_test\",\n)\n",
-		// A nested module has its own update_goldens.
+		"tests/bom/notes.txt": "golden_test(name = \"no\")\n",
+		// A nested module or repository has its own update_goldens.
 		"integration/MODULE.bazel":        "",
-		"integration/e2e/bom/BUILD.bazel": "golden_test(\n    name = \"bom_test\",\n)\n",
-		"bazel-out/x/BUILD.bazel":         "golden_test(\n    name = \"no\",\n)\n",
-		"tests/bom/notes.txt":             "golden_test(\n    name = \"no\",\n)\n",
+		"integration/e2e/bom/BUILD.bazel": "golden_test(name = \"no\")\n",
+		"vendor/REPO.bazel":               "",
+		"vendor/BUILD.bazel":              "golden_test(name = \"no\")\n",
+		// .bazelignore hides a directory from Bazel, and from the scan.
+		".bazelignore":                "# comment\nscratch\n",
+		"scratch/BUILD.bazel":         "golden_test(name = \"no\")\n",
+		"elsewhere/out/x/BUILD.bazel": "golden_test(name = \"no\")\n",
 	})
+	// The bazel-* output links are symbolic links, which the scan does not
+	// follow.
+	if err := os.Symlink(filepath.Join(ws, "elsewhere/out"), filepath.Join(ws, "bazel-out")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ws, ".bazelignore"), []byte("# comment\nscratch\nelsewhere\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	missing, err := Unregistered(ws, []string{"//tests/bom:default_test"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if want := []string{"//:root_test", "//tests/bom:custom_test"}; !reflect.DeepEqual(missing, want) {
 		t.Errorf("missing %v, want %v", missing, want)
+	}
+	// BUILD_WORKSPACE_DIRECTORY may itself be a symbolic link.
+	link := filepath.Join(t.TempDir(), "ws")
+	if err := os.Symlink(ws, link); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := Unregistered(link, []string{"//tests/bom:default_test"}); err != nil || len(got) != 2 {
+		t.Errorf("through a link: %v, %v", got, err)
+	}
+}
+
+func TestTestNames(t *testing.T) {
+	src := `
+golden_test(name = "one_line")
+
+golden_test(
+    # a comment that says name = "not_this"
+    size = "small",
+    src = ":x",   # ) a parenthesis in a comment
+    golden = "a(b).csv",
+    name = "name_last",
+)
+
+    golden_test(
+        name = "indented",
+    )
+
+my_golden_test(name = "other_macro")
+native.golden_test(name = "not_a_call_of_ours")
+golden_test(name = 'single_quotes')
+`
+	if got, want := TestNames([]byte(src)), []string{"one_line", "name_last", "indented", "single_quotes"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+// Main, as the program runs it under bazel test and bazel run.
+func TestMain_(t *testing.T) {
+	rf := workspace(t, map[string]string{
+		"_main/a/out.csv":      "new\n",
+		"_main/a/expected.csv": "old\n",
+	})
+	ws := workspace(t, map[string]string{
+		"a/expected.csv": "old\n",
+		"a/BUILD.bazel":  "golden_test(\n    name = \"t\",\n)\n",
+	})
+	pairs := "//a:t\t_main/a/out.csv\t_main/a/expected.csv\ta/expected.csv"
+	for _, c := range []struct {
+		name string
+		env  map[string]string
+		err  string // a part of the error; empty for none
+	}{
+		{"check fails", map[string]string{"GOLDEN_MODE": "check", "GOLDEN_PAIRS": pairs}, "differs from a/expected.csv"},
+		{"no pairs", map[string]string{"GOLDEN_MODE": "check"}, "GOLDEN_PAIRS is empty"},
+		{"bad mode", map[string]string{"GOLDEN_MODE": "fix", "GOLDEN_PAIRS": pairs}, "want check or update"},
+		{"update outside bazel run", map[string]string{"GOLDEN_MODE": "update", "GOLDEN_PAIRS": pairs}, "BUILD_WORKSPACE_DIRECTORY"},
+		{"update, test not listed", map[string]string{"GOLDEN_MODE": "update", "GOLDEN_PAIRS": pairs, "BUILD_WORKSPACE_DIRECTORY": ws}, "//a:t"},
+		{"update", map[string]string{"GOLDEN_MODE": "update", "GOLDEN_PAIRS": pairs, "BUILD_WORKSPACE_DIRECTORY": ws, "GOLDEN_REGISTERED": "//a:t"}, ""},
+	} {
+		var out bytes.Buffer
+		err := Main(func(k string) string { return c.env[k] }, under(rf), &out)
+		switch {
+		case c.err == "" && err != nil:
+			t.Errorf("%s: %v", c.name, err)
+		case c.err != "" && (err == nil || !strings.Contains(err.Error(), c.err)):
+			t.Errorf("%s: err %v, want one with %q", c.name, err, c.err)
+		}
+	}
+	if b, _ := os.ReadFile(filepath.Join(ws, "a/expected.csv")); string(b) != "new\n" {
+		t.Errorf("after the update: %q", b)
+	}
+}
+
+// A read-only golden file is updated and stays read-only; no temporary
+// file is left beside it.
+func TestUpdateReadOnly(t *testing.T) {
+	rf := workspace(t, map[string]string{"_main/a/out.csv": "new\n"})
+	ws := workspace(t, map[string]string{"a/expected.csv": "old\n"})
+	dst := filepath.Join(ws, "a/expected.csv")
+	if err := os.Chmod(dst, 0o444); err != nil {
+		t.Fatal(err)
+	}
+	pairs := []Pair{{Test: "//a:t", Built: "_main/a/out.csv", Golden: "_main/a/expected.csv", Source: "a/expected.csv"}}
+	if _, err := Update(pairs, ws, under(rf), &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	if fi, _ := os.Stat(dst); fi.Mode().Perm() != 0o444 {
+		t.Errorf("mode %v, want 0444", fi.Mode().Perm())
+	}
+	entries, _ := os.ReadDir(filepath.Dir(dst))
+	if len(entries) != 1 {
+		t.Errorf("files beside the golden file: %v", entries)
+	}
+}
+
+// When only the last newline differs, the two lines printed differ too.
+func TestCheckNewlineOnly(t *testing.T) {
+	rf := workspace(t, map[string]string{"_main/out": "x\ny", "_main/want": "x\ny\n"})
+	var out bytes.Buffer
+	Check(Pair{Test: "//:t", Built: "_main/out", Golden: "_main/want", Source: "want"}, under(rf), &out)
+	if !strings.Contains(out.String(), `built:  "y"`) || !strings.Contains(out.String(), `golden: "y\n"`) {
+		t.Errorf("output:\n%s", out.String())
 	}
 }
