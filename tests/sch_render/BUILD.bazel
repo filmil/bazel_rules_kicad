@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# kicad_sch_render on the schematic of //tests/design (issue #21): the SVG
+# export through the KiCad toolchain, the PNG drawing through the normalize
+# toolchain, and the same bytes in two configurations.
+load("@rules_go//go:def.bzl", "go_test")
+load("//kicad:defs.bzl", "determinism_test", "kicad_sch_render", "swap_test")
+load("//tests:fails_test.bzl", "fails_test")
+load(":action_test.bzl", "sch_render_action_test")
+
+kicad_sch_render(
+    name = "sch_render",
+    schematic = "//tests/design:sch",
+)
+
+sch_render_action_test(
+    name = "sch_render_action_test",
+    size = "small",
+    dpi = 150,
+    target_under_test = ":sch_render",
+)
+
+swap_test(
+    name = "sch_render_swap_test",
+    size = "small",
+    targets = [":sch_render"],
+)
+
+determinism_test(
+    name = "sch_render_determinism_test",
+    size = "small",
+    target = ":sch_render",
+)
+
+kicad_sch_render(
+    name = "sch_render_zero_dpi",
+    dpi = 0,
+    schematic = "//tests/design:sch",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "sch_render_zero_dpi_test",
+    size = "small",
+    message = "dpi must be positive",
+    target_under_test = ":sch_render_zero_dpi",
+)
+
+# The pixels of the real render: the drawing-sheet frame is drawn dark.
+go_test(
+    name = "sch_render_look_test",
+    size = "small",
+    srcs = ["look_test.go"],
+    args = ["--dir=$(rlocationpath :sch_render)"],
+    data = [":sch_render"],
+    pure = "on",
+    deps = ["@rules_go//go/runfiles"],
+)

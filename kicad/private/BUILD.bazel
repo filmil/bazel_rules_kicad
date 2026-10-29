@@ -19,6 +19,7 @@ bzl_library(
         "report_test.bzl",
         "run_tool.bzl",
         "sch_pdf.bzl",
+        "sch_render.bzl",
         "swap_test.bzl",
         "toolchains.bzl",
     ],

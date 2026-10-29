@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The e2e schematic's sheets as PNG, the same bytes in two configurations
+# (issue #21). A change to the schematic attaches these (AGENTS.md rule 5).
+load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_sch_render")
+
+kicad_sch_render(
+    name = "sch_render",
+    schematic = "//e2e:sch",
+)
+
+determinism_test(
+    name = "sch_render_determinism_test",
+    size = "small",
+    target = ":sch_render",
+)
