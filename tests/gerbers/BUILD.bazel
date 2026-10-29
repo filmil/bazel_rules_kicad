@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# kicad_gerbers on the board of //tests/design (issue #22): through the
+# KiCad and normalize toolchains, the same bytes in two configurations.
+load("//kicad:defs.bzl", "determinism_test", "kicad_gerbers", "swap_test")
+load("//tests:fails_test.bzl", "fails_test")
+load(":action_test.bzl", "gerbers_action_test")
+
+kicad_gerbers(
+    name = "gerbers",
+    pcb = "//tests/design:pcb",
+)
+
+gerbers_action_test(
+    name = "gerbers_action_test",
+    size = "small",
+    target_under_test = ":gerbers",
+)
+
+swap_test(
+    name = "gerbers_swap_test",
+    size = "small",
+    targets = [":gerbers"],
+)
+
+determinism_test(
+    name = "gerbers_determinism_test",
+    size = "small",
+    target = ":gerbers",
+)
+
+kicad_gerbers(
+    name = "gerbers_no_layers",
+    layers = [],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "gerbers_no_layers_test",
+    size = "small",
+    message = "layers is empty",
+    target_under_test = ":gerbers_no_layers",
+)
+
+kicad_gerbers(
+    name = "gerbers_comma",
+    layers = ["F.Cu,B.Cu"],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "gerbers_comma_test",
+    size = "small",
+    message = "is empty or has a comma",
+    target_under_test = ":gerbers_comma",
+)
