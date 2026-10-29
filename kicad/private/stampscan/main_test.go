@@ -3,9 +3,11 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -33,6 +35,11 @@ func TestEpochPasses(t *testing.T) {
 		`    (date "1970-01-01T00:00:00+0000")`,
 		"stamp 19700101T000000Z",
 		"day 1970/01/01",
+		"1970-01-01T00:00:00.000Z",
+		"1970-01-01T00:00",
+		"19700101T0000Z",
+		"19700101T000000+00:00",
+		"D:19700101",
 	} {
 		bad, n := Scan("f", []byte(s), epoch0, nil)
 		if n != 1 || len(bad) != 0 {
@@ -52,6 +59,13 @@ func TestOtherDatesFail(t *testing.T) {
 		"D:19700101000000+01'00'",
 		"19700102T000000",
 		"2026/10/29 08:31",
+		"1970-01-01T00:00:00.5Z",        // a fraction of a second off
+		"1970-01-01T00:00:00.000+01:00", // a zone after a fraction
+		"19700101T000000+01:00",         // a basic time with an extended zone
+		"1970-01-01 00:00:00+01:000",    // a malformed zone
+		"1970-01-01T25:00:00",           // an hour out of range
+		"1970-01-01T00:60:00",           // a minute out of range
+		"1970-01-01 00:00:61",           // a second out of range
 	} {
 		bad, _ := Scan("f", []byte(s), epoch0, nil)
 		if len(bad) != 1 {
@@ -70,6 +84,8 @@ func TestNotDates(t *testing.T) {
 		"2026-10-291",           // a digit after
 		"2026-13-01 2026-00-10", // no such month
 		"2026-10-32",            // no such day
+		"2026-10/29 2026/10-29", // mixed separators
+		"D:1970 D:197001",       // a PDF date without its day
 	} {
 		if bad, n := Scan("f", []byte(s), epoch0, nil); n != 0 {
 			t.Errorf("%q: %d dates %v, want none", s, n, texts(bad))
@@ -102,6 +118,21 @@ func TestAllowedFromSources(t *testing.T) {
 	bad, n := Scan("net", []byte(`(date "2026-10-29") (date "2026-10-29T08:32:01+0000")`), epoch0, allowed)
 	if n != 2 || !reflect.DeepEqual(texts(bad), []string{"2026-10-29T08:32:01+0000"}) {
 		t.Errorf("%d dates, bad %v", n, texts(bad))
+	}
+}
+
+// An epoch with a time of day: each part a date has must match it.
+func TestEpochWithTime(t *testing.T) {
+	at := time.Date(1970, 1, 2, 3, 4, 5, 0, time.UTC)
+	for _, s := range []string{"1970-01-02T03:04:05Z", "1970-01-02", "1970-01-02T03:04", "D:19700102030405", "19700102T030405"} {
+		if bad, n := Scan("f", []byte(s), at, nil); n != 1 || len(bad) != 0 {
+			t.Errorf("%q: %d dates, bad %v at %s", s, n, texts(bad), at)
+		}
+	}
+	for _, s := range []string{"1970-01-02T00:00:00Z", "1970-01-02T03:04:06", "D:19700102030400"} {
+		if bad, _ := Scan("f", []byte(s), at, nil); len(bad) != 1 {
+			t.Errorf("%q passed at %s", s, at)
+		}
 	}
 }
 
@@ -138,5 +169,70 @@ func TestRunDirectory(t *testing.T) {
 	}
 	if r.Files != 3 || r.Dates != 3 || len(r.Bad) != 1 || r.Bad[0].String() != "out/gerbers/b.gbl:1: 2026-10-28 23:39:14" {
 		t.Errorf("result %+v", r)
+	}
+}
+
+// A source's date with a time is not allowed: only a tool writes times.
+func TestSourceTimesNotAllowed(t *testing.T) {
+	src := filepath.Join(t.TempDir(), "notes.txt")
+	if err := os.WriteFile(src, []byte("2026-10-29 and 2026-10-29T08:00:00Z"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	allowed, err := Allowed([]string{src})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(allowed, map[string]bool{"2026-10-29": true}) {
+		t.Errorf("allowed %v", allowed)
+	}
+}
+
+// Check, as the test rule runs it.
+func TestCheck(t *testing.T) {
+	root := t.TempDir()
+	for name, body := range map[string]string{
+		"ws/clean.gtl": "date 1970-01-01 00:00:00*",
+		"ws/raw.gtl":   "date 2026-10-28 23:39:14*",
+		"ws/net.net":   `(date "2026-10-29")`,
+		"ws/sheet.sch": `(date "2026-10-29")`,
+	} {
+		p := filepath.Join(root, name)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, c := range []struct {
+		files, sources, epoch, expect string
+		err                           string // a part of the error; empty for none
+	}{
+		{"ws/clean.gtl", "", "0", "clean", ""},
+		{"ws/raw.gtl", "", "0", "clean", "1 dates are not the epoch"},
+		{"ws/raw.gtl", "", "0", "stamped", ""},
+		{"ws/clean.gtl", "", "0", "stamped", "found none"},
+		{"ws/clean.gtl\nws/net.net", "ws/sheet.sch", "0", "clean", ""},
+		{"ws/clean.gtl\nws/net.net", "", "0", "clean", "1 dates are not the epoch"},
+		{"", "", "0", "clean", "no files to scan"},
+		{"ws/clean.gtl", "", "-1", "clean", "STAMP_EPOCH"},
+		{"ws/clean.gtl", "", "x", "clean", "STAMP_EPOCH"},
+		{"ws/clean.gtl", "", "0", "same", "STAMP_EXPECT"},
+	} {
+		env := map[string]string{
+			"TEST_SRCDIR":   root,
+			"STAMP_FILES":   c.files,
+			"STAMP_SOURCES": c.sources,
+			"STAMP_EPOCH":   c.epoch,
+			"STAMP_EXPECT":  c.expect,
+		}
+		var out bytes.Buffer
+		err := Check(func(k string) string { return env[k] }, &out)
+		switch {
+		case c.err == "" && err != nil:
+			t.Errorf("%+v: %v\n%s", c, err, out.String())
+		case c.err != "" && (err == nil || !strings.Contains(err.Error(), c.err)):
+			t.Errorf("%+v: err %v, want one with %q", c, err, c.err)
+		}
 	}
 }

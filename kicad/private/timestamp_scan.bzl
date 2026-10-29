@@ -56,16 +56,19 @@ timestamp_scan_test(
 ```
 
 The test scans every file of `srcs`, and every file in a directory
-output, for dates and times: `2026-10-29`, `2026-10-29T08:31:59+01:00`,
-`2026-10-29 08:31`, PDF dates (`D:20261029083159`) and ISO 8601 basic
-(`20261029T083159Z`). A number next to other digits is not a date, so a
-PDF's cross-reference offsets do not count.
+output, for dates and times: `2026-10-29` or `2026/10/29` with an
+optional time and zone (`2026-10-29T08:31:59.5+01:00`), PDF dates
+(`D:20261029083159`) and ISO 8601 basic (`20261029T083159Z`). A number
+next to other digits is not a date, so a PDF's cross-reference offsets
+do not count.
 
 Each date must be `--@rules_kicad//kicad:source_date_epoch` (default
-1970-01-01T00:00:00 UTC): the same date, the same time if it has one,
-and no zone, `Z` or a zero offset. A date that is also in one of
+1970-01-01T00:00:00 UTC) in every part it has: the date, then the hour,
+minute and second, with no zone, `Z` or a zero offset. A time out of
+range never passes. A date without a time that is also in one of
 `sources` passes as well: KiCad copies the date of a title block, which
-the designer wrote, into the netlist.
+the designer wrote, into the netlist. A tool's time stamp has a time, so
+`sources` never lets one through.
 
 The test prints every date that fails, with its file and line.
 """,
