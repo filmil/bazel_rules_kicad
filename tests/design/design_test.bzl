@@ -89,3 +89,32 @@ drc_action_test = analysistest.make(
         "rules": attr.bool(mandatory = True),
     },
 )
+
+def _bom_action_impl(ctx):
+    env = analysistest.begin(ctx)
+    actions = [a for a in analysistest.target_actions(env) if a.mnemonic == "KicadBom"]
+    asserts.equals(env, 1, len(actions), "KicadBom actions")
+    argv = actions[0].argv
+    args = argv[argv.index("--") + 2:]
+    asserts.equals(env, ["sch", "export", "bom"], args[:3])
+
+    # Every option kicad-cli has a default for is given.
+    for flag, value in [
+        ("--fields", "Reference,Value,Footprint,${QUANTITY},${DNP}"),
+        ("--labels", "Refs,Value,Footprint,Qty,DNP"),
+        ("--group-by", "Value,Footprint"),
+        ("--sort-field", "Reference"),
+        ("--field-delimiter", ","),
+        ("--string-delimiter", "\""),
+        ("--ref-delimiter", ","),
+        ("--ref-range-delimiter", ""),
+    ]:
+        asserts.true(env, flag in args, "%s is given" % flag)
+        if flag in args:
+            asserts.equals(env, value, args[args.index(flag) + 1], flag)
+    asserts.true(env, "--sort-asc" in args and args[args.index("--sort-asc") + 1].startswith("--"), "--sort-asc is a flag with no value")
+    files = [f.basename for f in analysistest.target_under_test(env)[DefaultInfo].files.to_list()]
+    asserts.equals(env, ["bom.csv"], files)
+    return analysistest.end(env)
+
+bom_action_test = analysistest.make(_bom_action_impl)

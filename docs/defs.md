@@ -12,6 +12,52 @@ The rules arrive in milestones M1 and M2 (see the issues of
 https://github.com/filmil/bazel_rules_kicad). This file is the only public
 entry point; everything under `//kicad/private` may change without notice.
 
+<a id="kicad_bom"></a>
+
+## kicad_bom
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_bom")
+
+kicad_bom(<a href="#kicad_bom-name">name</a>, <a href="#kicad_bom-exclude_dnp">exclude_dnp</a>, <a href="#kicad_bom-fields">fields</a>, <a href="#kicad_bom-group_by">group_by</a>, <a href="#kicad_bom-labels">labels</a>, <a href="#kicad_bom-schematic">schematic</a>, <a href="#kicad_bom-sort_field">sort_field</a>)
+</pre>
+
+A schematic's bill of materials, as CSV.
+
+```starlark
+kicad_bom(
+    name = "bom",
+    schematic = ":sch",
+)
+```
+
+The output is `<name>.csv` (or `<name>` when the name already ends in
+`.csv`). The first row holds the labels; each other row is a group of
+parts with the same values of `group_by`, sorted by `sort_field`. Fields
+are quoted with `"`, separated with `,`, and the references of a group are
+listed one by one (`R1,R2,R3`), never as a range. Every option is passed
+to kicad-cli, so the columns do not change with its defaults.
+
+`fields` takes symbol fields (`Reference`, `Value`, `Footprint`, or any
+field of the parts) and kicad-cli's own: `${QUANTITY}`, `${DNP}`,
+`${ITEM_NUMBER}`. Parts marked "exclude from BOM" are left out, and so,
+with `exclude_dnp`, are parts marked "do not populate". The output has no
+time stamp.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_bom-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_bom-exclude_dnp"></a>exclude_dnp |  Leave out parts marked "do not populate".   | Boolean | optional |  `False`  |
+| <a id="kicad_bom-fields"></a>fields |  The columns, in order: symbol fields or kicad-cli's ${...} fields.   | List of strings | optional |  `["Reference", "Value", "Footprint", "${QUANTITY}", "${DNP}"]`  |
+| <a id="kicad_bom-group_by"></a>group_by |  Parts with the same values of these fields share a row. Empty: one row per part.   | List of strings | optional |  `["Value", "Footprint"]`  |
+| <a id="kicad_bom-labels"></a>labels |  The header of each column, in the order of `fields`.   | List of strings | optional |  `["Refs", "Value", "Footprint", "Qty", "DNP"]`  |
+| <a id="kicad_bom-schematic"></a>schematic |  The schematic (`kicad_schematic`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+| <a id="kicad_bom-sort_field"></a>sort_field |  The field the rows are sorted by, ascending.   | String | optional |  `"Reference"`  |
+
+
 <a id="kicad_drc_report"></a>
 
 ## kicad_drc_report

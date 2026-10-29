@@ -6,6 +6,7 @@ load(":library_test.bzl", "relative_path_test", "relative_to_test")
 bzl_library(
     name = "private",
     srcs = [
+        "bom.bzl",
         "design.bzl",
         "determinism.bzl",
         "drc.bzl",
