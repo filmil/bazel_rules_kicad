@@ -4,7 +4,7 @@
 # rules_kicad writes them. README.md describes the design.
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
-load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_bom", "kicad_drc_test", "kicad_erc_test", "kicad_pcb", "kicad_sch_pdf", "kicad_schematic")
+load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_bom", "kicad_drc_test", "kicad_erc_test", "kicad_netlist", "kicad_pcb", "kicad_sch_pdf", "kicad_schematic")
 
 kicad_schematic(
     name = "sch",
@@ -70,4 +70,17 @@ determinism_test(
     name = "sch_pdf_determinism_test",
     size = "small",
     target = ":sch_pdf",
+)
+
+# The e2e schematic's netlist, the same bytes in two configurations
+# (issue #19).
+kicad_netlist(
+    name = "netlist",
+    schematic = ":sch",
+)
+
+determinism_test(
+    name = "netlist_determinism_test",
+    size = "small",
+    target = ":netlist",
 )

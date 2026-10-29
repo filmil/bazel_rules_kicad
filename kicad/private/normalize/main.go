@@ -22,7 +22,10 @@
 //   - PDF: /CreationDate and /ModDate, with a value of the same length, so
 //     the cross-reference offsets stay right;
 //   - STEP: the time stamp of FILE_NAME;
-//   - KiCad ERC and DRC JSON reports: the top-level "date".
+//   - KiCad ERC and DRC JSON reports: the top-level "date";
+//   - KiCad netlists (s-expression): the date of the (design ...) header,
+//     and the paths of its source and of each library, which name the
+//     action's directory, cut to the file name.
 //
 // A file in none of these formats is copied unchanged. A file in one of
 // them whose time stamp has a form this program does not know is an error,
@@ -51,7 +54,10 @@ const (
 	PDF     Format = "pdf"
 	STEP    Format = "step"
 	Report  Format = "kicad-report"
+	Netlist Format = "kicad-netlist"
 )
+
+var netlistRe = regexp.MustCompile(`^\(export\s+\(version\s+"[^"]*"\)`)
 
 var reportSchemaRe = regexp.MustCompile(`"\$schema":\s*"https://schemas\.kicad\.org/(drc|erc)\.`)
 
@@ -76,6 +82,8 @@ func Detect(b []byte) Format {
 		return Job
 	case bytes.HasPrefix(head, []byte("{")) && reportSchemaRe.Match(head):
 		return Report
+	case netlistRe.Match(head):
+		return Netlist
 	}
 	return Unknown
 }
@@ -86,6 +94,16 @@ type rule struct {
 	re     *regexp.Regexp
 	stamp  func(t time.Time, old []byte) ([]byte, error)
 	needed bool // the format always has it; a file without it is an error
+	path   bool // group 2 is a path, cut to its file name; not a time stamp
+}
+
+// base cuts a path to its last element. Paths are POSIX (v1 runs on Linux
+// only); a backslash is an escape in KiCad's strings, not a separator.
+func base(_ time.Time, old []byte) ([]byte, error) {
+	if i := bytes.LastIndexByte(old, '/'); i >= 0 {
+		return old[i+1:], nil
+	}
+	return old, nil
 }
 
 // needAny lists the formats where at least one rule must match: KiCad
@@ -142,6 +160,15 @@ var rules = map[Format][]rule{
 		// objects start at 8 or more.
 		{re: regexp.MustCompile(`(?m)(^    "date":\s*")([^"]*)(")`), stamp: layout("2006-01-02T15:04:05+0000"), needed: true},
 	},
+	Netlist: {
+		// The (design ...) header: (source "...") then (date "..."). The
+		// title blocks have dates of their own, the designer's; they stay.
+		// Quoted strings may hold backslash escapes.
+		{re: regexp.MustCompile(`(\(design\s+\(source\s+")((?:[^"\\]|\\.)*)(")`), stamp: base, needed: true, path: true},
+		{re: regexp.MustCompile(`(\(design\s+\(source\s+"(?:[^"\\]|\\.)*"\)\s+\(date\s+")([^"]*)(")`), stamp: layout("2006-01-02T15:04:05+0000"), needed: true},
+		// Only a library's path, not text elsewhere that looks like one.
+		{re: regexp.MustCompile(`(\(library\s+\(logical\s+"(?:[^"\\]|\\.)*"\)\s+\(uri\s+")((?:[^"\\]|\\.)*)(")`), stamp: base, path: true},
+	},
 }
 
 // stampRe is what every time stamp KiCad writes looks like: a year, then
@@ -160,7 +187,7 @@ func Normalize(b []byte, t time.Time) ([]byte, Format, error) {
 		out = r.re.ReplaceAllFunc(out, func(m []byte) []byte {
 			sub := r.re.FindSubmatch(m)
 			found = true
-			if !stampRe.Match(sub[2]) {
+			if !r.path && !stampRe.Match(sub[2]) {
 				err = fmt.Errorf("%s: %q is not a time stamp this program knows", f, sub[2])
 				return m
 			}

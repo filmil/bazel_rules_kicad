@@ -1,10 +1,12 @@
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+
 # SPDX-License-Identifier: Apache-2.0
 #
 # kicad_schematic and kicad_pcb: what they stage and provide (issue #13),
 # and kicad_erc_test on the small schematic here (issue #14). The sheets
 # here hold no parts; the e2e design in integration/e2e is the full one.
-load("//kicad:defs.bzl", "determinism_test", "kicad_bom", "kicad_drc_report", "kicad_erc_test", "kicad_library", "kicad_pcb", "kicad_sch_pdf", "kicad_schematic", "swap_test")
-load(":design_test.bzl", "bom_action_test", "drc_action_test", "fails_test", "netlist_pcb_info_test", "pcb_info_test", "sch_pdf_action_test", "schematic_info_test")
+load("//kicad:defs.bzl", "determinism_test", "kicad_bom", "kicad_drc_report", "kicad_erc_test", "kicad_library", "kicad_netlist", "kicad_pcb", "kicad_sch_pdf", "kicad_schematic", "swap_test")
+load(":design_test.bzl", "bom_action_test", "drc_action_test", "fails_test", "netlist_action_test", "netlist_pcb_info_test", "pcb_info_test", "sch_pdf_action_test", "schematic_info_test")
 
 kicad_schematic(
     name = "sch",
@@ -321,4 +323,59 @@ sch_pdf_action_test(
     size = "small",
     output = "named.pdf",
     target_under_test = ":named.pdf",
+)
+
+# The schematic's netlist (issue #19): through the KiCad and normalize
+# toolchains, the same bytes in two configurations (the output directory,
+# which the raw netlist names, differs between them).
+kicad_netlist(
+    name = "netlist",
+    schematic = ":sch",
+)
+
+swap_test(
+    name = "netlist_swap_test",
+    size = "small",
+    targets = [":netlist"],
+)
+
+determinism_test(
+    name = "netlist_determinism_test",
+    size = "small",
+    target = ":netlist",
+)
+
+# The netlist action and its one output: <name>.net, or the name itself
+# when it already ends in .net.
+netlist_action_test(
+    name = "netlist_action_test",
+    size = "small",
+    output = "netlist.net",
+    target_under_test = ":netlist",
+)
+
+kicad_netlist(
+    name = "named.net",
+    schematic = ":sch",
+    tags = ["manual"],
+)
+
+netlist_action_test(
+    name = "netlist_named_test",
+    size = "small",
+    output = "named.net",
+    target_under_test = ":named.net",
+)
+
+# kicad_pcb takes a kicad_netlist output as its netlist.
+kicad_pcb(
+    name = "pcb_from_generated_netlist",
+    board = "board.kicad_pcb",
+    netlist = ":netlist",
+)
+
+build_test(
+    name = "pcb_from_generated_netlist_test",
+    size = "small",
+    targets = [":pcb_from_generated_netlist"],
 )

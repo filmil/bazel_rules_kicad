@@ -21,3 +21,10 @@ STEP file and both reports. The one-off scripts that did this are not kept.
 
 `expected_epoch_86400.drl` (in `..`) is `a/fixture.drl` with its two dates
 edited by hand to 1970-01-02, so that the normalizer is not its own check.
+
+`a/e2e.net` and `b/e2e.net` are two netlist exports of the e2e schematic
+(`integration/e2e`), a few seconds apart, by `kicad-cli sch export
+netlist`. Their paths, which named a scratch directory, were replaced by
+two made-up action directories (`/sandbox/one/...`, `/sandbox/two/...`):
+a netlist names its schematic and its libraries by absolute path, and the
+normalizer must cut those to file names.
