@@ -22,6 +22,7 @@ var formats = map[string]Format{
 	"board.pdf":           PDF,
 	"sch.pdf":             PDF,
 	"board.step":          STEP,
+	"copper.step":         STEP,
 	"drc.json":            Report,
 	"erc.json":            Report,
 	"e2e.net":             Netlist,

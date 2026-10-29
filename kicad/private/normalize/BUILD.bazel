@@ -10,6 +10,7 @@ go_library(
     srcs = [
         "main.go",
         "png.go",
+        "step.go",
     ],
     importpath = "github.com/filmil/bazel_rules_kicad/kicad/private/normalize",
     visibility = ["//visibility:private"],
@@ -30,6 +31,7 @@ go_test(
     srcs = [
         "main_test.go",
         "png_test.go",
+        "step_test.go",
     ],
     data = glob(["testdata/**"]),
     embed = [":normalize_lib"],

@@ -19,6 +19,13 @@ pdf --layers F.Cu,Edge.Cuts`, `pcb export step`, `pcb drc --format json`,
 one copper layer, the job file, the drill file and its map, both PDFs, the
 STEP file and both reports. The one-off scripts that did this are not kept.
 
+`a/copper.step` and `b/copper.step` are two runs, on another day and
+host, of `kicad-cli pcb export step --no-components --include-tracks
+--include-pads --include-zones` on `fixture.kicad_pcb`. kicad-cli numbers
+and orders the entities of the copper differently on every run (issue
+#63), so besides their time stamps the two files differ in most lines; the
+normalizer must bring them to the same bytes.
+
 `expected_epoch_86400.drl` (in `..`) is `a/fixture.drl` with its two dates
 edited by hand to 1970-01-02, so that the normalizer is not its own check.
 
