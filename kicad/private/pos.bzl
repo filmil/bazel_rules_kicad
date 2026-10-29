@@ -32,6 +32,8 @@ def _kicad_pos_impl(ctx):
         args.append("--exclude-dnp")
     if ctx.attr.bottom_negate_x:
         args.append("--bottom-negate-x")
+    if ctx.attr.use_drill_file_origin:
+        args.append("--use-drill-file-origin")
     run_tool(
         ctx,
         _KICAD,
@@ -58,9 +60,12 @@ kicad_pos(
 The output is `<name>.csv` (or `<name>` when the name already ends in
 `.csv`), with the parts of both sides in one file. The first row is
 `Ref,Val,Package,PosX,PosY,Rot,Side`; each other row is one footprint,
-with its position in millimetres from the board's origin, its rotation in
-degrees, and its side, `top` or `bottom`. Y grows upwards, so a part below
-the origin has a negative Y. The output has no time stamp.
+with its position in millimetres, its rotation in degrees, and its side,
+`top` or `bottom`. Positions are measured from the top-left corner of
+KiCad's page, with Y growing upwards, so every part on the page has a
+negative Y. With `use_drill_file_origin`, they are measured from the
+board's drill and place file origin instead, which a pick-and-place machine
+usually wants. The output has no time stamp.
 """,
     attrs = {
         "pcb": attr.label(
@@ -82,6 +87,11 @@ the origin has a negative Y. The output has no time stamp.
         ),
         "bottom_negate_x": attr.bool(
             doc = "Negate the X of parts on the bottom side, as seen from below.",
+            default = False,
+        ),
+        "use_drill_file_origin": attr.bool(
+            doc = "Measure positions from the board's drill and place file origin, " +
+                  "not from the top-left corner of the page.",
             default = False,
         ),
     },

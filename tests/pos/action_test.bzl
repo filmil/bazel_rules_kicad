@@ -3,7 +3,13 @@
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
 
-_FLAGS = ["--smd-only", "--exclude-fp-th", "--exclude-dnp", "--bottom-negate-x"]
+_FLAGS = [
+    "--smd-only",
+    "--exclude-fp-th",
+    "--exclude-dnp",
+    "--bottom-negate-x",
+    "--use-drill-file-origin",
+]
 
 def _args(env):
     actions = [a for a in analysistest.target_actions(env) if a.mnemonic == "KicadPos"]
@@ -41,6 +47,12 @@ def _pos_flags_action_impl(ctx):
     args = _args(env)
     for flag in _FLAGS:
         asserts.true(env, flag in args, "%s is given" % flag)
+
+    # The name already ends in .csv: no second .csv.
+    asserts.equals(env, "--output", args[-3])
+    asserts.true(env, args[-2].endswith("/flags.csv"), "the output: %s" % args[-2])
+    files = [f.basename for f in analysistest.target_under_test(env)[DefaultInfo].files.to_list()]
+    asserts.equals(env, ["flags.csv"], files)
     return analysistest.end(env)
 
 pos_flags_action_test = analysistest.make(_pos_flags_action_impl)

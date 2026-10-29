@@ -325,7 +325,7 @@ board's: `<board name>.kicad_pcb`, `<board name>.net` and
 <pre>
 load("@rules_kicad//kicad:defs.bzl", "kicad_pos")
 
-kicad_pos(<a href="#kicad_pos-name">name</a>, <a href="#kicad_pos-bottom_negate_x">bottom_negate_x</a>, <a href="#kicad_pos-exclude_dnp">exclude_dnp</a>, <a href="#kicad_pos-exclude_th">exclude_th</a>, <a href="#kicad_pos-pcb">pcb</a>, <a href="#kicad_pos-smd_only">smd_only</a>)
+kicad_pos(<a href="#kicad_pos-name">name</a>, <a href="#kicad_pos-bottom_negate_x">bottom_negate_x</a>, <a href="#kicad_pos-exclude_dnp">exclude_dnp</a>, <a href="#kicad_pos-exclude_th">exclude_th</a>, <a href="#kicad_pos-pcb">pcb</a>, <a href="#kicad_pos-smd_only">smd_only</a>, <a href="#kicad_pos-use_drill_file_origin">use_drill_file_origin</a>)
 </pre>
 
 A board's footprint positions, as CSV, for a pick-and-place machine.
@@ -340,9 +340,12 @@ kicad_pos(
 The output is `<name>.csv` (or `<name>` when the name already ends in
 `.csv`), with the parts of both sides in one file. The first row is
 `Ref,Val,Package,PosX,PosY,Rot,Side`; each other row is one footprint,
-with its position in millimetres from the board's origin, its rotation in
-degrees, and its side, `top` or `bottom`. Y grows upwards, so a part below
-the origin has a negative Y. The output has no time stamp.
+with its position in millimetres, its rotation in degrees, and its side,
+`top` or `bottom`. Positions are measured from the top-left corner of
+KiCad's page, with Y growing upwards, so every part on the page has a
+negative Y. With `use_drill_file_origin`, they are measured from the
+board's drill and place file origin instead, which a pick-and-place machine
+usually wants. The output has no time stamp.
 
 **ATTRIBUTES**
 
@@ -355,6 +358,7 @@ the origin has a negative Y. The output has no time stamp.
 | <a id="kicad_pos-exclude_th"></a>exclude_th |  Leave out footprints that have a through-hole pad.   | Boolean | optional |  `False`  |
 | <a id="kicad_pos-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 | <a id="kicad_pos-smd_only"></a>smd_only |  List only footprints marked SMD.   | Boolean | optional |  `False`  |
+| <a id="kicad_pos-use_drill_file_origin"></a>use_drill_file_origin |  Measure positions from the board's drill and place file origin, not from the top-left corner of the page.   | Boolean | optional |  `False`  |
 
 
 <a id="kicad_render"></a>
