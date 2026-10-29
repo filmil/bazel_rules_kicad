@@ -20,6 +20,7 @@ load("//kicad/private:erc.bzl", _kicad_erc_report = "kicad_erc_report", _kicad_e
 load("//kicad/private:kicad_toolchain.bzl", _KicadToolchainInfo = "KicadToolchainInfo", _kicad_toolchain = "kicad_toolchain")
 load("//kicad/private:library.bzl", _KicadLibraryInfo = "KicadLibraryInfo", _kicad_lib_tables = "kicad_lib_tables", _kicad_library = "kicad_library", _lib_table_test = "lib_table_test")
 load("//kicad/private:normalize.bzl", _NormalizeToolchainInfo = "NormalizeToolchainInfo")
+load("//kicad/private:sch_pdf.bzl", _kicad_sch_pdf = "kicad_sch_pdf")
 load("//kicad/private:swap_test.bzl", _swap_test = "swap_test")
 load("//kicad/private:toolchains.bzl", _tool_toolchain = "tool_toolchain")
 
@@ -39,6 +40,7 @@ kicad_erc_test = _kicad_erc_test
 kicad_drc_report = _kicad_drc_report
 kicad_drc_test = _kicad_drc_test
 kicad_bom = _kicad_bom
+kicad_sch_pdf = _kicad_sch_pdf
 kicad_pcb = _kicad_pcb
 KicadSchematicInfo = _KicadSchematicInfo
 KicadPcbInfo = _KicadPcbInfo
