@@ -36,6 +36,7 @@ helpers_toolchain(
     reportcheck = "//kicad/private/reportcheck",
     sheetcheck = "//kicad/private/sheetcheck",
     sheetcheck_test = "//kicad/private/sheetcheck",
+    stampscan = "//kicad/private/stampscan",
     swapcheck = "//kicad/private/swapcheck",
     tablecheck = "//kicad/private/tablecheck",
 )

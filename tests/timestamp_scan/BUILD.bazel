@@ -1,0 +1,62 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# timestamp_scan_test (issue #27, spec D2). testdata/README.md says what
+# each fixture is. The scan of every export of the e2e design is in
+# integration/e2e/timestamp_scan.
+load("//kicad:defs.bzl", "kicad_gerbers", "timestamp_scan_test")
+load("//tests:fails_test.bzl", "fails_test")
+
+# A real export, normalized: every date is the epoch.
+kicad_gerbers(
+    name = "gerbers",
+    pcb = "//tests/design:pcb",
+)
+
+timestamp_scan_test(
+    name = "gerbers_test",
+    size = "small",
+    srcs = [":gerbers"],
+)
+
+# Known-bad: a Gerber file as KiCad writes it, with the time of the export.
+timestamp_scan_test(
+    name = "raw_gerber_test",
+    size = "small",
+    srcs = ["testdata/raw.gtl"],
+    expect = "stamped",
+)
+
+# The title block's date, which KiCad copies into the netlist, passes when
+# the sheet that holds it is a source...
+timestamp_scan_test(
+    name = "title_block_test",
+    size = "small",
+    srcs = ["testdata/titled.net"],
+    sources = ["testdata/titled.kicad_sch"],
+)
+
+# ... and fails when it is not.
+timestamp_scan_test(
+    name = "title_block_no_sources_test",
+    size = "small",
+    srcs = ["testdata/titled.net"],
+    expect = "stamped",
+)
+
+filegroup(
+    name = "nothing",
+    srcs = [],
+)
+
+timestamp_scan_test(
+    name = "empty",
+    srcs = [":nothing"],
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "empty_test",
+    size = "small",
+    message = "srcs has no files to scan",
+    target_under_test = ":empty",
+)

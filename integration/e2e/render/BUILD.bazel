@@ -8,6 +8,7 @@ load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_render")
 kicad_render(
     name = "render",
     pcb = "//e2e:pcb",
+    visibility = ["//e2e/timestamp_scan:__pkg__"],
 )
 
 determinism_test(

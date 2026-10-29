@@ -1,0 +1,11 @@
+(kicad_sch
+	(version 20250114)
+	(generator "eeschema")
+	(generator_version "9.0")
+	(paper "A4")
+	(title_block
+		(title "timestamp_scan_test fixture")
+		(date "2026-10-29")
+		(rev "1")
+	)
+)
