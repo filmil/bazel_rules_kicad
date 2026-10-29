@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# kicad_netlist on the schematic of //tests/design (issue #19).
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("//kicad:defs.bzl", "determinism_test", "kicad_netlist", "kicad_pcb", "swap_test")
+load(":action_test.bzl", "netlist_action_test")
+
+# The schematic's netlist (issue #19): through the KiCad and normalize
+# toolchains, the same bytes in two configurations (the output directory,
+# which the raw netlist names, differs between them).
+kicad_netlist(
+    name = "netlist",
+    schematic = "//tests/design:sch",
+)
+
+swap_test(
+    name = "netlist_swap_test",
+    size = "small",
+    targets = [":netlist"],
+)
+
+determinism_test(
+    name = "netlist_determinism_test",
+    size = "small",
+    target = ":netlist",
+)
+
+# The netlist action and its one output: <name>.net, or the name itself
+# when it already ends in .net.
+netlist_action_test(
+    name = "netlist_action_test",
+    size = "small",
+    output = "netlist.net",
+    target_under_test = ":netlist",
+)
+
+kicad_netlist(
+    name = "named.net",
+    schematic = "//tests/design:sch",
+    tags = ["manual"],
+)
+
+netlist_action_test(
+    name = "netlist_named_test",
+    size = "small",
+    output = "named.net",
+    target_under_test = ":named.net",
+)
+
+# kicad_pcb takes a kicad_netlist output as its netlist.
+kicad_pcb(
+    name = "pcb_from_generated_netlist",
+    board = "//tests/design:board.kicad_pcb",
+    netlist = ":netlist",
+)
+
+build_test(
+    name = "pcb_from_generated_netlist_test",
+    size = "small",
+    targets = [":pcb_from_generated_netlist"],
+)

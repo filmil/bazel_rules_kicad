@@ -2,9 +2,12 @@
 #
 # The e2e design: a two-sheet schematic and its board, as a user of
 # rules_kicad writes them. README.md describes the design.
+#
+# Each check of the design is in a package of its own under e2e/.
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
-load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_bom", "kicad_drc_test", "kicad_erc_test", "kicad_netlist", "kicad_pcb", "kicad_sch_pdf", "kicad_schematic")
+load("@rules_kicad//kicad:defs.bzl", "kicad_pcb", "kicad_schematic")
+
+package(default_visibility = ["//e2e:__subpackages__"])
 
 kicad_schematic(
     name = "sch",
@@ -28,59 +31,4 @@ build_test(
         ":pcb",
         ":sch",
     ],
-)
-
-# The e2e schematic passes KiCad's electrical rules check (issue #14).
-kicad_erc_test(
-    name = "erc_test",
-    size = "small",
-    schematic = ":sch",
-)
-
-# The e2e board passes KiCad's design rules check, with schematic parity
-# (issue #15).
-kicad_drc_test(
-    name = "drc_test",
-    size = "small",
-    pcb = ":pcb",
-)
-
-# The e2e bill of materials, with the default columns (issue #20). The
-# expected file is written by hand: it is what rules_fab will read.
-kicad_bom(
-    name = "bom",
-    schematic = ":sch",
-)
-
-diff_test(
-    name = "bom_test",
-    size = "small",
-    file1 = ":bom",
-    file2 = "expected_bom.csv",
-)
-
-# The e2e schematic as a PDF, the same bytes in two configurations
-# (issue #18).
-kicad_sch_pdf(
-    name = "sch_pdf",
-    schematic = ":sch",
-)
-
-determinism_test(
-    name = "sch_pdf_determinism_test",
-    size = "small",
-    target = ":sch_pdf",
-)
-
-# The e2e schematic's netlist, the same bytes in two configurations
-# (issue #19).
-kicad_netlist(
-    name = "netlist",
-    schematic = ":sch",
-)
-
-determinism_test(
-    name = "netlist_determinism_test",
-    size = "small",
-    target = ":netlist",
 )

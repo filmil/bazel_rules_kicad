@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The e2e bill of materials, with the default columns (issue #20). The
+# expected file is written by hand: it is what rules_fab will read.
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("@rules_kicad//kicad:defs.bzl", "kicad_bom")
+
+kicad_bom(
+    name = "bom",
+    schematic = "//e2e:sch",
+)
+
+diff_test(
+    name = "bom_test",
+    size = "small",
+    file1 = ":bom",
+    file2 = "expected_bom.csv",
+)
