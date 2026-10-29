@@ -1,0 +1,104 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# kicad_drill on the board of //tests/design (issue #23): through the KiCad
+# and normalize toolchains, the same bytes in two configurations, and the
+# real files read back.
+load("@rules_go//go:def.bzl", "go_test")
+load("//kicad:defs.bzl", "determinism_test", "kicad_drill", "swap_test")
+load("//tests:fails_test.bzl", "fails_test")
+load(":action_test.bzl", "drill_action_test", "drill_map_action_test")
+
+kicad_drill(
+    name = "drill",
+    pcb = "//tests/design:pcb",
+)
+
+# Plated and unplated holes apart, each with a Gerber map.
+kicad_drill(
+    name = "drill_map",
+    map_format = "gerberx2",
+    pcb = "//tests/design:pcb",
+    separate_th = True,
+)
+
+# One file, with a PDF map.
+kicad_drill(
+    name = "drill_pdf",
+    map_format = "pdf",
+    pcb = "//tests/design:pcb",
+)
+
+drill_action_test(
+    name = "drill_action_test",
+    size = "small",
+    target_under_test = ":drill",
+)
+
+drill_map_action_test(
+    name = "drill_map_action_test",
+    size = "small",
+    target_under_test = ":drill_map",
+)
+
+swap_test(
+    name = "drill_swap_test",
+    size = "small",
+    targets = [
+        ":drill",
+        ":drill_map",
+        ":drill_pdf",
+    ],
+)
+
+determinism_test(
+    name = "drill_determinism_test",
+    size = "small",
+    target = ":drill",
+)
+
+determinism_test(
+    name = "drill_map_determinism_test",
+    size = "small",
+    target = ":drill_map",
+)
+
+determinism_test(
+    name = "drill_pdf_determinism_test",
+    size = "small",
+    target = ":drill_pdf",
+)
+
+# The files themselves: names, the Excellon header, the dates at the epoch,
+# and the board's holes.
+go_test(
+    name = "drill_files_test",
+    size = "small",
+    srcs = ["files_test.go"],
+    args = [
+        "--drill=$(rlocationpath :drill)",
+        "--drill_map=$(rlocationpath :drill_map)",
+        "--drill_pdf=$(rlocationpath :drill_pdf)",
+    ],
+    data = [
+        ":drill",
+        ":drill_map",
+        ":drill_pdf",
+    ],
+    pure = "on",
+    deps = ["@rules_go//go/runfiles"],
+)
+
+# A map format normalize does not know would not come out the same bytes.
+kicad_drill(
+    name = "drill_svg_map",
+    map_format = "svg",
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "drill_svg_map_test",
+    size = "small",
+    message = "map_format \"svg\": want one of gerberx2, pdf",
+    target_under_test = ":drill_svg_map",
+)
