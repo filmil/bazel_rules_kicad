@@ -3,6 +3,30 @@
 
 load(":run_tool.bzl", "HELPERS_TOOLCHAIN_TYPE")
 
+_FORWARDED = [
+    "applicable_licenses",
+    "compatible_with",
+    "exec_compatible_with",
+    "exec_properties",
+    "features",
+    "tags",
+    "target_compatible_with",
+    "visibility",
+]
+
+def forwarded_attrs(kwargs):
+    """Returns the test's attributes that its report target also takes.
+
+    They decide where and whether a target builds.
+
+    Args:
+      kwargs: the test macro's keyword arguments.
+
+    Returns:
+      A dict of those attributes.
+    """
+    return {k: kwargs[k] for k in _FORWARDED if k in kwargs}
+
 def _rlocation_path(ctx, f):
     """Returns the file's path below TEST_SRCDIR.
 

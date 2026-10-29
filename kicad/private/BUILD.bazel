@@ -8,6 +8,7 @@ bzl_library(
     srcs = [
         "design.bzl",
         "determinism.bzl",
+        "drc.bzl",
         "erc.bzl",
         "extensions.bzl",
         "kicad_toolchain.bzl",

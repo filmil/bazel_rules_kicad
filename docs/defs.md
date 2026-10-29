@@ -12,6 +12,36 @@ The rules arrive in milestones M1 and M2 (see the issues of
 https://github.com/filmil/bazel_rules_kicad). This file is the only public
 entry point; everything under `//kicad/private` may change without notice.
 
+<a id="kicad_drc_report"></a>
+
+## kicad_drc_report
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_drc_report")
+
+kicad_drc_report(<a href="#kicad_drc_report-name">name</a>, <a href="#kicad_drc_report-pcb">pcb</a>)
+</pre>
+
+KiCad's DRC report of a board, in JSON.
+
+kicad-cli runs on the board's staged project (`kicad_pcb`), so it finds
+footprints only through the project's library tables, and reads the
+design rules (`design_rules`) where KiCad expects them, next to the board.
+When the board follows a schematic, the report also has the schematic
+parity check: footprints and nets that differ from the schematic. It lists
+every violation of severity error or warning, and every unconnected item;
+which checks have which severity is the design's own setting. The report's
+date is removed (spec D2), so the same board gives the same bytes.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_drc_report-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_drc_report-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+
+
 <a id="kicad_erc_report"></a>
 
 ## kicad_erc_report
@@ -439,6 +469,42 @@ determinism_test(
 | <a id="determinism_test-name"></a>name |  the test's name.   |  none |
 | <a id="determinism_test-target"></a>target |  the target whose outputs must not change between builds.   |  none |
 | <a id="determinism_test-kwargs"></a>kwargs |  common test attributes, such as `size` and `tags`.   |  none |
+
+
+<a id="kicad_drc_test"></a>
+
+## kicad_drc_test
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_drc_test")
+
+kicad_drc_test(<a href="#kicad_drc_test-name">name</a>, <a href="#kicad_drc_test-pcb">pcb</a>, <a href="#kicad_drc_test-expect">expect</a>, <a href="#kicad_drc_test-kwargs">**kwargs</a>)
+</pre>
+
+Fails if KiCad's design rules check finds a violation.
+
+The check covers the board's design rules, unconnected items and, when
+the board follows a schematic, schematic parity. It makes
+`<name>_report`, the DRC report (`kicad_drc_report`), and a test that
+prints a summary of it and keeps it among the test's outputs.
+
+```starlark
+kicad_drc_test(
+    name = "drc_test",
+    pcb = ":pcb",
+)
+```
+
+
+**PARAMETERS**
+
+
+| Name  | Description | Default Value |
+| :------------- | :------------- | :------------- |
+| <a id="kicad_drc_test-name"></a>name |  the test's name.   |  none |
+| <a id="kicad_drc_test-pcb"></a>pcb |  the board (`kicad_pcb`).   |  none |
+| <a id="kicad_drc_test-expect"></a>expect |  empty for a board that must be clean. For a known-bad board (spec T3), a violation type, such as `clearance`: the test then passes only if the report has violations of that type and of no other.   |  `""` |
+| <a id="kicad_drc_test-kwargs"></a>kwargs |  common test attributes, such as `size` and `tags`.   |  none |
 
 
 <a id="kicad_erc_test"></a>

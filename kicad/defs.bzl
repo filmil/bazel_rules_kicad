@@ -14,6 +14,7 @@ entry point; everything under `//kicad/private` may change without notice.
 
 load("//kicad/private:design.bzl", _KicadPcbInfo = "KicadPcbInfo", _KicadSchematicInfo = "KicadSchematicInfo", _kicad_pcb = "kicad_pcb", _kicad_schematic = "kicad_schematic")
 load("//kicad/private:determinism.bzl", _determinism_test = "determinism_test")
+load("//kicad/private:drc.bzl", _kicad_drc_report = "kicad_drc_report", _kicad_drc_test = "kicad_drc_test")
 load("//kicad/private:erc.bzl", _kicad_erc_report = "kicad_erc_report", _kicad_erc_test = "kicad_erc_test")
 load("//kicad/private:kicad_toolchain.bzl", _KicadToolchainInfo = "KicadToolchainInfo", _kicad_toolchain = "kicad_toolchain")
 load("//kicad/private:library.bzl", _KicadLibraryInfo = "KicadLibraryInfo", _kicad_lib_tables = "kicad_lib_tables", _kicad_library = "kicad_library", _lib_table_test = "lib_table_test")
@@ -34,6 +35,8 @@ NormalizeToolchainInfo = _NormalizeToolchainInfo
 kicad_schematic = _kicad_schematic
 kicad_erc_report = _kicad_erc_report
 kicad_erc_test = _kicad_erc_test
+kicad_drc_report = _kicad_drc_report
+kicad_drc_test = _kicad_drc_test
 kicad_pcb = _kicad_pcb
 KicadSchematicInfo = _KicadSchematicInfo
 KicadPcbInfo = _KicadPcbInfo

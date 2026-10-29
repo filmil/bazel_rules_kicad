@@ -3,21 +3,10 @@
 
 load(":design.bzl", "KicadSchematicInfo")
 load(":normalize.bzl", "NORMALIZE_TOOLCHAIN_TYPE", "normalize")
-load(":report_test.bzl", "raw_kicad_report_test")
+load(":report_test.bzl", "forwarded_attrs", "raw_kicad_report_test")
 load(":run_tool.bzl", "RUN_TOOL_TOOLCHAINS", "run_tool")
 
 _KICAD = Label("//kicad:toolchain_type")
-
-_FORWARDED = [
-    "applicable_licenses",
-    "compatible_with",
-    "exec_compatible_with",
-    "exec_properties",
-    "features",
-    "tags",
-    "target_compatible_with",
-    "visibility",
-]
 
 def _kicad_erc_report_impl(ctx):
     sch = ctx.attr.schematic[KicadSchematicInfo]
@@ -96,7 +85,7 @@ def kicad_erc_test(name, schematic, expect = "", **kwargs):
 
     # The report gets the test's common attributes that decide where and
     # whether it builds.
-    common = {k: kwargs[k] for k in _FORWARDED if k in kwargs}
+    common = forwarded_attrs(kwargs)
     kicad_erc_report(
         name = name + "_report",
         schematic = schematic,
