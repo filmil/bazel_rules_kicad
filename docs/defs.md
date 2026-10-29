@@ -106,7 +106,10 @@ board as `<root name>.kicad_pcb` next to the schematic's sheets (KiCad
 finds a board's schematic by that name), the design rules as
 `<root name>.kicad_dru`, the project file (`project`, else the
 schematic's), and library tables with the libraries of the schematic and
-of `deps`. Every rule that runs KiCad on the board reads `KicadPcbInfo`.
+of `deps`. With `netlist` instead of `schematic`, the names come from the
+board's: `<board name>.kicad_pcb`, `<board name>.net` and
+`<board name>.kicad_dru`. Every rule that runs KiCad on the board reads
+`KicadPcbInfo`.
 
 **ATTRIBUTES**
 
@@ -296,10 +299,10 @@ A board, staged as a KiCad project with its schematic.
 
 | Name  | Description |
 | :------------- | :------------- |
-| <a id="KicadPcbInfo-board"></a>board |  File: the board, <name>.kicad_pcb, in the project directory.    |
-| <a id="KicadPcbInfo-schematic"></a>schematic |  KicadSchematicInfo or None: the schematic the board follows.    |
-| <a id="KicadPcbInfo-netlist"></a>netlist |  File or None: the netlist the board follows, when there is no schematic.    |
-| <a id="KicadPcbInfo-design_rules"></a>design_rules |  File or None: <name>.kicad_dru, in the project directory.    |
+| <a id="KicadPcbInfo-board"></a>board |  File: the board, in the project directory. Its name is the schematic's root name (<root>.kicad_pcb), or with a netlist the board's own.    |
+| <a id="KicadPcbInfo-schematic"></a>schematic |  KicadSchematicInfo or None: the schematic the board follows, staged in the board's project directory, next to the board.    |
+| <a id="KicadPcbInfo-netlist"></a>netlist |  File or None: the netlist the board follows, when there is no schematic; staged as <board name>.net.    |
+| <a id="KicadPcbInfo-design_rules"></a>design_rules |  File or None: the design rules, staged with the board's name (.kicad_dru).    |
 | <a id="KicadPcbInfo-project"></a>project |  File: the project file.    |
 | <a id="KicadPcbInfo-project_dir"></a>project_dir |  string: the project directory, relative to the execution root.    |
 | <a id="KicadPcbInfo-library"></a>library |  KicadLibraryInfo: the libraries the tables list.    |

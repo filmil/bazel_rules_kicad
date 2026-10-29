@@ -16,9 +16,10 @@
 // well, for a Bazel validation action.
 //
 // As a test, the files come from SHEETCHECK_FILES (root first, one path per
-// line, relative to the runfiles directory), and SHEETCHECK_EXPECT=
-// missing:NAME makes the check pass only if it finds the sheet NAME
-// missing, for the rule's own known-bad test.
+// line, relative to the runfiles directory), and SHEETCHECK_EXPECT=KIND:NAME
+// makes the check pass only if it finds that problem with the sheet NAME
+// (relative to the root's directory), for the rule's own known-bad tests.
+// KIND is missing, unused or circular.
 package main
 
 import (
@@ -26,6 +27,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -61,44 +63,63 @@ func Sheetfiles(text string) ([]string, error) {
 }
 
 // Problems lists what is wrong with the given files: sheets that are
-// referenced but not given, and given files that nothing references.
-// read returns a file's text.
+// referenced but not given, given files that nothing references, and
+// sheets that reference one of their own ancestors (KiCad rejects a
+// circular hierarchy). Names are relative to the root's directory. read
+// returns a file's text.
 func Problems(root string, given []string, read func(string) (string, error)) ([]string, error) {
+	root = filepath.Clean(root)
+	base := filepath.Dir(root)
+	name := func(p string) string {
+		if r, err := filepath.Rel(base, p); err == nil {
+			return filepath.ToSlash(r)
+		}
+		return p
+	}
 	have := map[string]bool{}
 	for _, g := range given {
 		have[filepath.Clean(g)] = true
 	}
-	seen := map[string]bool{filepath.Clean(root): true}
+	seen := map[string]bool{root: true}
 	var problems []string
-	queue := []string{filepath.Clean(root)}
-	for len(queue) > 0 {
-		f := queue[0]
-		queue = queue[1:]
+	// Depth first, with the chain of sheets from the root, to find cycles.
+	var visit func(f string, chain []string) error
+	visit = func(f string, chain []string) error {
 		text, err := read(f)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		refs, err := Sheetfiles(text)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", f, err)
+			return fmt.Errorf("%s: %w", name(f), err)
 		}
 		for _, r := range refs {
 			p := filepath.Clean(filepath.Join(filepath.Dir(f), filepath.FromSlash(r)))
+			if slices.Contains(chain, p) {
+				problems = append(problems, fmt.Sprintf("sheet %q, which %s references, is one of its own parents: the hierarchy is circular", name(p), name(f)))
+				continue
+			}
 			if seen[p] {
 				continue
 			}
 			seen[p] = true
 			if !have[p] {
-				problems = append(problems, fmt.Sprintf("sheet %q, which %s references, is not in srcs", r, filepath.Base(f)))
+				problems = append(problems, fmt.Sprintf("sheet %q, which %s references, is not in srcs", name(p), name(f)))
 				continue
 			}
-			queue = append(queue, p)
+			if err := visit(p, append(slices.Clone(chain), p)); err != nil {
+				return err
+			}
 		}
+		return nil
+	}
+	if err := visit(root, []string{root}); err != nil {
+		return nil, err
 	}
 	var unused []string
 	for g := range have {
 		if !seen[g] {
-			unused = append(unused, fmt.Sprintf("%q is in srcs, but no sheet references it", filepath.Base(g)))
+			unused = append(unused, fmt.Sprintf("sheet %q is in srcs, but no sheet references it", name(g)))
 		}
 	}
 	sort.Strings(unused)
@@ -122,13 +143,17 @@ func run(args []string, expect string) (string, int) {
 		return "sheetcheck: " + err.Error(), 2
 	}
 	msg := strings.Join(ps, "\n")
-	if want, ok := strings.CutPrefix(expect, "missing:"); ok {
+	if kind, want, ok := strings.Cut(expect, ":"); ok {
+		suffix := map[string]string{"missing": "is not in srcs", "unused": "no sheet references it", "circular": "the hierarchy is circular"}[kind]
+		if suffix == "" {
+			return fmt.Sprintf("SHEETCHECK_EXPECT=%q: want missing:, unused: or circular: and a sheet", expect), 2
+		}
 		for _, p := range ps {
-			if strings.HasPrefix(p, fmt.Sprintf("sheet %q", want)) {
+			if strings.HasPrefix(p, fmt.Sprintf("sheet %q", want)) && strings.HasSuffix(p, suffix) {
 				return msg + "\nfound, as expected", 0
 			}
 		}
-		return fmt.Sprintf("expected sheet %q to be missing; problems: %q", want, ps), 1
+		return fmt.Sprintf("expected sheet %q to be %s; problems: %q", want, kind, ps), 1
 	}
 	if len(ps) > 0 {
 		return msg + "\nthe schematic's srcs do not match the sheets its root references", 1

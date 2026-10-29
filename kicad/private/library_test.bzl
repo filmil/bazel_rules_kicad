@@ -2,6 +2,7 @@
 """Unit tests of relative_to: the ../ steps reach the execution root."""
 
 load("@bazel_skylib//lib:unittest.bzl", "asserts", "unittest")
+load(":design.bzl", "relative_path")
 load(":library.bzl", "relative_to")
 
 def _relative_to_test_impl(ctx):
@@ -21,3 +22,22 @@ def _relative_to_test_impl(ctx):
     return unittest.end(env)
 
 relative_to_test = unittest.make(_relative_to_test_impl)
+
+def _relative_path_test_impl(ctx):
+    env = unittest.begin(ctx)
+    for short_path, base, want in [
+        ("pkg/main.kicad_sch", "pkg", "main.kicad_sch"),
+        ("pkg/sheets/a.kicad_sch", "pkg", "sheets/a.kicad_sch"),
+        ("pkgx/a.kicad_sch", "pkg", None),
+        ("other/a.kicad_sch", "pkg", None),
+        # The root package.
+        ("a.kicad_sch", "", "a.kicad_sch"),
+        ("sub/a.kicad_sch", "", "sub/a.kicad_sch"),
+        ("../repo/a.kicad_sch", "", None),
+        # An external repository.
+        ("../repo/pkg/a.kicad_sch", "../repo/pkg", "a.kicad_sch"),
+    ]:
+        asserts.equals(env, want, relative_path(short_path, base), "%s below %r" % (short_path, base))
+    return unittest.end(env)
+
+relative_path_test = unittest.make(_relative_path_test_impl)

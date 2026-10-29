@@ -35,7 +35,10 @@ def _pcb_impl(ctx):
     asserts.equals(env, "main.kicad_pcb", _rel(info.board, info))
     asserts.equals(env, "main.kicad_dru", _rel(info.design_rules, info))
     asserts.equals(env, None, info.netlist)
-    asserts.equals(env, "main.kicad_sch", info.schematic.root.basename)
+    asserts.equals(env, "main.kicad_sch", _rel(info.schematic.root, info))
+    asserts.equals(env, ["sheets/power.kicad_sch"], [_rel(s, info) for s in info.schematic.sheets])
+    asserts.equals(env, info.project_dir, info.schematic.project_dir)
+    asserts.equals(env, info.project, info.schematic.project)
     names = sorted([_rel(f, info) for f in info.files.to_list() if f.path.startswith(info.project_dir + "/")])
     asserts.equals(env, ["fp-lib-table", "main.kicad_dru", "main.kicad_pcb", "main.kicad_pro", "main.kicad_sch", "sheets/power.kicad_sch", "sym-lib-table"], names)
 
