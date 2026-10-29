@@ -25,7 +25,8 @@
 //   - KiCad ERC and DRC JSON reports: the top-level "date";
 //   - KiCad netlists (s-expression): the date of the (design ...) header,
 //     and the paths of its source and of each library, which name the
-//     action's directory, cut to the file name.
+//     action's directory, cut to the file name;
+//   - PNG: the chunks of text, time and Exif data are dropped (png.go).
 //
 // A file in none of these formats is copied unchanged. A file in one of
 // them whose time stamp has a form this program does not know is an error,
@@ -70,6 +71,8 @@ func Detect(b []byte) Format {
 	}
 	head = bytes.TrimLeft(bytes.TrimPrefix(head, []byte("\xef\xbb\xbf")), " \t\r\n")
 	switch {
+	case bytes.HasPrefix(b, pngSignature):
+		return PNG
 	case bytes.HasPrefix(head, []byte("%PDF-")):
 		return PDF
 	case bytes.HasPrefix(head, []byte("ISO-10303-21;")):
@@ -179,6 +182,10 @@ var stampRe = regexp.MustCompile(`^(D:)?\d{4}-?\d{2}-?\d{2}[T ]?\d{2}:?\d{2}:?\d
 // Normalize returns b with its time stamps replaced by t.
 func Normalize(b []byte, t time.Time) ([]byte, Format, error) {
 	f := Detect(b)
+	if f == PNG {
+		out, err := StripPNG(b)
+		return out, f, err
+	}
 	out := b
 	anyFound := false
 	for _, r := range rules[f] {

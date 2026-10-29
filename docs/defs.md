@@ -318,6 +318,52 @@ board's: `<board name>.kicad_pcb`, `<board name>.net` and
 | <a id="kicad_pcb-schematic"></a>schematic |  The schematic (`kicad_schematic`). Give this or `netlist`.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `None`  |
 
 
+<a id="kicad_render"></a>
+
+## kicad_render
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_render")
+
+kicad_render(<a href="#kicad_render-name">name</a>, <a href="#kicad_render-height">height</a>, <a href="#kicad_render-pcb">pcb</a>, <a href="#kicad_render-width">width</a>)
+</pre>
+
+A board's top and bottom, rendered in 3D as PNG images.
+
+```starlark
+kicad_render(
+    name = "render",
+    pcb = ":pcb",
+)
+```
+
+The outputs are `<name>/top.png` and `<name>/bottom.png`: the board seen
+from above and from below, in the colors of its stackup, on KiCad's
+opaque background. kicad-cli renders them with its raytracer on the CPU,
+so no display and no GPU are needed.
+
+KiCad makes the image a little smaller than `width` by `height`: 1600 by
+900 gives 1568 by 872. The quality is KiCad's basic one, the only one
+that gives the same bytes on every run. The PNGs hold no time stamp and
+no text, so the same board gives the same bytes.
+
+The images show no 3D models of the parts: the KiCad toolchain does not
+include KiCad's 3D model libraries.
+
+A pull request that changes a board attaches these images (AGENTS.md
+rule 5).
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_render-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_render-height"></a>height |  The image height asked of KiCad, in pixels; at least 64.   | Integer | optional |  `900`  |
+| <a id="kicad_render-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+| <a id="kicad_render-width"></a>width |  The image width asked of KiCad, in pixels; at least 64.   | Integer | optional |  `1600`  |
+
+
 <a id="kicad_sch_pdf"></a>
 
 ## kicad_sch_pdf
