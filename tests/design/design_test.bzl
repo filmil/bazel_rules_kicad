@@ -39,6 +39,11 @@ def _pcb_impl(ctx):
     asserts.equals(env, ["sheets/power.kicad_sch"], [_rel(s, info) for s in info.schematic.sheets])
     asserts.equals(env, info.project_dir, info.schematic.project_dir)
     asserts.equals(env, info.project, info.schematic.project)
+
+    # The schematic's files hold no board file.
+    sch_names = [f.basename for f in info.schematic.files.to_list()]
+    asserts.false(env, "main.kicad_pcb" in sch_names, "the board is among the schematic's files")
+    asserts.false(env, "main.kicad_dru" in sch_names, "the rules are among the schematic's files")
     names = sorted([_rel(f, info) for f in info.files.to_list() if f.path.startswith(info.project_dir + "/")])
     asserts.equals(env, ["fp-lib-table", "main.kicad_dru", "main.kicad_pcb", "main.kicad_pro", "main.kicad_sch", "sheets/power.kicad_sch", "sym-lib-table"], names)
 

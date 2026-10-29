@@ -58,3 +58,12 @@ sheet_check_test(
     expect = "unused:extra.kicad_sch",
     root = "testdata/root.kicad_sch",
 )
+
+# circular/a.kicad_sch places the root again.
+sheet_check_test(
+    name = "detects_circular_sheet_test",
+    size = "small",
+    srcs = ["testdata/circular/a.kicad_sch"],
+    expect = "circular:root.kicad_sch",
+    root = "testdata/circular/root.kicad_sch",
+)

@@ -34,8 +34,11 @@ def _relative_path_test_impl(ctx):
         ("a.kicad_sch", "", "a.kicad_sch"),
         ("sub/a.kicad_sch", "", "sub/a.kicad_sch"),
         ("../repo/a.kicad_sch", "", None),
-        # An external repository.
+        # An external repository, and its root package.
         ("../repo/pkg/a.kicad_sch", "../repo/pkg", "a.kicad_sch"),
+        ("../repo/a.kicad_sch", "../repo", "a.kicad_sch"),
+        ("../repo/sub/b.kicad_sch", "../repo", "sub/b.kicad_sch"),
+        ("../other/a.kicad_sch", "../repo", None),
     ]:
         asserts.equals(env, want, relative_path(short_path, base), "%s below %r" % (short_path, base))
     return unittest.end(env)

@@ -417,7 +417,7 @@ A board, staged as a KiCad project with its schematic.
 | <a id="KicadPcbInfo-board"></a>board |  File: the board, in the project directory. Its name is the schematic's root name (<root>.kicad_pcb), or with a netlist the board's own.    |
 | <a id="KicadPcbInfo-schematic"></a>schematic |  KicadSchematicInfo or None: the schematic the board follows, staged in the board's project directory, next to the board.    |
 | <a id="KicadPcbInfo-netlist"></a>netlist |  File or None: the netlist the board follows, when there is no schematic; staged as <board name>.net.    |
-| <a id="KicadPcbInfo-design_rules"></a>design_rules |  File or None: the design rules, staged with the board's name (.kicad_dru).    |
+| <a id="KicadPcbInfo-design_rules"></a>design_rules |  File or None: the design rules, staged with the same name as `board` (<root>.kicad_dru, or with a netlist <board name>.kicad_dru).    |
 | <a id="KicadPcbInfo-project"></a>project |  File: the project file.    |
 | <a id="KicadPcbInfo-project_dir"></a>project_dir |  string: the project directory, relative to the execution root.    |
 | <a id="KicadPcbInfo-library"></a>library |  KicadLibraryInfo: the libraries the tables list.    |

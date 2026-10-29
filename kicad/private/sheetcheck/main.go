@@ -143,7 +143,11 @@ func run(args []string, expect string) (string, int) {
 		return "sheetcheck: " + err.Error(), 2
 	}
 	msg := strings.Join(ps, "\n")
-	if kind, want, ok := strings.Cut(expect, ":"); ok {
+	if expect != "" {
+		kind, want, ok := strings.Cut(expect, ":")
+		if !ok {
+			return fmt.Sprintf("SHEETCHECK_EXPECT=%q: want KIND:SHEET", expect), 2
+		}
 		suffix := map[string]string{"missing": "is not in srcs", "unused": "no sheet references it", "circular": "the hierarchy is circular"}[kind]
 		if suffix == "" {
 			return fmt.Sprintf("SHEETCHECK_EXPECT=%q: want missing:, unused: or circular: and a sheet", expect), 2
