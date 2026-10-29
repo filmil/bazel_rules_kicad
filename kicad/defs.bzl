@@ -25,6 +25,11 @@ load("//kicad/private:sch_pdf.bzl", _kicad_sch_pdf = "kicad_sch_pdf")
 load("//kicad/private:swap_test.bzl", _swap_test = "swap_test")
 load("//kicad/private:toolchains.bzl", _tool_toolchain = "tool_toolchain")
 
+KicadLibraryInfo = _KicadLibraryInfo
+KicadPcbInfo = _KicadPcbInfo
+KicadSchematicInfo = _KicadSchematicInfo
+KicadToolchainInfo = _KicadToolchainInfo
+NormalizeToolchainInfo = _NormalizeToolchainInfo
 determinism_test = _determinism_test
 kicad_bom = _kicad_bom
 kicad_drc_report = _kicad_drc_report
@@ -38,12 +43,7 @@ kicad_pcb = _kicad_pcb
 kicad_sch_pdf = _kicad_sch_pdf
 kicad_schematic = _kicad_schematic
 kicad_toolchain = _kicad_toolchain
-KicadLibraryInfo = _KicadLibraryInfo
-KicadPcbInfo = _KicadPcbInfo
-KicadSchematicInfo = _KicadSchematicInfo
-KicadToolchainInfo = _KicadToolchainInfo
 lib_table_test = _lib_table_test
-NormalizeToolchainInfo = _NormalizeToolchainInfo
 swap_test = _swap_test
 tool_toolchain = _tool_toolchain
 

@@ -108,4 +108,7 @@ kicad_schematic(
 )
 
 # The board, for the rules the other packages run on it.
-exports_files(["board.kicad_pcb"])
+exports_files(
+    ["board.kicad_pcb"],
+    visibility = ["//tests:__subpackages__"],
+)
