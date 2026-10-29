@@ -22,6 +22,7 @@ load("//kicad/private:library.bzl", _KicadLibraryInfo = "KicadLibraryInfo", _kic
 load("//kicad/private:netlist.bzl", _kicad_netlist = "kicad_netlist")
 load("//kicad/private:normalize.bzl", _NormalizeToolchainInfo = "NormalizeToolchainInfo")
 load("//kicad/private:sch_pdf.bzl", _kicad_sch_pdf = "kicad_sch_pdf")
+load("//kicad/private:sch_render.bzl", _kicad_sch_render = "kicad_sch_render")
 load("//kicad/private:swap_test.bzl", _swap_test = "swap_test")
 load("//kicad/private:toolchains.bzl", _tool_toolchain = "tool_toolchain")
 
@@ -41,6 +42,7 @@ kicad_library = _kicad_library
 kicad_netlist = _kicad_netlist
 kicad_pcb = _kicad_pcb
 kicad_sch_pdf = _kicad_sch_pdf
+kicad_sch_render = _kicad_sch_render
 kicad_schematic = _kicad_schematic
 kicad_toolchain = _kicad_toolchain
 lib_table_test = _lib_table_test

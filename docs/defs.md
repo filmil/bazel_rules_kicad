@@ -311,6 +311,45 @@ gives the same bytes.
 | <a id="kicad_sch_pdf-schematic"></a>schematic |  The schematic (`kicad_schematic`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 
 
+<a id="kicad_sch_render"></a>
+
+## kicad_sch_render
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_sch_render")
+
+kicad_sch_render(<a href="#kicad_sch_render-name">name</a>, <a href="#kicad_sch_render-dpi">dpi</a>, <a href="#kicad_sch_render-schematic">schematic</a>)
+</pre>
+
+A schematic's sheets as PNG images, one per sheet.
+
+```starlark
+kicad_sch_render(
+    name = "sch_render",
+    schematic = ":sch",
+)
+```
+
+The output is the directory `<name>`, with `<root>.png` for the root
+sheet and `<root>-<sheet name>.png` for each other sheet, in KiCad's
+colors, with the drawing sheet and title block. kicad-cli plots each
+sheet to SVG; a Go program built from source (oksvg and rasterx) draws
+them. KiCad draws all text as strokes, so no font is read. The PNGs hold
+no time stamp, so the same schematic gives the same bytes.
+
+A pull request that changes a schematic attaches these images (AGENTS.md
+rule 5).
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_sch_render-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_sch_render-dpi"></a>dpi |  Dots per inch. 150 makes an A4 sheet about 1750 by 1240 pixels.   | Integer | optional |  `150`  |
+| <a id="kicad_sch_render-schematic"></a>schematic |  The schematic (`kicad_schematic`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+
+
 <a id="kicad_schematic"></a>
 
 ## kicad_schematic
