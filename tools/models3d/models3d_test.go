@@ -360,7 +360,7 @@ func TestUpload(t *testing.T) {
 		}
 		switch r.Method {
 		case http.MethodPut:
-			if u, p, ok := r.BasicAuth(); !ok || u != "bt-upload" || p != "secret" {
+			if u, p, ok := r.BasicAuth(); !ok || u != "publisher" || p != "secret" {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
@@ -368,7 +368,7 @@ func TestUpload(t *testing.T) {
 			stored[r.URL.Path] = b
 			w.WriteHeader(http.StatusCreated)
 		case http.MethodHead:
-			if u, p, ok := r.BasicAuth(); !ok || u != "bt-upload" || p != "secret" {
+			if u, p, ok := r.BasicAuth(); !ok || u != "publisher" || p != "secret" {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			}
@@ -383,7 +383,7 @@ func TestUpload(t *testing.T) {
 	defer srv.Close()
 	files := []string{LicenseFile, libs[0].Archive, libs[0].Torrent}
 	var log bytes.Buffer
-	if err := Upload(srv.Client(), out, srv.URL+"/k/", "bt-upload", "secret", files, &log); err != nil {
+	if err := Upload(srv.Client(), out, srv.URL+"/k/", "publisher", "secret", files, &log); err != nil {
 		t.Fatal(err)
 	}
 	for _, f := range files {
@@ -392,7 +392,7 @@ func TestUpload(t *testing.T) {
 			t.Errorf("%s not stored as written", f)
 		}
 	}
-	if err := Upload(srv.Client(), out, srv.URL+"/k/", "bt-upload", "wrong", files, &log); err == nil {
+	if err := Upload(srv.Client(), out, srv.URL+"/k/", "publisher", "wrong", files, &log); err == nil {
 		t.Error("a refused PUT must fail")
 	}
 }
