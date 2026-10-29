@@ -9,6 +9,7 @@ load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_pos")
 kicad_pos(
     name = "pos",
     pcb = "//e2e:pcb",
+    visibility = ["//e2e/timestamp_scan:__pkg__"],
 )
 
 diff_test(
