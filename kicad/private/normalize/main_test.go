@@ -241,4 +241,27 @@ func TestNetlist(t *testing.T) {
 	if _, _, err := Normalize([]byte("(export (version \"E\")\n  (components))\n"), time.Unix(0, 0)); err == nil {
 		t.Error("a netlist without a design header must be an error")
 	}
+	bad := "(export (version \"E\")\n  (design\n    (source \"/a/main.kicad_sch\")\n    (date \"yesterday\")))\n"
+	if _, _, err := Normalize([]byte(bad), time.Unix(0, 0)); err == nil {
+		t.Error("a design date of an unknown form must be an error")
+	}
+	// Text that only looks like a library path stays, and an escaped quote
+	// in a path does not end it early.
+	odd := `(export (version "E")
+  (design
+    (source "/a/b \"q\"/main.kicad_sch")
+    (date "2026-10-29T02:37:56+0000"))
+  (components (comp (ref "R1") (description "see (uri \"x/y\")")))
+  (libraries (library (logical "Device")
+      (uri "/a/libs/Device.kicad_sym"))))
+`
+	n2, _, err := Normalize([]byte(odd), time.Unix(0, 0).UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`(source "main.kicad_sch")`, `see (uri \"x/y\")`, `(uri "Device.kicad_sym")`} {
+		if !bytes.Contains(n2, []byte(want)) {
+			t.Errorf("no %q in:\n%s", want, n2)
+		}
+	}
 }

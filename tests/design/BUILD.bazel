@@ -1,3 +1,5 @@
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+
 # SPDX-License-Identifier: Apache-2.0
 #
 # kicad_schematic and kicad_pcb: what they stage and provide (issue #13),
@@ -363,4 +365,17 @@ netlist_action_test(
     size = "small",
     output = "named.net",
     target_under_test = ":named.net",
+)
+
+# kicad_pcb takes a kicad_netlist output as its netlist.
+kicad_pcb(
+    name = "pcb_from_generated_netlist",
+    board = "board.kicad_pcb",
+    netlist = ":netlist",
+)
+
+build_test(
+    name = "pcb_from_generated_netlist_test",
+    size = "small",
+    targets = [":pcb_from_generated_netlist"],
 )

@@ -97,9 +97,10 @@ type rule struct {
 	path   bool // group 2 is a path, cut to its file name; not a time stamp
 }
 
-// base cuts a path (/ or \ separated) to its last element.
+// base cuts a path to its last element. Paths are POSIX (v1 runs on Linux
+// only); a backslash is an escape in KiCad's strings, not a separator.
 func base(_ time.Time, old []byte) ([]byte, error) {
-	if i := bytes.LastIndexAny(old, "/\\"); i >= 0 {
+	if i := bytes.LastIndexByte(old, '/'); i >= 0 {
 		return old[i+1:], nil
 	}
 	return old, nil
@@ -162,9 +163,11 @@ var rules = map[Format][]rule{
 	Netlist: {
 		// The (design ...) header: (source "...") then (date "..."). The
 		// title blocks have dates of their own, the designer's; they stay.
-		{re: regexp.MustCompile(`(\(design\s+\(source\s+")([^"]*)(")`), stamp: base, needed: true, path: true},
-		{re: regexp.MustCompile(`(\(design\s+\(source\s+"[^"]*"\)\s+\(date\s+")([^"]*)(")`), stamp: layout("2006-01-02T15:04:05+0000"), needed: true},
-		{re: regexp.MustCompile(`(\(uri\s+")([^"]*)(")`), stamp: base, path: true},
+		// Quoted strings may hold backslash escapes.
+		{re: regexp.MustCompile(`(\(design\s+\(source\s+")((?:[^"\\]|\\.)*)(")`), stamp: base, needed: true, path: true},
+		{re: regexp.MustCompile(`(\(design\s+\(source\s+"(?:[^"\\]|\\.)*"\)\s+\(date\s+")([^"]*)(")`), stamp: layout("2006-01-02T15:04:05+0000"), needed: true},
+		// Only a library's path, not text elsewhere that looks like one.
+		{re: regexp.MustCompile(`(\(library\s+\(logical\s+"(?:[^"\\]|\\.)*"\)\s+\(uri\s+")((?:[^"\\]|\\.)*)(")`), stamp: base, path: true},
 	},
 }
 

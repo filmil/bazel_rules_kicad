@@ -162,6 +162,7 @@ def _netlist_action_impl(ctx):
     files = [f.basename for f in analysistest.target_under_test(env)[DefaultInfo].files.to_list()]
     asserts.equals(env, [ctx.attr.output], files)
     return analysistest.end(env)
+
 netlist_action_test = analysistest.make(
     _netlist_action_impl,
     attrs = {"output": attr.string(mandatory = True)},
