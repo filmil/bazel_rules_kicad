@@ -2,9 +2,10 @@
 #
 # kicad_pos (issue #24) on a board with a part on each side: the e2e
 # board, with R1 turned to the bottom at 90 degrees and D1 turned 180
-# degrees and marked do-not-populate. J1 is a through-hole header, and R2
-# a resistor with neither the SMD nor the through-hole attribute, so
-# smd_only drops it and exclude_th keeps it. The drill and place file
+# degrees and marked do-not-populate. J1 is a header with through-hole
+# pads but no attribute, so exclude_th drops it by its pads, as kicad-cli
+# 9 does. R2 is a resistor with SMD pads and no attribute, so smd_only
+# drops it and exclude_th keeps it. The drill and place file
 # origin is the board's bottom-left corner, (100, 107). The copper is not
 # routed for these changes; the position file reads only the footprints.
 # The expected files are written by hand.
@@ -54,7 +55,7 @@ diff_test(
     file2 = "expected_smd.csv",
 )
 
-# Without through-hole parts: no J1, but R2 stays.
+# Without parts that have a through-hole pad: no J1, but R2 stays.
 kicad_pos(
     name = "no_th",
     exclude_th = True,

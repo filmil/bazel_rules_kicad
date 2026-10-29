@@ -456,7 +456,6 @@
 			)
 		)
 		(path "/161d4716-e0e0-5011-8e92-4aef97ceaf7e")
-		(attr through_hole)
 		(fp_line
 			(start -1.38 -1.38)
 			(end 0 -1.38)
