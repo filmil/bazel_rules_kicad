@@ -25,9 +25,10 @@ kicad_erc_report(<a href="#kicad_erc_report-name">name</a>, <a href="#kicad_erc_
 KiCad's ERC report of a schematic, in JSON.
 
 kicad-cli runs on the schematic's staged project, so it finds symbols and
-footprints only through the project's library tables. The report keeps
-errors and warnings; its date is removed (spec D2), so the same schematic
-gives the same bytes.
+footprints only through the project's library tables. The report lists
+every violation of severity error or warning; which checks have which
+severity is the design's own setting, in its project file. The report's
+date is removed (spec D2), so the same schematic gives the same bytes.
 
 **ATTRIBUTES**
 
@@ -471,7 +472,7 @@ kicad_erc_test(
 | :------------- | :------------- | :------------- |
 | <a id="kicad_erc_test-name"></a>name |  the test's name.   |  none |
 | <a id="kicad_erc_test-schematic"></a>schematic |  the schematic (`kicad_schematic`).   |  none |
-| <a id="kicad_erc_test-expect"></a>expect |  empty for a schematic that must be clean. For a known-bad schematic (spec T3), a violation type, such as `pin_not_connected`: the test then passes only if the report has a violation of that type.   |  `""` |
+| <a id="kicad_erc_test-expect"></a>expect |  empty for a schematic that must be clean. For a known-bad schematic (spec T3), a violation type, such as `pin_not_connected`: the test then passes only if the report has violations of that type and of no other.   |  `""` |
 | <a id="kicad_erc_test-kwargs"></a>kwargs |  common test attributes, such as `size` and `tags`.   |  none |
 
 

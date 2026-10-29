@@ -6,11 +6,16 @@
 //
 // It runs as a test, with:
 //
-//   - REPORT: the report, relative to the main repository's runfiles
-//     directory;
+//   - REPORT: the report's runfiles path (its rlocationpath: the
+//     repository's directory, then the path in it), relative to
+//     TEST_SRCDIR;
 //   - REPORT_EXPECT: empty for a design that must be clean, or a violation
-//     type (such as pin_not_connected) for a known-bad design, which then
-//     must have at least one violation of that type (spec T3).
+//     type (such as pin_not_connected) for a known-bad design (spec T3),
+//     which then must have violations of that type and of no other, so a
+//     second, unintended problem cannot hide behind the expected one.
+//
+// Entries with severity "exclusion" (marked as excluded in the design)
+// or "ignore" do not count.
 //
 // It copies the report into TEST_UNDECLARED_OUTPUTS_DIR, so `bazel test`
 // keeps it in bazel-testlogs.
@@ -62,6 +67,9 @@ type report struct {
 
 func add(out []Violation, kind, sheet string, es []entry) []Violation {
 	for _, e := range es {
+		if e.Severity == "exclusion" || e.Severity == "ignore" {
+			continue
+		}
 		v := Violation{Kind: kind, Severity: e.Severity, Type: e.Type, Description: e.Description, Sheet: sheet}
 		for _, i := range e.Items {
 			v.Items = append(v.Items, i.Description)
@@ -139,28 +147,45 @@ func Check(b []byte, expect string) (string, int) {
 		}
 		return msg, 0
 	}
+	found := 0
+	var others []string
 	for _, v := range vs {
 		if v.Type == expect {
-			return msg + fmt.Sprintf("found a %s violation, as expected", expect), 0
+			found++
+		} else {
+			others = append(others, v.Type)
 		}
 	}
-	return msg + fmt.Sprintf("expected a %s violation; this known-bad design must have one", expect), 1
+	switch {
+	case found == 0:
+		return msg + fmt.Sprintf("expected a %s violation; this known-bad design must have one", expect), 1
+	case len(others) > 0:
+		return msg + fmt.Sprintf("expected only %s violations; also found %v", expect, others), 1
+	}
+	return msg + fmt.Sprintf("found only %s violations, as expected", expect), 0
+}
+
+// Run is the test: it reads the report at srcdir/report, keeps a copy in
+// outdir (when set), and checks it.
+func Run(srcdir, report, outdir, expect string) (string, int) {
+	if srcdir == "" || report == "" {
+		return "reportcheck: TEST_SRCDIR and REPORT must be set; run it as a test", 2
+	}
+	p := filepath.Join(srcdir, filepath.FromSlash(report))
+	b, err := os.ReadFile(p)
+	if err != nil {
+		return "reportcheck: " + err.Error(), 2
+	}
+	if outdir != "" {
+		if err := os.WriteFile(filepath.Join(outdir, filepath.Base(p)), b, 0o644); err != nil {
+			return "reportcheck: " + err.Error(), 2
+		}
+	}
+	return Check(b, expect)
 }
 
 func main() {
-	p := filepath.Join(os.Getenv("TEST_SRCDIR"), os.Getenv("TEST_WORKSPACE"), os.Getenv("REPORT"))
-	b, err := os.ReadFile(p)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "reportcheck:", err)
-		os.Exit(2)
-	}
-	if d := os.Getenv("TEST_UNDECLARED_OUTPUTS_DIR"); d != "" {
-		if err := os.WriteFile(filepath.Join(d, filepath.Base(p)), b, 0o644); err != nil {
-			fmt.Fprintln(os.Stderr, "reportcheck:", err)
-			os.Exit(2)
-		}
-	}
-	msg, code := Check(b, os.Getenv("REPORT_EXPECT"))
+	msg, code := Run(os.Getenv("TEST_SRCDIR"), os.Getenv("REPORT"), os.Getenv("TEST_UNDECLARED_OUTPUTS_DIR"), os.Getenv("REPORT_EXPECT"))
 	fmt.Println(msg)
 	os.Exit(code)
 }

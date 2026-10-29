@@ -13,7 +13,8 @@ go_binary(
     name = "reportcheck",
     embed = [":reportcheck_lib"],
     pure = "on",
-    visibility = ["//visibility:public"],
+    # Only the helpers toolchain names it.
+    visibility = ["//kicad/toolchains:__pkg__"],
 )
 
 go_test(

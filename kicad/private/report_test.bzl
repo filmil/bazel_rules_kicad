@@ -3,6 +3,15 @@
 
 load(":run_tool.bzl", "HELPERS_TOOLCHAIN_TYPE")
 
+def _rlocation_path(ctx, f):
+    """Returns the file's path below TEST_SRCDIR.
+
+    That is its repository's directory, then the path in the repository.
+    """
+    if f.short_path.startswith("../"):
+        return f.short_path[3:]
+    return ctx.workspace_name + "/" + f.short_path
+
 def _report_test_impl(ctx):
     helpers = ctx.toolchains[HELPERS_TOOLCHAIN_TYPE].helpers
     exe = ctx.actions.declare_file(ctx.label.name)
@@ -17,7 +26,7 @@ def _report_test_impl(ctx):
             runfiles = ctx.runfiles(files = [ctx.file.report]).merge(helpers.reportcheck.default_runfiles),
         ),
         RunEnvironmentInfo(environment = {
-            "REPORT": ctx.file.report.short_path,
+            "REPORT": _rlocation_path(ctx, ctx.file.report),
             "REPORT_EXPECT": ctx.attr.expect,
         }),
     ]
