@@ -20,6 +20,7 @@ timestamp_scan_test(
         "//e2e/render",
         "//e2e/sch_pdf",
         "//e2e/sch_render",
+        "//e2e/step",
     ],
     # The title blocks of the sheets have the designer's date, which KiCad
     # copies into the netlist.
