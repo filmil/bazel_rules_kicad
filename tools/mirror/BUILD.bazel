@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: Apache-2.0
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+# The mirror of the prebuilt archives (issue #29, spec "Prebuilts").
+#
+#   bazel run //tools:mirror    checks every upstream file of manifest.json
+#
+# The operator uploads with --dry_run=false (see cmd/main.go). The test
+# runs the checks against a local server, never the network, and keeps
+# manifest.json equal to what the kicad module extension fetches.
+
+go_library(
+    name = "mirror_lib",
+    srcs = ["mirror.go"],
+    importpath = "github.com/filmil/bazel_rules_kicad/tools/mirror",
+    visibility = ["//visibility:private"],
+)
+
+go_test(
+    name = "mirror_test",
+    size = "small",
+    srcs = ["mirror_test.go"],
+    data = [
+        "manifest.json",
+        "//kicad/private",
+    ],
+    embed = [":mirror_lib"],
+    pure = "on",
+)
+
+go_binary(
+    name = "mirror",
+    srcs = ["cmd/main.go"],
+    pure = "on",
+    visibility = ["//tools:__pkg__"],
+    deps = [":mirror_lib"],
+)
