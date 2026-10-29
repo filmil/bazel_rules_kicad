@@ -7,9 +7,12 @@
 //
 //	bazel run //tools:models3d -- --archive=/path/kicad-packages3D-9.0.9.tar.gz --out=/path/out
 //
-// Upload (the operator only; it needs the bt-upload password):
+// Upload (the operator only). The login is "publisher"; its password is in
+// the Kubernetes Secret bt/bt-upload, which serving's bt.k8s/make-secrets.sh
+// made:
 //
-//	BT_UPLOAD_PASSWORD=... bazel run //tools:models3d -- --archive=... --out=... --upload --user=bt-upload
+//	BT_UPLOAD_PASSWORD="$(kubectl -n bt get secret bt-upload -o jsonpath='{.data.password}' | base64 -d)" \
+//	  bazel run //tools:models3d -- --archive=... --out=... --upload --user=publisher
 //
 // --archive must hash to the pinned sha256, so every run publishes the
 // same bytes. --pins writes the Starlark file of pins.
@@ -107,7 +110,7 @@ func run(archive, wantSHA256, out, base, pins string, upload bool, user, passwor
 		fmt.Println("pins:", pins)
 	}
 	if !upload {
-		fmt.Println("not uploaded; the operator adds --upload --user=bt-upload with $BT_UPLOAD_PASSWORD")
+		fmt.Println("not uploaded; the operator adds --upload --user=publisher, with $BT_UPLOAD_PASSWORD from the Secret bt/bt-upload")
 		return nil
 	}
 	client := &http.Client{Timeout: 30 * time.Minute}
