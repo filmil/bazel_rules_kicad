@@ -619,6 +619,58 @@ the XDG directories all point inside the action (spec H3), and
 | <a id="kicad_toolchain-version"></a>version |  The KiCad version kicad-cli reports, such as "9.0.9".   | String | required |  |
 
 
+<a id="timestamp_scan_test"></a>
+
+## timestamp_scan_test
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "timestamp_scan_test")
+
+timestamp_scan_test(<a href="#timestamp_scan_test-name">name</a>, <a href="#timestamp_scan_test-srcs">srcs</a>, <a href="#timestamp_scan_test-expect">expect</a>, <a href="#timestamp_scan_test-sources">sources</a>)
+</pre>
+
+Checks that outputs hold no date or time but the epoch (spec D2).
+
+```starlark
+timestamp_scan_test(
+    name = "timestamp_scan_test",
+    srcs = [
+        ":gerbers",
+        ":netlist",
+        ":sch_pdf",
+    ],
+    sources = [":sch"],
+)
+```
+
+The test scans every file of `srcs`, and every file in a directory
+output, for dates and times: `2026-10-29` or `2026/10/29` with an
+optional time and zone (`2026-10-29T08:31:59.5+01:00`), PDF dates
+(`D:20261029083159`) and ISO 8601 basic (`20261029T083159Z`). A number
+next to other digits is not a date, so a PDF's cross-reference offsets
+do not count.
+
+Each date must be `--@rules_kicad//kicad:source_date_epoch` (default
+1970-01-01T00:00:00 UTC) in every part it has: the date, then the hour,
+minute and second, with no zone, `Z` or a zero offset. A time out of
+range never passes. A date without a time that is also in one of
+`sources` passes as well: KiCad copies the date of a title block, which
+the designer wrote, into the netlist. A tool's time stamp has a time, so
+`sources` never lets one through.
+
+The test prints every date that fails, with its file and line.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="timestamp_scan_test-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="timestamp_scan_test-srcs"></a>srcs |  The outputs to scan: files, or rules whose outputs are files or directories.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | required |  |
+| <a id="timestamp_scan_test-expect"></a>expect |  "clean", or "stamped" for this rule's own known-bad test: srcs must then have a date that is not the epoch.   | String | optional |  `"clean"`  |
+| <a id="timestamp_scan_test-sources"></a>sources |  Design sources whose dates are allowed, such as the schematic (`kicad_schematic`) whose title blocks have a date.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+
+
 <a id="tool_toolchain"></a>
 
 ## tool_toolchain

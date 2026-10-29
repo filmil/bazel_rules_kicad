@@ -8,4 +8,5 @@ kicad_drc_test(
     name = "drc_test",
     size = "small",
     pcb = "//e2e:pcb",
+    visibility = ["//e2e/timestamp_scan:__pkg__"],
 )

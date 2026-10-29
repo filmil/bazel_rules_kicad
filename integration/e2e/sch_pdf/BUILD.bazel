@@ -7,6 +7,7 @@ load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_sch_pdf")
 kicad_sch_pdf(
     name = "sch_pdf",
     schematic = "//e2e:sch",
+    visibility = ["//e2e/timestamp_scan:__pkg__"],
 )
 
 determinism_test(
