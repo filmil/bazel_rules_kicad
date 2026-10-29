@@ -216,25 +216,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # The root module's targets, then the e2e design's in integration/:
+      # every export of a whole design, built in two output bases.
       - name: Build in two output bases and compare
         run: |
           set -o errexit -o nounset -o pipefail
           q='labels(target_a, attr(expect, "^same$", kind("raw_determinism_test rule", //...)))'
-          targets=$(bazel query "$q" | tr '\n' ' ')
-          if [ -z "${targets}" ]; then echo "no determinism_test targets"; exit 0; fi
-          echo "targets: ${targets}"
-          # Each output base has its own server. They are not shut down: in a
-          # container with no init process, `bazel shutdown` cannot reap the
-          # server and fails.
-          for b in one two; do
-            ob="${HOME}/ob_${b}"
-            bazel --output_base="${ob}" build --disk_cache= --noremote_accept_cached ${targets}
-            root="$(bazel --output_base="${ob}" info execution_root)"
-            bazel --output_base="${ob}" cquery --output=files "set(${targets})" > "${HOME}/files_${b}"
-            (cd "${root}" && while read -r f; do
-              find -L "${f}" -type f -print0 | sort -z | xargs -0 sha256sum
-            done < "${HOME}/files_${b}") > "${HOME}/sums_${b}"
+          for m in root integration; do
+            dir=.; [ "${m}" = root ] || dir="${m}"
+            targets=$(cd "${dir}" && bazel query "$q" | tr '\n' ' ')
+            if [ -z "${targets}" ]; then echo "${m}: no determinism_test targets"; exit 1; fi
+            echo "${m} targets: ${targets}"
+            # Each output base has its own server. They are not shut down: in
+            # a container with no init process, `bazel shutdown` cannot reap
+            # the server and fails.
+            for b in one two; do
+              ob="${HOME}/ob_${m}_${b}"
+              (cd "${dir}" && bazel --output_base="${ob}" build --disk_cache= --noremote_accept_cached ${targets})
+              root="$(cd "${dir}" && bazel --output_base="${ob}" info execution_root)"
+              (cd "${dir}" && bazel --output_base="${ob}" cquery --output=files "set(${targets})") > "${HOME}/files_${m}_${b}"
+              (cd "${root}" && while read -r f; do
+                find -L "${f}" -type f -print0 | sort -z | xargs -0 sha256sum
+              done < "${HOME}/files_${m}_${b}") > "${HOME}/sums_${m}_${b}"
+            done
+            cat "${HOME}/sums_${m}_one"
+            diff -u "${HOME}/sums_${m}_one" "${HOME}/sums_${m}_two"
+            echo "${m}: identical in two output bases"
           done
-          cat "${HOME}/sums_one"
-          diff -u "${HOME}/sums_one" "${HOME}/sums_two"
-          echo "identical in two output bases"
