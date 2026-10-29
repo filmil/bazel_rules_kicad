@@ -12,6 +12,7 @@ timestamp_scan_test(
         "//e2e/bom",
         "//e2e/drc:drc_test_report",
         "//e2e/drill",
+        "//e2e/drill:drill_map",
         "//e2e/erc:erc_test_report",
         "//e2e/gerbers",
         "//e2e/netlist",

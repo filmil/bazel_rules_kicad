@@ -21,6 +21,13 @@ kicad_drill(
     separate_th = True,
 )
 
+# One file, with a PDF map.
+kicad_drill(
+    name = "drill_pdf",
+    map_format = "pdf",
+    pcb = "//tests/design:pcb",
+)
+
 drill_action_test(
     name = "drill_action_test",
     size = "small",
@@ -39,6 +46,7 @@ swap_test(
     targets = [
         ":drill",
         ":drill_map",
+        ":drill_pdf",
     ],
 )
 
@@ -54,6 +62,12 @@ determinism_test(
     target = ":drill_map",
 )
 
+determinism_test(
+    name = "drill_pdf_determinism_test",
+    size = "small",
+    target = ":drill_pdf",
+)
+
 # The files themselves: names, the Excellon header, the dates at the epoch,
 # and the board's holes.
 go_test(
@@ -63,10 +77,12 @@ go_test(
     args = [
         "--drill=$(rlocationpath :drill)",
         "--drill_map=$(rlocationpath :drill_map)",
+        "--drill_pdf=$(rlocationpath :drill_pdf)",
     ],
     data = [
         ":drill",
         ":drill_map",
+        ":drill_pdf",
     ],
     pure = "on",
     deps = ["@rules_go//go/runfiles"],
