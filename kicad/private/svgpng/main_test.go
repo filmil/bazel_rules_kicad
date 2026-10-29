@@ -87,3 +87,52 @@ func TestRunDirectoryIsDeterministic(t *testing.T) {
 		t.Error("a directory without SVGs must be an error")
 	}
 }
+
+func TestRenderScalesWithDpi(t *testing.T) {
+	img, err := Render(strings.NewReader(sheet), 508) // 20 px per mm
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b := img.Bounds(); b.Dx() != 400 || b.Dy() != 200 {
+		t.Fatalf("size %v, want 400x200", b)
+	}
+	// The 0.5 mm line is 10 pixels wide now: black 4 pixels off its axis.
+	if got := img.RGBAAt(300, 104); got != (color.RGBA{0, 0, 0, 0xff}) {
+		t.Errorf("(300,104) = %v, want black", got)
+	}
+}
+
+func TestDashesScale(t *testing.T) {
+	// A 1 mm dash, 1 mm gap line: at 10 px per mm, 10 pixels on, 10 off.
+	const dashed = `<svg xmlns="http://www.w3.org/2000/svg" width="20mm" height="2mm" viewBox="0 0 20 2">
+<path d="M0 1 L20 1" style="fill:none; stroke:#000000; stroke-width:0.5; stroke-dasharray:1,1" />
+</svg>`
+	img, err := Render(strings.NewReader(dashed), 254)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if on := img.RGBAAt(5, 10); on != (color.RGBA{0, 0, 0, 0xff}) {
+		t.Errorf("(5,10), in a dash, = %v, want black", on)
+	}
+	if off := img.RGBAAt(15, 10); off != (color.RGBA{0xff, 0xff, 0xff, 0xff}) {
+		t.Errorf("(15,10), in a gap, = %v, want white", off)
+	}
+}
+
+func TestVisibleTextFails(t *testing.T) {
+	visible := strings.Replace(sheet, `opacity="0" stroke-opacity="0"`, "", 1)
+	if _, err := Render(strings.NewReader(visible), 150); err == nil {
+		t.Error("a visible <text> must fail: oksvg cannot draw it")
+	}
+}
+
+func TestBadInput(t *testing.T) {
+	for name, svg := range map[string]string{
+		"no view box": `<svg xmlns="http://www.w3.org/2000/svg"></svg>`,
+		"not XML":     `<svg`,
+	} {
+		if _, err := Render(strings.NewReader(svg), 150); err == nil {
+			t.Errorf("%s: want an error", name)
+		}
+	}
+}

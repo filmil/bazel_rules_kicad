@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # kicad_sch_render on the schematic of //tests/design (issue #21): the SVG
-# export through the KiCad toolchain, the PNG drawing through the helpers
+# export through the KiCad toolchain, the PNG drawing through the normalize
 # toolchain, and the same bytes in two configurations.
 load("@rules_go//go:def.bzl", "go_test")
 load("//kicad:defs.bzl", "determinism_test", "kicad_sch_render", "swap_test")
@@ -54,4 +54,5 @@ go_test(
     args = ["--dir=$(rlocationpath :sch_render)"],
     data = [":sch_render"],
     pure = "on",
+    deps = ["@rules_go//go/runfiles"],
 )

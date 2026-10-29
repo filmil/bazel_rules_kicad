@@ -38,6 +38,8 @@ and DRC reports) by `--@rules_kicad//kicad:source_date_epoch`, default 0.
 
 Its second tool, `svgpng --dpi N IN OUT`, draws the SVG sheets that
 kicad-cli plots as PNG images that hold no time stamp (`kicad_sch_render`).
+It ignores `SOURCE_DATE_EPOCH`. It is here, not in the helpers toolchain,
+because `swap_test` swaps this toolchain for the stub along with KiCad's.
 """,
     attrs = {
         "normalize": attr.label(mandatory = True, executable = True, cfg = "exec"),

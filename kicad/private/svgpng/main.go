@@ -17,6 +17,7 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"image"
@@ -26,6 +27,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -33,10 +35,23 @@ import (
 	"github.com/srwiley/rasterx"
 )
 
+// invisibleText matches a <text> element whose opening tag makes it
+// invisible, as KiCad writes each text for searching: opacity="0".
+var invisibleText = regexp.MustCompile(`(?s)<text\b[^>]*\bopacity="0"[^>]*>.*?</text>`)
+
 // Render draws an SVG at dpi dots per inch, on white. KiCad's SVGs are
-// sized in millimeters.
+// sized in millimeters, one unit of the view box per millimeter.
+//
+// It drops KiCad's invisible <text> elements and parses the rest strictly:
+// an element oksvg cannot draw, such as visible text, fails the run
+// instead of leaving it out of the image.
 func Render(svg io.Reader, dpi float64) (*image.RGBA, error) {
-	icon, err := oksvg.ReadIconStream(svg, oksvg.IgnoreErrorMode)
+	src, err := io.ReadAll(svg)
+	if err != nil {
+		return nil, err
+	}
+	src = invisibleText.ReplaceAll(src, nil)
+	icon, err := oksvg.ReadIconStream(bytes.NewReader(src), oksvg.StrictErrorMode)
 	if err != nil {
 		return nil, err
 	}
@@ -47,11 +62,19 @@ func Render(svg io.Reader, dpi float64) (*image.RGBA, error) {
 	}
 	icon.SetTarget(0, 0, float64(w), float64(h))
 
-	// oksvg scales the geometry to the target but not the line widths,
-	// which stay in SVG units: a 0.15 mm wire would be 0.15 pixel wide.
-	scale := float64(w) / icon.ViewBox.W
+	// oksvg scales the geometry to the target but not the line widths and
+	// dashes, which stay in SVG units: a 0.15 mm wire would be 0.15 pixel
+	// wide.
+	scale := dpi / 25.4
 	for i := range icon.SVGPaths {
-		icon.SVGPaths[i].LineWidth *= scale
+		p := &icon.SVGPaths[i]
+		p.LineWidth *= scale
+		p.DashOffset *= scale
+		dash := make([]float64, len(p.Dash))
+		for j, d := range p.Dash {
+			dash[j] = d * scale
+		}
+		p.Dash = dash
 	}
 	img := image.NewRGBA(image.Rect(0, 0, w, h))
 	draw.Draw(img, img.Bounds(), &image.Uniform{color.White}, image.Point{}, draw.Src)
