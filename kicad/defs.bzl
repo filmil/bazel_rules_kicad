@@ -22,6 +22,7 @@ load("//kicad/private:kicad_toolchain.bzl", _KicadToolchainInfo = "KicadToolchai
 load("//kicad/private:library.bzl", _KicadLibraryInfo = "KicadLibraryInfo", _kicad_lib_tables = "kicad_lib_tables", _kicad_library = "kicad_library", _lib_table_test = "lib_table_test")
 load("//kicad/private:netlist.bzl", _kicad_netlist = "kicad_netlist")
 load("//kicad/private:normalize.bzl", _NormalizeToolchainInfo = "NormalizeToolchainInfo")
+load("//kicad/private:pos.bzl", _kicad_pos = "kicad_pos")
 load("//kicad/private:render.bzl", _kicad_render = "kicad_render")
 load("//kicad/private:sch_pdf.bzl", _kicad_sch_pdf = "kicad_sch_pdf")
 load("//kicad/private:sch_render.bzl", _kicad_sch_render = "kicad_sch_render")
@@ -47,6 +48,7 @@ kicad_lib_tables = _kicad_lib_tables
 kicad_library = _kicad_library
 kicad_netlist = _kicad_netlist
 kicad_pcb = _kicad_pcb
+kicad_pos = _kicad_pos
 kicad_render = _kicad_render
 kicad_sch_pdf = _kicad_sch_pdf
 kicad_sch_render = _kicad_sch_render

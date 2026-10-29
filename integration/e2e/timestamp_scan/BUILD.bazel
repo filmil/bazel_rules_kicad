@@ -14,6 +14,7 @@ timestamp_scan_test(
         "//e2e/erc:erc_test_report",
         "//e2e/gerbers",
         "//e2e/netlist",
+        "//e2e/pos",
         "//e2e/render",
         "//e2e/sch_pdf",
         "//e2e/sch_render",
