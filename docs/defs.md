@@ -318,6 +318,45 @@ board's: `<board name>.kicad_pcb`, `<board name>.net` and
 | <a id="kicad_pcb-schematic"></a>schematic |  The schematic (`kicad_schematic`). Give this or `netlist`.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `None`  |
 
 
+<a id="kicad_pos"></a>
+
+## kicad_pos
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_pos")
+
+kicad_pos(<a href="#kicad_pos-name">name</a>, <a href="#kicad_pos-bottom_negate_x">bottom_negate_x</a>, <a href="#kicad_pos-exclude_dnp">exclude_dnp</a>, <a href="#kicad_pos-exclude_th">exclude_th</a>, <a href="#kicad_pos-pcb">pcb</a>, <a href="#kicad_pos-smd_only">smd_only</a>)
+</pre>
+
+A board's footprint positions, as CSV, for a pick-and-place machine.
+
+```starlark
+kicad_pos(
+    name = "pos",
+    pcb = ":pcb",
+)
+```
+
+The output is `<name>.csv` (or `<name>` when the name already ends in
+`.csv`), with the parts of both sides in one file. The first row is
+`Ref,Val,Package,PosX,PosY,Rot,Side`; each other row is one footprint,
+with its position in millimetres from the board's origin, its rotation in
+degrees, and its side, `top` or `bottom`. Y grows upwards, so a part below
+the origin has a negative Y. The output has no time stamp.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_pos-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_pos-bottom_negate_x"></a>bottom_negate_x |  Negate the X of parts on the bottom side, as seen from below.   | Boolean | optional |  `False`  |
+| <a id="kicad_pos-exclude_dnp"></a>exclude_dnp |  Leave out parts marked "do not populate".   | Boolean | optional |  `False`  |
+| <a id="kicad_pos-exclude_th"></a>exclude_th |  Leave out footprints that have a through-hole pad.   | Boolean | optional |  `False`  |
+| <a id="kicad_pos-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+| <a id="kicad_pos-smd_only"></a>smd_only |  List only footprints marked SMD.   | Boolean | optional |  `False`  |
+
+
 <a id="kicad_render"></a>
 
 ## kicad_render

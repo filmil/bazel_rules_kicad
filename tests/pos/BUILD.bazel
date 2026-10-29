@@ -1,0 +1,122 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# kicad_pos (issue #24) on a board with a part on each side: the e2e
+# board, with R1 turned to the bottom at 90 degrees and D1 turned 180
+# degrees and marked do-not-populate. J1 is a through-hole header. Its
+# copper is not routed for the bottom; the position file reads only the
+# footprints. The expected files are written by hand.
+#
+# Also kicad_pos on the board of //tests/design: the action's options, and
+# swap and determinism tests.
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("//kicad:defs.bzl", "determinism_test", "kicad_pcb", "kicad_pos", "swap_test")
+load(":action_test.bzl", "pos_action_test", "pos_flags_action_test")
+
+kicad_pcb(
+    name = "pcb",
+    board = "board.kicad_pcb",
+    schematic = "//tests/design:sch",
+)
+
+# The defaults: both sides, one file.
+kicad_pos(
+    name = "default",
+    pcb = ":pcb",
+)
+
+diff_test(
+    name = "default_test",
+    size = "small",
+    file1 = ":default",
+    file2 = "expected_default.csv",
+)
+
+determinism_test(
+    name = "default_determinism_test",
+    size = "small",
+    target = ":default",
+)
+
+# SMD parts only: no J1.
+kicad_pos(
+    name = "smd",
+    pcb = ":pcb",
+    smd_only = True,
+)
+
+diff_test(
+    name = "smd_test",
+    size = "small",
+    file1 = ":smd",
+    file2 = "expected_smd.csv",
+)
+
+# Without the do-not-populate part, and the name already ends in .csv.
+kicad_pos(
+    name = "no_dnp.csv",
+    exclude_dnp = True,
+    pcb = ":pcb",
+)
+
+diff_test(
+    name = "no_dnp_test",
+    size = "small",
+    file1 = ":no_dnp.csv",
+    file2 = "expected_no_dnp.csv",
+)
+
+# The bottom part's X negated.
+kicad_pos(
+    name = "negate_x",
+    bottom_negate_x = True,
+    pcb = ":pcb",
+)
+
+diff_test(
+    name = "negate_x_test",
+    size = "small",
+    file1 = ":negate_x",
+    file2 = "expected_negate_x.csv",
+)
+
+# Every option the rule passes, on the action.
+kicad_pos(
+    name = "flags",
+    bottom_negate_x = True,
+    exclude_dnp = True,
+    exclude_th = True,
+    pcb = ":pcb",
+    smd_only = True,
+)
+
+pos_flags_action_test(
+    name = "flags_action_test",
+    size = "small",
+    target_under_test = ":flags",
+)
+
+# The position file of //tests/design's board: every kicad-cli option
+# given, through the KiCad toolchain, the same bytes in two
+# configurations.
+kicad_pos(
+    name = "pos",
+    pcb = "//tests/design:pcb",
+)
+
+pos_action_test(
+    name = "pos_action_test",
+    size = "small",
+    target_under_test = ":pos",
+)
+
+swap_test(
+    name = "pos_swap_test",
+    size = "small",
+    targets = [":pos"],
+)
+
+determinism_test(
+    name = "pos_determinism_test",
+    size = "small",
+    target = ":pos",
+)
