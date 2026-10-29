@@ -240,6 +240,40 @@ board's: `<board name>.kicad_pcb`, `<board name>.net` and
 | <a id="kicad_pcb-schematic"></a>schematic |  The schematic (`kicad_schematic`). Give this or `netlist`.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `None`  |
 
 
+<a id="kicad_sch_pdf"></a>
+
+## kicad_sch_pdf
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_sch_pdf")
+
+kicad_sch_pdf(<a href="#kicad_sch_pdf-name">name</a>, <a href="#kicad_sch_pdf-schematic">schematic</a>)
+</pre>
+
+A schematic as one PDF, a page per sheet, in KiCad's colors.
+
+```starlark
+kicad_sch_pdf(
+    name = "sch_pdf",
+    schematic = ":sch",
+)
+```
+
+The output is `<name>.pdf` (or `<name>` when the name already ends in
+`.pdf`). kicad-cli plots the schematic's staged project. The PDF's creation
+date is set to `--@rules_kicad//kicad:source_date_epoch` (default
+1970-01-01; spec D2, no time stamps in outputs), so the same schematic
+gives the same bytes.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_sch_pdf-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_sch_pdf-schematic"></a>schematic |  The schematic (`kicad_schematic`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+
+
 <a id="kicad_schematic"></a>
 
 ## kicad_schematic

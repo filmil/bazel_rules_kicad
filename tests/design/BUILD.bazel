@@ -3,8 +3,8 @@
 # kicad_schematic and kicad_pcb: what they stage and provide (issue #13),
 # and kicad_erc_test on the small schematic here (issue #14). The sheets
 # here hold no parts; the e2e design in integration/e2e is the full one.
-load("//kicad:defs.bzl", "determinism_test", "kicad_bom", "kicad_drc_report", "kicad_erc_test", "kicad_library", "kicad_pcb", "kicad_schematic", "swap_test")
-load(":design_test.bzl", "bom_action_test", "drc_action_test", "fails_test", "netlist_pcb_info_test", "pcb_info_test", "schematic_info_test")
+load("//kicad:defs.bzl", "determinism_test", "kicad_bom", "kicad_drc_report", "kicad_erc_test", "kicad_library", "kicad_pcb", "kicad_sch_pdf", "kicad_schematic", "swap_test")
+load(":design_test.bzl", "bom_action_test", "drc_action_test", "fails_test", "netlist_pcb_info_test", "pcb_info_test", "sch_pdf_action_test", "schematic_info_test")
 
 kicad_schematic(
     name = "sch",
@@ -280,4 +280,45 @@ fails_test(
     size = "small",
     message = "is not in fields; kicad-cli groups only by columns",
     target_under_test = ":bom_group_not_column",
+)
+
+# The schematic as a PDF (issue #18): through the KiCad and normalize
+# toolchains, the same bytes in two configurations.
+kicad_sch_pdf(
+    name = "sch_pdf",
+    schematic = ":sch",
+)
+
+swap_test(
+    name = "sch_pdf_swap_test",
+    size = "small",
+    targets = [":sch_pdf"],
+)
+
+determinism_test(
+    name = "sch_pdf_determinism_test",
+    size = "small",
+    target = ":sch_pdf",
+)
+
+# The plot action and the one output: <name>.pdf, or the name itself when
+# it already ends in .pdf.
+sch_pdf_action_test(
+    name = "sch_pdf_action_test",
+    size = "small",
+    output = "sch_pdf.pdf",
+    target_under_test = ":sch_pdf",
+)
+
+kicad_sch_pdf(
+    name = "named.pdf",
+    schematic = ":sch",
+    tags = ["manual"],
+)
+
+sch_pdf_action_test(
+    name = "sch_pdf_named_test",
+    size = "small",
+    output = "named.pdf",
+    target_under_test = ":named.pdf",
 )

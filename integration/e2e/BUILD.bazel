@@ -4,7 +4,7 @@
 # rules_kicad writes them. README.md describes the design.
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
-load("@rules_kicad//kicad:defs.bzl", "kicad_bom", "kicad_drc_test", "kicad_erc_test", "kicad_pcb", "kicad_schematic")
+load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_bom", "kicad_drc_test", "kicad_erc_test", "kicad_pcb", "kicad_sch_pdf", "kicad_schematic")
 
 kicad_schematic(
     name = "sch",
@@ -57,4 +57,17 @@ diff_test(
     size = "small",
     file1 = ":bom",
     file2 = "expected_bom.csv",
+)
+
+# The e2e schematic as a PDF, the same bytes in two configurations
+# (issue #18).
+kicad_sch_pdf(
+    name = "sch_pdf",
+    schematic = ":sch",
+)
+
+determinism_test(
+    name = "sch_pdf_determinism_test",
+    size = "small",
+    target = ":sch_pdf",
 )
