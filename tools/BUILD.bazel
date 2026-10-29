@@ -3,6 +3,12 @@
 # apart from the packages a user of the module loads.
 load("@buildifier_prebuilt//:rules.bzl", "buildifier")
 
+# bazel run //tools:mirror: checks the prebuilt archives (tools/mirror).
+alias(
+    name = "mirror",
+    actual = "//tools/mirror",
+)
+
 # bazel run //tools:buildifier
 buildifier(
     name = "buildifier",

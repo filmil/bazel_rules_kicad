@@ -1,0 +1,38 @@
+{
+  "repo": "filmil/bazel_rules_kicad",
+  "releases": [
+    {
+      "tag": "prebuilt-kicad-9.0.9.1",
+      "title": "Prebuilt KiCad 9.0.9.1 (linux x86_64)",
+      "notes": "Unpacked, pruned KiCad 9.0.9.1 lite AppImage, for rules_kicad's toolchain. Source: https://kicad-downloads.s3.cern.ch/appimage/stable/kicad-9.0.9.1-x86_64-lite.AppImage.tar (sha256 401ed5e3e32bcf96af89d9741597670107b6a7c30b550518739b2512e6e92b63). License: GPL-3.0-or-later (KiCad). Built by make-kicad-prebuilt.sh.",
+      "assets": [
+        {
+          "name": "kicad-9.0.9.1-linux-x86_64.tar.xz",
+          "sha256": "7f570bd2161a2dbdd0dca9ef7ba0ab751d422b379c6209385491ecc047f93bff",
+          "built": {
+            "source": "https://kicad-downloads.s3.cern.ch/appimage/stable/kicad-9.0.9.1-x86_64-lite.AppImage.tar",
+            "source_sha256": "401ed5e3e32bcf96af89d9741597670107b6a7c30b550518739b2512e6e92b63",
+            "script": "make-kicad-prebuilt.sh"
+          }
+        }
+      ]
+    },
+    {
+      "tag": "prebuilt-kicad-libs-9.0.9",
+      "title": "KiCad 9.0.9 symbol and footprint libraries",
+      "notes": "Archives of tag 9.0.9 of https://gitlab.com/kicad/libraries/kicad-symbols and https://gitlab.com/kicad/libraries/kicad-footprints, as GitLab served them on 2026-10-28. License: CC-BY-SA-4.0 with the KiCad libraries exception.",
+      "assets": [
+        {
+          "name": "kicad-symbols-9.0.9.tar.gz",
+          "sha256": "06ef18935edb5aab03708006a37753c607ef2dcd735a8abdf36d816523696516",
+          "url": "https://gitlab.com/kicad/libraries/kicad-symbols/-/archive/9.0.9/kicad-symbols-9.0.9.tar.gz"
+        },
+        {
+          "name": "kicad-footprints-9.0.9.tar.gz",
+          "sha256": "f36f804056ebbe36e7fb53e897d20e905c6b5863f7cff43cceccdf54492f7d9a",
+          "url": "https://gitlab.com/kicad/libraries/kicad-footprints/-/archive/9.0.9/kicad-footprints-9.0.9.tar.gz"
+        }
+      ]
+    }
+  ]
+}
