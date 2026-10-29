@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The e2e board as a STEP model, the same bytes in two configurations
+# (issue #25).
+load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_step")
+
+kicad_step(
+    name = "step",
+    pcb = "//e2e:pcb",
+)
+
+determinism_test(
+    name = "step_determinism_test",
+    size = "small",
+    target = ":step",
+)
