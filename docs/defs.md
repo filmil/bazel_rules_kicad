@@ -526,6 +526,45 @@ and names the sheet.
 | <a id="kicad_schematic-root"></a>root |  The root sheet.   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 
 
+<a id="kicad_step"></a>
+
+## kicad_step
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_step")
+
+kicad_step(<a href="#kicad_step-name">name</a>, <a href="#kicad_step-pcb">pcb</a>)
+</pre>
+
+A board as a STEP model: `<name>.step`.
+
+```starlark
+kicad_step(
+    name = "step",
+    pcb = ":pcb",
+)
+```
+
+The model holds the board body: its outline, thickness and holes, as
+`<board>_PCB`. It holds no parts yet: their 3D models come with issue
+#43. It holds no copper: kicad-cli writes tracks, pads and zones in a
+different order on every run (issue #63).
+
+The time stamp in the header is set to
+`--@rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
+same board gives the same bytes on the same platform. Across platforms
+the geometry may differ in the last digits; rules_brep compares models
+by tolerance.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_step-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_step-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+
+
 <a id="kicad_toolchain"></a>
 
 ## kicad_toolchain
