@@ -1,0 +1,91 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# kicad_bom on parts that group (issue #20): R1, R2 and R3 are 10k 0603
+# resistors, R4 is one too but marked do-not-populate, and C1 is a 100n
+# 0603 capacitor. The expected files are written by hand.
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+load("//kicad:defs.bzl", "determinism_test", "kicad_bom", "kicad_schematic")
+
+kicad_schematic(
+    name = "sch",
+    project = "bom.kicad_pro",
+    root = "bom.kicad_sch",
+    deps = ["@kicad_libs//:symbols"],
+)
+
+# The defaults: R1-R3 share a row; R4 has its own, marked DNP.
+kicad_bom(
+    name = "default",
+    schematic = ":sch",
+)
+
+diff_test(
+    name = "default_test",
+    size = "small",
+    file1 = ":default",
+    file2 = "expected_default.csv",
+)
+
+determinism_test(
+    name = "default_determinism_test",
+    size = "small",
+    target = ":default",
+)
+
+# No grouping: a row per part.
+kicad_bom(
+    name = "ungrouped",
+    group_by = [],
+    schematic = ":sch",
+)
+
+diff_test(
+    name = "ungrouped_test",
+    size = "small",
+    file1 = ":ungrouped",
+    file2 = "expected_ungrouped.csv",
+)
+
+# Without the do-not-populate part.
+kicad_bom(
+    name = "no_dnp",
+    exclude_dnp = True,
+    schematic = ":sch",
+)
+
+diff_test(
+    name = "no_dnp_test",
+    size = "small",
+    file1 = ":no_dnp",
+    file2 = "expected_no_dnp.csv",
+)
+
+# Other columns, sorted by value; the name already ends in .csv.
+kicad_bom(
+    name = "custom.csv",
+    fields = [
+        "Value",
+        "Reference",
+        "${QUANTITY}",
+        "${DNP}",
+    ],
+    group_by = [
+        "Value",
+        "${DNP}",
+    ],
+    labels = [
+        "Value",
+        "Designators",
+        "Count",
+        "DNP",
+    ],
+    schematic = ":sch",
+    sort_field = "Value",
+)
+
+diff_test(
+    name = "custom_test",
+    size = "small",
+    file1 = ":custom.csv",
+    file2 = "expected_custom.csv",
+)

@@ -12,6 +12,7 @@ https://github.com/filmil/bazel_rules_kicad). This file is the only public
 entry point; everything under `//kicad/private` may change without notice.
 """
 
+load("//kicad/private:bom.bzl", _kicad_bom = "kicad_bom")
 load("//kicad/private:design.bzl", _KicadPcbInfo = "KicadPcbInfo", _KicadSchematicInfo = "KicadSchematicInfo", _kicad_pcb = "kicad_pcb", _kicad_schematic = "kicad_schematic")
 load("//kicad/private:determinism.bzl", _determinism_test = "determinism_test")
 load("//kicad/private:drc.bzl", _kicad_drc_report = "kicad_drc_report", _kicad_drc_test = "kicad_drc_test")
@@ -37,6 +38,7 @@ kicad_erc_report = _kicad_erc_report
 kicad_erc_test = _kicad_erc_test
 kicad_drc_report = _kicad_drc_report
 kicad_drc_test = _kicad_drc_test
+kicad_bom = _kicad_bom
 kicad_pcb = _kicad_pcb
 KicadSchematicInfo = _KicadSchematicInfo
 KicadPcbInfo = _KicadPcbInfo
