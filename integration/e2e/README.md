@@ -11,10 +11,15 @@ writes one.
   R1 and D1 (0603) and their three nets routed on the top copper.
 * `main.kicad_pro`: the project file, with KiCad 9's default rules.
 
+Both sheets are A5, with title blocks. Every wire is straight: on the root
+sheet, each pin of J1 runs left to its rail, with `+3V3` and its flag
+above and `GND` and its flag below; on "Power", `+3V3`, R1, D1 (anode up)
+and `GND` form one column.
+
 All symbols and footprints come from the KiCad 9.0.9 libraries
 (`@kicad_libs//:standard`).
 
-On 2026-10-29, KiCad 9.0.9 found the design clean when staged the way
+On 2026-10-29, after the layout above, KiCad 9.0.9 found the design clean when staged the way
 `kicad_schematic` and `kicad_pcb` stage it:
 
 * ERC with every severity: 0 violations;
