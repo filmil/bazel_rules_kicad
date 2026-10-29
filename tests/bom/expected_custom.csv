@@ -1,0 +1,4 @@
+"Value","Designators","Count","DNP"
+"100n","C1","1",""
+"10k","R1,R2,R3","3",""
+"10k","R4","1","DNP"

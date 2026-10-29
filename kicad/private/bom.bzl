@@ -11,9 +11,18 @@ def _kicad_bom_impl(ctx):
         fail("%s: %d fields but %d labels; give one label per field" % (ctx.label, len(ctx.attr.fields), len(ctx.attr.labels)))
     if not ctx.attr.fields:
         fail("%s: fields is empty" % ctx.label)
-    for f in ctx.attr.fields + ctx.attr.labels + ctx.attr.group_by:
+    for f in ctx.attr.fields + ctx.attr.labels + ctx.attr.group_by + [ctx.attr.sort_field]:
+        if not f:
+            fail("%s: an empty name in fields, labels, group_by or sort_field; kicad-cli would fall back to its default" % ctx.label)
         if "," in f:
             fail("%s: %r has a comma, which kicad-cli takes as a list separator" % (ctx.label, f))
+
+    # kicad-cli 9.0.9 does not group by a field that is not a column: with
+    # ${DNP} missing from fields, a do-not-populate part joined the row of
+    # the parts it shares a value with.
+    for g in ctx.attr.group_by:
+        if g not in ctx.attr.fields:
+            fail("%s: group_by %r is not in fields; kicad-cli groups only by columns" % (ctx.label, g))
     sch = ctx.attr.schematic[KicadSchematicInfo]
     base = ctx.label.name[:-len(".csv")] if ctx.label.name.endswith(".csv") else ctx.label.name
     out = ctx.actions.declare_file(base + ".csv")
@@ -74,7 +83,12 @@ The output is `<name>.csv` (or `<name>` when the name already ends in
 parts with the same values of `group_by`, sorted by `sort_field`. Fields
 are quoted with `"`, separated with `,`, and the references of a group are
 listed one by one (`R1,R2,R3`), never as a range. Every option is passed
-to kicad-cli, so the columns do not change with its defaults.
+to kicad-cli that shapes the output (no project preset applies), so the
+columns do not change with its defaults.
+
+The default grouping has `${DNP}`, so a do-not-populate part gets a row
+of its own: grouped by value and footprint only, it joins the row of its
+twins, which then counts it and says DNP for all of them.
 
 `fields` takes symbol fields (`Reference`, `Value`, `Footprint`, or any
 field of the parts) and kicad-cli's own: `${QUANTITY}`, `${DNP}`,
@@ -97,8 +111,9 @@ time stamp.
             default = ["Refs", "Value", "Footprint", "Qty", "DNP"],
         ),
         "group_by": attr.string_list(
-            doc = "Parts with the same values of these fields share a row. Empty: one row per part.",
-            default = ["Value", "Footprint"],
+            doc = "Parts with the same values of these fields share a row; each must be in `fields`. " +
+                  "Empty: one row per part.",
+            default = ["Value", "Footprint", "${DNP}"],
         ),
         "sort_field": attr.string(
             doc = "The field the rows are sorted by, ascending.",

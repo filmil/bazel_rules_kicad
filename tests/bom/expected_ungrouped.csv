@@ -1,0 +1,6 @@
+"Refs","Value","Footprint","Qty","DNP"
+"C1","100n","Capacitor_SMD:C_0603_1608Metric","1",""
+"R1","10k","Resistor_SMD:R_0603_1608Metric","1",""
+"R2","10k","Resistor_SMD:R_0603_1608Metric","1",""
+"R3","10k","Resistor_SMD:R_0603_1608Metric","1",""
+"R4","10k","Resistor_SMD:R_0603_1608Metric","1","DNP"

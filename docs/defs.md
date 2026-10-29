@@ -36,7 +36,12 @@ The output is `<name>.csv` (or `<name>` when the name already ends in
 parts with the same values of `group_by`, sorted by `sort_field`. Fields
 are quoted with `"`, separated with `,`, and the references of a group are
 listed one by one (`R1,R2,R3`), never as a range. Every option is passed
-to kicad-cli, so the columns do not change with its defaults.
+to kicad-cli that shapes the output (no project preset applies), so the
+columns do not change with its defaults.
+
+The default grouping has `${DNP}`, so a do-not-populate part gets a row
+of its own: grouped by value and footprint only, it joins the row of its
+twins, which then counts it and says DNP for all of them.
 
 `fields` takes symbol fields (`Reference`, `Value`, `Footprint`, or any
 field of the parts) and kicad-cli's own: `${QUANTITY}`, `${DNP}`,
@@ -52,7 +57,7 @@ time stamp.
 | <a id="kicad_bom-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
 | <a id="kicad_bom-exclude_dnp"></a>exclude_dnp |  Leave out parts marked "do not populate".   | Boolean | optional |  `False`  |
 | <a id="kicad_bom-fields"></a>fields |  The columns, in order: symbol fields or kicad-cli's ${...} fields.   | List of strings | optional |  `["Reference", "Value", "Footprint", "${QUANTITY}", "${DNP}"]`  |
-| <a id="kicad_bom-group_by"></a>group_by |  Parts with the same values of these fields share a row. Empty: one row per part.   | List of strings | optional |  `["Value", "Footprint"]`  |
+| <a id="kicad_bom-group_by"></a>group_by |  Parts with the same values of these fields share a row; each must be in `fields`. Empty: one row per part.   | List of strings | optional |  `["Value", "Footprint", "${DNP}"]`  |
 | <a id="kicad_bom-labels"></a>labels |  The header of each column, in the order of `fields`.   | List of strings | optional |  `["Refs", "Value", "Footprint", "Qty", "DNP"]`  |
 | <a id="kicad_bom-schematic"></a>schematic |  The schematic (`kicad_schematic`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 | <a id="kicad_bom-sort_field"></a>sort_field |  The field the rows are sorted by, ascending.   | String | optional |  `"Reference"`  |

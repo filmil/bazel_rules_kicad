@@ -231,3 +231,53 @@ fails_test(
     message = "has a comma",
     target_under_test = ":bom_comma",
 )
+
+kicad_bom(
+    name = "bom_no_fields",
+    fields = [],
+    labels = [],
+    schematic = ":sch",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "bom_no_fields_test",
+    size = "small",
+    message = "fields is empty",
+    target_under_test = ":bom_no_fields",
+)
+
+kicad_bom(
+    name = "bom_empty_name",
+    schematic = ":sch",
+    sort_field = "",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "bom_empty_name_test",
+    size = "small",
+    message = "an empty name",
+    target_under_test = ":bom_empty_name",
+)
+
+kicad_bom(
+    name = "bom_group_not_column",
+    fields = [
+        "Reference",
+        "Value",
+    ],
+    labels = [
+        "Refs",
+        "Value",
+    ],
+    schematic = ":sch",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "bom_group_not_column_test",
+    size = "small",
+    message = "is not in fields; kicad-cli groups only by columns",
+    target_under_test = ":bom_group_not_column",
+)
