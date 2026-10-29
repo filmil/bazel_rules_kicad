@@ -12,6 +12,7 @@ bzl_library(
         "drc.bzl",
         "erc.bzl",
         "extensions.bzl",
+        "gerbers.bzl",
         "kicad_toolchain.bzl",
         "library.bzl",
         "netlist.bzl",

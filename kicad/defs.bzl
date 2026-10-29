@@ -17,6 +17,7 @@ load("//kicad/private:design.bzl", _KicadPcbInfo = "KicadPcbInfo", _KicadSchemat
 load("//kicad/private:determinism.bzl", _determinism_test = "determinism_test")
 load("//kicad/private:drc.bzl", _kicad_drc_report = "kicad_drc_report", _kicad_drc_test = "kicad_drc_test")
 load("//kicad/private:erc.bzl", _kicad_erc_report = "kicad_erc_report", _kicad_erc_test = "kicad_erc_test")
+load("//kicad/private:gerbers.bzl", _DEFAULT_GERBER_LAYERS = "DEFAULT_GERBER_LAYERS", _kicad_gerbers = "kicad_gerbers")
 load("//kicad/private:kicad_toolchain.bzl", _KicadToolchainInfo = "KicadToolchainInfo", _kicad_toolchain = "kicad_toolchain")
 load("//kicad/private:library.bzl", _KicadLibraryInfo = "KicadLibraryInfo", _kicad_lib_tables = "kicad_lib_tables", _kicad_library = "kicad_library", _lib_table_test = "lib_table_test")
 load("//kicad/private:netlist.bzl", _kicad_netlist = "kicad_netlist")
@@ -26,6 +27,7 @@ load("//kicad/private:sch_render.bzl", _kicad_sch_render = "kicad_sch_render")
 load("//kicad/private:swap_test.bzl", _swap_test = "swap_test")
 load("//kicad/private:toolchains.bzl", _tool_toolchain = "tool_toolchain")
 
+DEFAULT_GERBER_LAYERS = _DEFAULT_GERBER_LAYERS
 KicadLibraryInfo = _KicadLibraryInfo
 KicadPcbInfo = _KicadPcbInfo
 KicadSchematicInfo = _KicadSchematicInfo
@@ -37,6 +39,7 @@ kicad_drc_report = _kicad_drc_report
 kicad_drc_test = _kicad_drc_test
 kicad_erc_report = _kicad_erc_report
 kicad_erc_test = _kicad_erc_test
+kicad_gerbers = _kicad_gerbers
 kicad_lib_tables = _kicad_lib_tables
 kicad_library = _kicad_library
 kicad_netlist = _kicad_netlist

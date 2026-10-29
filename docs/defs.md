@@ -127,6 +127,47 @@ date is removed (spec D2), so the same schematic gives the same bytes.
 | <a id="kicad_erc_report-schematic"></a>schematic |  The schematic (`kicad_schematic`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 
 
+<a id="kicad_gerbers"></a>
+
+## kicad_gerbers
+
+<pre>
+load("@rules_kicad//kicad:defs.bzl", "kicad_gerbers")
+
+kicad_gerbers(<a href="#kicad_gerbers-name">name</a>, <a href="#kicad_gerbers-layers">layers</a>, <a href="#kicad_gerbers-pcb">pcb</a>)
+</pre>
+
+A board's Gerber files, and its Gerber job file, in one directory.
+
+```starlark
+kicad_gerbers(
+    name = "gerbers",
+    pcb = ":pcb",
+)
+```
+
+The output is the directory `<name>`, with one file per layer the board
+has (`<board>-F_Cu.gtl`, `<board>-Edge_Cuts.gm1`, ...) and
+`<board>-job.gbrjob`. The files are Gerber X2, with netlist attributes, 6
+decimals and Protel file extensions.
+
+The default `layers` lists every copper layer KiCad has; kicad-cli skips
+the ones a board does not have, so a board gets all of its copper layers,
+however many. Besides copper: paste, silkscreen and mask on both sides,
+and the board outline. The time stamps are set to
+`--@rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
+same board gives the same bytes.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_gerbers-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_gerbers-layers"></a>layers |  The layers to plot, by KiCad's names (F.Cu, In1.Cu, Edge.Cuts, ...). Layers the board does not have are skipped. The default is `DEFAULT_GERBER_LAYERS` from `@rules_kicad//kicad:defs.bzl`; to add a layer, write `layers = DEFAULT_GERBER_LAYERS + ["F.Fab"]`.   | List of strings | optional |  `["F.Cu", "In1.Cu", "In2.Cu", "In3.Cu", "In4.Cu", "In5.Cu", "In6.Cu", "In7.Cu", "In8.Cu", "In9.Cu", "In10.Cu", "In11.Cu", "In12.Cu", "In13.Cu", "In14.Cu", "In15.Cu", "In16.Cu", "In17.Cu", "In18.Cu", "In19.Cu", "In20.Cu", "In21.Cu", "In22.Cu", "In23.Cu", "In24.Cu", "In25.Cu", "In26.Cu", "In27.Cu", "In28.Cu", "In29.Cu", "In30.Cu", "B.Cu", "F.Paste", "B.Paste", "F.Silkscreen", "B.Silkscreen", "F.Mask", "B.Mask", "Edge.Cuts"]`  |
+| <a id="kicad_gerbers-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+
+
 <a id="kicad_lib_tables"></a>
 
 ## kicad_lib_tables
