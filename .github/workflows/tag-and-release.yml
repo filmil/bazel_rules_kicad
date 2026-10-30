@@ -71,10 +71,15 @@ jobs:
     if: ${{ needs.check.outputs.changed == 'true' }}
     runs-on: ubuntu-latest
     container: buildpack-deps:bullseye-curl@sha256:7c8d79c31eb106cca055357456a2fa89b10fa20f254da6fe3eca937439696c62
+    strategy:
+      matrix:
+        bazel: ["8.x", "9.x"]
     defaults:
       run:
         shell: bash
+    # The same bazelisk as Test (test.yml); change both together.
     env:
+      USE_BAZEL_VERSION: ${{ matrix.bazel }}
       BAZELISK_VERSION: v1.29.0
       BAZELISK_SHA256: 5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992
     steps:

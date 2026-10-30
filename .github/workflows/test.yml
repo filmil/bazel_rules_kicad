@@ -37,6 +37,7 @@ defaults:
   run:
     shell: bash
 
+# Tag and Release pins the same bazelisk; change both together.
 env:
   BAZELISK_VERSION: v1.29.0
   BAZELISK_SHA256: 5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992
@@ -136,10 +137,18 @@ jobs:
   # registry, so Tag and Release requires this; a pull request does not.
   # A dependency new in the filmil registry can wait days for BCR review,
   # and the rules' work goes on meanwhile.
+  #
+  # Only the two checks may fail; a broken setup (bazelisk, checkout) still
+  # fails the job.
   bcr-ready:
     runs-on: ubuntu-latest
     container: buildpack-deps:bullseye-curl@sha256:7c8d79c31eb106cca055357456a2fa89b10fa20f254da6fe3eca937439696c62
-    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        bazel: ["8.x", "9.x"]
+    env:
+      USE_BAZEL_VERSION: ${{ matrix.bazel }}
     steps:
       - name: Install bazelisk
         run: |
@@ -153,9 +162,11 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Dependencies resolve from the BCR alone
+        continue-on-error: true
         run: bazel --ignore_all_rc_files mod graph --registry=https://bcr.bazel.build > /dev/null
 
       - name: Integration dependencies resolve from the BCR alone
+        continue-on-error: true
         working-directory: integration
         run: bazel --ignore_all_rc_files mod graph --registry=https://bcr.bazel.build > /dev/null
 
