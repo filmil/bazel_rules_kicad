@@ -15,6 +15,6 @@ cat <<EOF
 ## Using Bzlmod
 
 \`\`\`starlark
-bazel_dep(name = "rules_kicad", version = "${VERSION}")
+bazel_dep(name = "hdlf_rules_kicad", version = "${VERSION}")
 \`\`\`
 EOF

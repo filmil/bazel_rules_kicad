@@ -60,7 +60,7 @@ func TestGivenLayers(t *testing.T) {
 }
 
 // Gerber X2 with netlist attributes, 6 decimals in mm, every date at the
-// epoch (--@rules_kicad//kicad:source_date_epoch defaults to 0).
+// epoch (--@hdlf_rules_kicad//kicad:source_date_epoch defaults to 0).
 func TestCopperFile(t *testing.T) {
 	dir, _ := files(t, *all)
 	b, err := os.ReadFile(filepath.Join(dir, "main-F_Cu.gtl"))

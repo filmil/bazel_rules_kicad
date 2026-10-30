@@ -2,7 +2,7 @@
 #
 # The e2e board's Gerber files, the same bytes in two configurations
 # (issue #22).
-load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_gerbers")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_gerbers")
 
 kicad_gerbers(
     name = "gerbers",

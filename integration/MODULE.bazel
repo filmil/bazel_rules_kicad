@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # The Bazel Central Registry presubmit builds this module against the
-# published rules_kicad archive. `.bcr/presubmit.yml` names it by the
+# published hdlf_rules_kicad archive. `.bcr/presubmit.yml` names it by the
 # `module_path: "integration"` key.
 #
 # The version below and the override are both replaced by the registry
@@ -13,18 +13,18 @@ module(
     version = "0.0.0",
 )
 
-bazel_dep(name = "rules_kicad", version = "0.0.0")
+bazel_dep(name = "hdlf_rules_kicad", version = "0.0.0")
 local_path_override(
-    module_name = "rules_kicad",
+    module_name = "hdlf_rules_kicad",
     path = "..",
 )
 
 bazel_dep(name = "bazel_skylib", version = "1.9.2")
 
 # The pinned KiCad libraries, as a user brings them in.
-kicad = use_extension("@rules_kicad//kicad:extensions.bzl", "kicad")
+kicad = use_extension("@hdlf_rules_kicad//kicad:extensions.bzl", "kicad")
 use_repo(kicad, "kicad_libs")
 
 # KiCad's 3D model libraries, fetched over BitTorrent (issue #43).
-models = use_extension("@rules_kicad//kicad:models.bzl", "models")
+models = use_extension("@hdlf_rules_kicad//kicad:models.bzl", "models")
 use_repo(models, "kicad_models")

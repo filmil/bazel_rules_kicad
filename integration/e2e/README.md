@@ -1,6 +1,6 @@
 # The e2e design
 
-A small design that the rules of rules_kicad run on, laid out as a user
+A small design that the rules of hdlf_rules_kicad run on, laid out as a user
 writes one.
 
 * `main.kicad_sch`, the root sheet: a two-pin power connector J1 with

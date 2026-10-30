@@ -3,7 +3,7 @@
 # Every export of the e2e design holds no date or time but the epoch
 # (issue #27, spec D2). Each export grants this package visibility; a new
 # export adds that, and one line here.
-load("@rules_kicad//kicad:defs.bzl", "timestamp_scan_test")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "timestamp_scan_test")
 
 timestamp_scan_test(
     name = "timestamp_scan_test",

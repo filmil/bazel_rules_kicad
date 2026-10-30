@@ -54,7 +54,7 @@ models = module_extension(
     doc = """KiCad's 3D model libraries, for `kicad_step(models = ...)`.
 
 ```starlark
-models = use_extension("@rules_kicad//kicad:models.bzl", "models")
+models = use_extension("@hdlf_rules_kicad//kicad:models.bzl", "models")
 use_repo(models, "kicad_models")
 ```
 

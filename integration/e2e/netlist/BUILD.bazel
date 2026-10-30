@@ -2,7 +2,7 @@
 #
 # The e2e schematic's netlist, the same bytes in two configurations
 # (issue #19).
-load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_netlist")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_netlist")
 
 kicad_netlist(
     name = "netlist",

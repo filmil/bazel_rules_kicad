@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # The e2e design: a two-sheet schematic and its board, as a user of
-# rules_kicad writes them. README.md describes the design.
+# hdlf_rules_kicad writes them. README.md describes the design.
 #
 # Each check of the design is in a package of its own under e2e/.
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@rules_kicad//kicad:defs.bzl", "kicad_pcb", "kicad_schematic")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_pcb", "kicad_schematic")
 
 package(default_visibility = ["//e2e:__subpackages__"])
 

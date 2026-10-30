@@ -17,7 +17,7 @@ def _normalize_toolchain_impl(ctx):
     exe = ctx.attr.normalize[DefaultInfo].files_to_run
     epoch = ctx.attr._epoch[BuildSettingInfo].value
     if epoch < 0:
-        fail("--@rules_kicad//kicad:source_date_epoch=%d: want 0 or more" % epoch)
+        fail("--@hdlf_rules_kicad//kicad:source_date_epoch=%d: want 0 or more" % epoch)
     return [platform_common.ToolchainInfo(
         tools = {
             "normalize": exe,
@@ -30,11 +30,11 @@ def _normalize_toolchain_impl(ctx):
 
 normalize_toolchain = rule(
     implementation = _normalize_toolchain_impl,
-    doc = """The normalize toolchain, for `@rules_kicad//kicad:normalize_toolchain_type`.
+    doc = """The normalize toolchain, for `@hdlf_rules_kicad//kicad:normalize_toolchain_type`.
 
 Its tool, `normalize IN OUT`, copies a file or a directory and replaces
 every time stamp KiCad writes (Gerber, drill, Gerber job, PDF, STEP, ERC
-and DRC reports) by `--@rules_kicad//kicad:source_date_epoch`, default 0.
+and DRC reports) by `--@hdlf_rules_kicad//kicad:source_date_epoch`, default 0.
 
 Its second tool, `svgpng --dpi N IN OUT`, draws the SVG sheets that
 kicad-cli plots as PNG images that hold no time stamp (`kicad_sch_render`).

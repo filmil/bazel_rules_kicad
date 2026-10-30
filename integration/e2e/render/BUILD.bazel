@@ -3,7 +3,7 @@
 # The e2e board's top and bottom as PNG, the same bytes in two
 # configurations (issue #26). A change to the board attaches these
 # (AGENTS.md rule 5).
-load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_render")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_render")
 
 kicad_render(
     name = "render",

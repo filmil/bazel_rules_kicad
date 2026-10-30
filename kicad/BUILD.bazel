@@ -23,7 +23,7 @@ toolchain_type(
 )
 
 # The time every time stamp in an output becomes, in seconds since 1970
-# UTC (spec D2): --@rules_kicad//kicad:source_date_epoch=1700000000.
+# UTC (spec D2): --@hdlf_rules_kicad//kicad:source_date_epoch=1700000000.
 int_flag(
     name = "source_date_epoch",
     build_setting_default = 0,

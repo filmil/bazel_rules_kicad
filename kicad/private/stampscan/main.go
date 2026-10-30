@@ -15,7 +15,7 @@
 // and:
 //
 //   - STAMP_EPOCH: the epoch, in seconds since 1970 UTC
-//     (--@rules_kicad//kicad:source_date_epoch).
+//     (--@hdlf_rules_kicad//kicad:source_date_epoch).
 //   - STAMP_EXPECT: "clean", or "stamped" for a known-bad file, which must
 //     then have at least one date that is not the epoch.
 //
