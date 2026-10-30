@@ -226,6 +226,19 @@ jobs:
           USE_BAZEL_VERSION: ${{ matrix.bazel }}
         run: bazel test //...
 
+      # Issue #43: a part whose 3D model library is not in models fails
+      # the build, and the message names the part and the library.
+      - name: A missing 3D model fails the build and is named
+        working-directory: integration
+        env:
+          USE_BAZEL_VERSION: ${{ matrix.bazel }}
+        run: |
+          set -o nounset -o pipefail
+          if bazel build //e2e/step:step_parts_missing > "${HOME}/model.log" 2>&1; then
+            echo "the STEP model without LED_SMD built"; exit 1
+          fi
+          grep -F 'D1: ${KICAD9_3DMODEL_DIR}/LED_SMD.3dshapes/LED_0603_1608Metric.step not found; add @kicad_models//:LED_SMD' "${HOME}/model.log"
+
   # Spec D1: two clean builds give byte-identical outputs. Every target of a
   # determinism_test is built in two fresh output bases with no shared
   # cache, and the SHA-256 of every output file is compared.

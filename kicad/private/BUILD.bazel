@@ -17,6 +17,7 @@ bzl_library(
         "golden.bzl",
         "kicad_toolchain.bzl",
         "library.bzl",
+        "models_pins.bzl",
         "netlist.bzl",
         "normalize.bzl",
         "pos.bzl",

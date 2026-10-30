@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# A second library with the same <name>.3dshapes/ path as the one in
+# //tests/step, for the test that two models targets may not give the same
+# model path.
+filegroup(
+    name = "fake_lib",
+    srcs = ["Fake_Lib.3dshapes/part.step"],
+    visibility = ["//tests/step:__pkg__"],
+)

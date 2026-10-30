@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# The e2e board as a STEP model, without and with copper, the same bytes in
-# two configurations (issues #25 and #63).
+# The e2e board as a STEP model: the board alone, with copper, and with its
+# parts; the same bytes in two configurations (issues #25, #63 and #43).
 load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_step")
 
 kicad_step(
@@ -27,4 +27,39 @@ determinism_test(
     name = "copper_determinism_test",
     size = "small",
     target = ":copper",
+)
+
+# With the parts (issue #43): the three model libraries the board's
+# footprints use, fetched over BitTorrent from bt.hdlfactory.com. Building
+# it runs stepcheck, which fails when a part has no model. kicad-cli writes
+# the parts' shells in a different order on every run; the normalizer
+# renumbers them canonically (issue #63), so the bytes are stable.
+kicad_step(
+    name = "step_parts",
+    models = [
+        "@kicad_models//:Connector_PinHeader_2.54mm",
+        "@kicad_models//:LED_SMD",
+        "@kicad_models//:Resistor_SMD",
+    ],
+    pcb = "//e2e:pcb",
+    visibility = ["//e2e/timestamp_scan:__pkg__"],
+)
+
+determinism_test(
+    name = "step_parts_determinism_test",
+    size = "small",
+    target = ":step_parts",
+)
+
+# Known bad: LED_SMD is left out, so D1 has no model. The build fails and
+# names D1 and @kicad_models//:LED_SMD; CI checks that
+# (.github/workflows/test.yml). Manual, so that //... builds.
+kicad_step(
+    name = "step_parts_missing",
+    models = [
+        "@kicad_models//:Connector_PinHeader_2.54mm",
+        "@kicad_models//:Resistor_SMD",
+    ],
+    pcb = "//e2e:pcb",
+    tags = ["manual"],
 )

@@ -5,6 +5,7 @@
 # bytes in two configurations, and the models themselves.
 load("@rules_go//go:def.bzl", "go_test")
 load("//kicad:defs.bzl", "determinism_test", "kicad_step", "swap_test")
+load("//tests:fails_test.bzl", "fails_test")
 load(":action_test.bzl", "step_action_test")
 
 kicad_step(
@@ -74,4 +75,109 @@ go_test(
     ],
     pure = "on",
     deps = ["@rules_go//go/runfiles"],
+)
+
+# With models (issue #43): a made-up library in this package stands in for
+# @kicad_models, so the analysis needs no network. The board names no
+# model of it, so only the analysis is tested here; integration/e2e/step
+# builds the real thing.
+filegroup(
+    name = "fake_lib",
+    srcs = ["Fake_Lib.3dshapes/part.step"],
+)
+
+kicad_step(
+    name = "step_models",
+    models = [":fake_lib"],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+step_action_test(
+    name = "step_models_action_test",
+    size = "small",
+    models_dir = "step_models_models",
+    output = "step_models.step",
+    target_under_test = ":step_models",
+)
+
+kicad_step(
+    name = "step_stray_model",
+    models = ["stray.step"],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "step_stray_model_test",
+    size = "small",
+    message = "is not in a <name>.3dshapes directory",
+    target_under_test = ":step_stray_model",
+)
+
+# The same model path from two libraries.
+kicad_step(
+    name = "step_dup_model",
+    models = [
+        ":fake_lib",
+        "//tests/step/second:fake_lib",
+    ],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "step_dup_model_test",
+    size = "small",
+    message = "comes from two models targets",
+    target_under_test = ":step_dup_model",
+)
+
+# A library with only its license: no model file.
+kicad_step(
+    name = "step_license_only",
+    models = ["LICENSE.md"],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "step_license_only_test",
+    size = "small",
+    message = "models has no model file",
+    target_under_test = ":step_license_only",
+)
+
+# A file named like a library directory is not one.
+kicad_step(
+    name = "step_bare_lib",
+    models = ["Bare.3dshapes"],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "step_bare_lib_test",
+    size = "small",
+    message = "is not in a <name>.3dshapes directory",
+    target_under_test = ":step_bare_lib",
+)
+
+# Two libraries of one's own stage side by side.
+kicad_step(
+    name = "step_two_libs",
+    models = [
+        "Other.3dshapes/part.step",
+        ":fake_lib",
+    ],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+step_action_test(
+    name = "step_two_libs_action_test",
+    size = "small",
+    models_dir = "step_two_libs_models",
+    output = "step_two_libs.step",
+    target_under_test = ":step_two_libs",
 )

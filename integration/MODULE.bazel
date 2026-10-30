@@ -24,3 +24,7 @@ bazel_dep(name = "bazel_skylib", version = "1.9.2")
 # The pinned KiCad libraries, as a user brings them in.
 kicad = use_extension("@rules_kicad//kicad:extensions.bzl", "kicad")
 use_repo(kicad, "kicad_libs")
+
+# KiCad's 3D model libraries, fetched over BitTorrent (issue #43).
+models = use_extension("@rules_kicad//kicad:models.bzl", "models")
+use_repo(models, "kicad_models")
