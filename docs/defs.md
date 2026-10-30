@@ -576,7 +576,7 @@ and names the sheet.
 <pre>
 load("@rules_kicad//kicad:defs.bzl", "kicad_step")
 
-kicad_step(<a href="#kicad_step-name">name</a>, <a href="#kicad_step-pcb">pcb</a>)
+kicad_step(<a href="#kicad_step-name">name</a>, <a href="#kicad_step-copper">copper</a>, <a href="#kicad_step-pcb">pcb</a>)
 </pre>
 
 A board as a STEP model: `<name>.step`.
@@ -590,8 +590,8 @@ kicad_step(
 
 The model holds the board body: its outline, thickness and holes, as
 `<board>_PCB`. It holds no parts yet: their 3D models come with issue
-#43. It holds no copper: kicad-cli writes tracks, pads and zones in a
-different order on every run (issue #63).
+#43. With `copper = True` it also holds the copper: tracks and zones
+as `<board>_copper`, pads as `<board>_pad`, and vias as `<board>_via`.
 
 The time stamp in the header is set to
 `--@rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
@@ -605,6 +605,7 @@ by tolerance.
 | Name  | Description | Type | Mandatory | Default |
 | :------------- | :------------- | :------------- | :------------- | :------------- |
 | <a id="kicad_step-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_step-copper"></a>copper |  Export the copper too: tracks, vias, pads and zones.   | Boolean | optional |  `False`  |
 | <a id="kicad_step-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 
 

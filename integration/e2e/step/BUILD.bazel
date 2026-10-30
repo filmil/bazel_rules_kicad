@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# The e2e board as a STEP model, the same bytes in two configurations
-# (issue #25).
+# The e2e board as a STEP model, without and with copper, the same bytes in
+# two configurations (issues #25 and #63).
 load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_step")
 
 kicad_step(
@@ -14,4 +14,17 @@ determinism_test(
     name = "step_determinism_test",
     size = "small",
     target = ":step",
+)
+
+kicad_step(
+    name = "copper",
+    copper = True,
+    pcb = "//e2e:pcb",
+    visibility = ["//e2e/timestamp_scan:__pkg__"],
+)
+
+determinism_test(
+    name = "copper_determinism_test",
+    size = "small",
+    target = ":copper",
 )
