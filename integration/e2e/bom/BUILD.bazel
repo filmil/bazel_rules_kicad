@@ -2,7 +2,7 @@
 #
 # The e2e bill of materials, with the default columns (issue #20). The
 # expected file is written by hand: it is what rules_fab will read.
-load("@rules_kicad//kicad:defs.bzl", "determinism_test", "golden_test", "kicad_bom")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "golden_test", "kicad_bom")
 
 kicad_bom(
     name = "bom",

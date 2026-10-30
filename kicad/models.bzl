@@ -2,7 +2,7 @@
 """KiCad's 3D model libraries, fetched over BitTorrent (issue #43).
 
 ```starlark
-models = use_extension("@rules_kicad//kicad:models.bzl", "models")
+models = use_extension("@hdlf_rules_kicad//kicad:models.bzl", "models")
 use_repo(models, "kicad_models")
 ```
 

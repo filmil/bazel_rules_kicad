@@ -1,9 +1,9 @@
 <!-- Generated with Stardoc: http://skydoc.bazel.build -->
 
-Module extensions of rules_kicad.
+Module extensions of hdlf_rules_kicad.
 
 ```starlark
-kicad = use_extension("@rules_kicad//kicad:extensions.bzl", "kicad")
+kicad = use_extension("@hdlf_rules_kicad//kicad:extensions.bzl", "kicad")
 kicad.toolchain(version = "9.0.9")
 ```
 
@@ -12,26 +12,26 @@ kicad.toolchain(version = "9.0.9")
 ## kicad
 
 <pre>
-kicad = use_extension("@rules_kicad//kicad:extensions.bzl", "kicad")
+kicad = use_extension("@hdlf_rules_kicad//kicad:extensions.bzl", "kicad")
 kicad.toolchain(<a href="#kicad.toolchain-version">version</a>)
 </pre>
 
 The prebuilt KiCad toolchain.
 
-rules_kicad registers it, so a user needs nothing to get KiCad
+hdlf_rules_kicad registers it, so a user needs nothing to get KiCad
 9.0.9. The extension also makes `@kicad_libs`, KiCad's symbol and
 footprint libraries of the same version: `@kicad_libs//:standard`,
 `:symbols` and `:footprints`, each a `kicad_library`. Bring it in with
 `use_repo(kicad, "kicad_libs")`.
 
 KiCad's 3D model libraries come from a second extension, `models` in
-`@rules_kicad//kicad:models.bzl`.
+`@hdlf_rules_kicad//kicad:models.bzl`.
 
 The root module can pick another
-version that rules_kicad has a prebuilt for:
+version that hdlf_rules_kicad has a prebuilt for:
 
 ```starlark
-kicad = use_extension("@rules_kicad//kicad:extensions.bzl", "kicad")
+kicad = use_extension("@hdlf_rules_kicad//kicad:extensions.bzl", "kicad")
 kicad.toolchain(version = "9.0.9")
 ```
 
@@ -48,6 +48,6 @@ Picks the KiCad version. Only the root module's tag counts.
 
 | Name  | Description | Type | Mandatory | Default |
 | :------------- | :------------- | :------------- | :------------- | :------------- |
-| <a id="kicad.toolchain-version"></a>version |  A KiCad version that rules_kicad has a prebuilt for.   | String | optional |  `"9.0.9"`  |
+| <a id="kicad.toolchain-version"></a>version |  A KiCad version that hdlf_rules_kicad has a prebuilt for.   | String | optional |  `"9.0.9"`  |
 
 

@@ -43,13 +43,13 @@ def _kicad_toolchain_impl(ctx):
 
 kicad_toolchain = rule(
     implementation = _kicad_toolchain_impl,
-    doc = """A KiCad toolchain, for the toolchain type `@rules_kicad//kicad:toolchain_type`.
+    doc = """A KiCad toolchain, for the toolchain type `@hdlf_rules_kicad//kicad:toolchain_type`.
 
 The `kicad` module extension makes one from the prebuilt KiCad. A user who
 builds or fetches KiCad another way declares their own:
 
 ```starlark
-load("@rules_kicad//kicad:defs.bzl", "kicad_toolchain")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_toolchain")
 
 kicad_toolchain(
     name = "my_kicad_impl",
@@ -63,9 +63,9 @@ kicad_toolchain(
 toolchain(
     name = "my_kicad",
     exec_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
-    target_settings = ["@rules_kicad//kicad/toolchains:stub_off"],
+    target_settings = ["@hdlf_rules_kicad//kicad/toolchains:stub_off"],
     toolchain = ":my_kicad_impl",
-    toolchain_type = "@rules_kicad//kicad:toolchain_type",
+    toolchain_type = "@hdlf_rules_kicad//kicad:toolchain_type",
 )
 ```
 

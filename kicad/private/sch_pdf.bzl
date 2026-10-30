@@ -40,7 +40,7 @@ kicad_sch_pdf(
 
 The output is `<name>.pdf` (or `<name>` when the name already ends in
 `.pdf`). kicad-cli plots the schematic's staged project. The PDF's creation
-date is set to `--@rules_kicad//kicad:source_date_epoch` (default
+date is set to `--@hdlf_rules_kicad//kicad:source_date_epoch` (default
 1970-01-01; spec D2, no time stamps in outputs), so the same schematic
 gives the same bytes.
 """,

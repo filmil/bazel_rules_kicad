@@ -82,7 +82,7 @@ The default `layers` lists every copper layer KiCad has; kicad-cli skips
 the ones a board does not have, so a board gets all of its copper layers,
 however many. Besides copper: paste, silkscreen and mask on both sides,
 and the board outline. The time stamps are set to
-`--@rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
+`--@hdlf_rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
 same board gives the same bytes.
 """,
     attrs = {
@@ -94,7 +94,7 @@ same board gives the same bytes.
         "layers": attr.string_list(
             doc = "The layers to plot, by KiCad's names (F.Cu, In1.Cu, Edge.Cuts, ...). " +
                   "Layers the board does not have are skipped. The default is " +
-                  "`DEFAULT_GERBER_LAYERS` from `@rules_kicad//kicad:defs.bzl`; to add a " +
+                  "`DEFAULT_GERBER_LAYERS` from `@hdlf_rules_kicad//kicad:defs.bzl`; to add a " +
                   "layer, write `layers = DEFAULT_GERBER_LAYERS + [\"F.Fab\"]`.",
             default = DEFAULT_GERBER_LAYERS,
         ),

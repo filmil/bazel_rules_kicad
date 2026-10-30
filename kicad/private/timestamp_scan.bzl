@@ -16,7 +16,7 @@ def _timestamp_scan_test_impl(ctx):
         fail("%s: srcs has no files to scan" % ctx.label)
     epoch = ctx.attr._epoch[BuildSettingInfo].value
     if epoch < 0:
-        fail("--@rules_kicad//kicad:source_date_epoch=%d: want 0 or more" % epoch)
+        fail("--@hdlf_rules_kicad//kicad:source_date_epoch=%d: want 0 or more" % epoch)
     exe = ctx.actions.declare_file(ctx.label.name)
     ctx.actions.symlink(
         output = exe,
@@ -62,7 +62,7 @@ optional time and zone (`2026-10-29T08:31:59.5+01:00`), PDF dates
 next to other digits is not a date, so a PDF's cross-reference offsets
 do not count.
 
-Each date must be `--@rules_kicad//kicad:source_date_epoch` (default
+Each date must be `--@hdlf_rules_kicad//kicad:source_date_epoch` (default
 1970-01-01T00:00:00 UTC) in every part it has: the date, then the hour,
 minute and second, with no zone, `Z` or a zero offset. A time out of
 range never passes. A date without a time that is also in one of

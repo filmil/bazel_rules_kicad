@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Public API of rules_kicad.
+"""Public API of hdlf_rules_kicad.
 
 Load every rule from this file:
 
 ```starlark
-load("@rules_kicad//kicad:defs.bzl", "determinism_test", "swap_test", "tool_toolchain")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "swap_test", "tool_toolchain")
 ```
 
 The rules arrive in milestones M1 and M2 (see the issues of

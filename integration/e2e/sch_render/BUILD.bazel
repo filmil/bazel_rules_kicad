@@ -2,7 +2,7 @@
 #
 # The e2e schematic's sheets as PNG, the same bytes in two configurations
 # (issue #21). A change to the schematic attaches these (AGENTS.md rule 5).
-load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_sch_render")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_sch_render")
 
 kicad_sch_render(
     name = "sch_render",

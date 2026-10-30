@@ -2,7 +2,7 @@
 #
 # The e2e board passes KiCad's design rules check, with schematic parity
 # (issue #15).
-load("@rules_kicad//kicad:defs.bzl", "kicad_drc_test")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_drc_test")
 
 kicad_drc_test(
     name = "drc_test",

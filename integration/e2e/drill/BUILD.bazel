@@ -2,7 +2,7 @@
 #
 # The e2e board's drill files, the same bytes in two configurations
 # (issue #23).
-load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_drill")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_drill")
 
 kicad_drill(
     name = "drill",

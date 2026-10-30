@@ -158,14 +158,14 @@ kicad_step(
 ```
 
 Only the libraries listed are fetched (over BitTorrent; see
-`@rules_kicad//kicad:models.bzl`). With `models`, the build fails when a
+`@hdlf_rules_kicad//kicad:models.bzl`). With `models`, the build fails when a
 part's model is not in them, and names the library to add. kicad-cli
 writes the shells of copper and parts in a different order on every run;
 the normalizer renumbers them canonically (issue #63), so the bytes are
 stable.
 
 The time stamp in the header is set to
-`--@rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
+`--@hdlf_rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
 same board gives the same bytes on the same platform. Across platforms
 the geometry may differ in the last digits; rules_brep compares models
 by tolerance.

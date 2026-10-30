@@ -1,11 +1,11 @@
 <!-- Generated with Stardoc: http://skydoc.bazel.build -->
 
-Public API of rules_kicad.
+Public API of hdlf_rules_kicad.
 
 Load every rule from this file:
 
 ```starlark
-load("@rules_kicad//kicad:defs.bzl", "determinism_test", "swap_test", "tool_toolchain")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "swap_test", "tool_toolchain")
 ```
 
 The rules arrive in milestones M1 and M2 (see the issues of
@@ -17,7 +17,7 @@ entry point; everything under `//kicad/private` may change without notice.
 ## kicad_bom
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_bom")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_bom")
 
 kicad_bom(<a href="#kicad_bom-name">name</a>, <a href="#kicad_bom-exclude_dnp">exclude_dnp</a>, <a href="#kicad_bom-fields">fields</a>, <a href="#kicad_bom-group_by">group_by</a>, <a href="#kicad_bom-labels">labels</a>, <a href="#kicad_bom-schematic">schematic</a>, <a href="#kicad_bom-sort_field">sort_field</a>)
 </pre>
@@ -68,7 +68,7 @@ time stamp.
 ## kicad_drc_report
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_drc_report")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_drc_report")
 
 kicad_drc_report(<a href="#kicad_drc_report-name">name</a>, <a href="#kicad_drc_report-pcb">pcb</a>)
 </pre>
@@ -105,7 +105,7 @@ rule appended; that report is the output group `canary`, and
 ## kicad_drill
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_drill")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_drill")
 
 kicad_drill(<a href="#kicad_drill-name">name</a>, <a href="#kicad_drill-map_format">map_format</a>, <a href="#kicad_drill-pcb">pcb</a>, <a href="#kicad_drill-separate_th">separate_th</a>)
 </pre>
@@ -132,7 +132,7 @@ its holes by size: `<board>-drl_map.gbr` for `gerberx2`, or
 `separate_th`).
 
 The time stamps, the date of the drill file's header and the map's, are set
-to `--@rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
+to `--@hdlf_rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
 same board gives the same bytes.
 
 **ATTRIBUTES**
@@ -151,7 +151,7 @@ same board gives the same bytes.
 ## kicad_erc_report
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_erc_report")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_erc_report")
 
 kicad_erc_report(<a href="#kicad_erc_report-name">name</a>, <a href="#kicad_erc_report-schematic">schematic</a>)
 </pre>
@@ -178,7 +178,7 @@ date is removed (spec D2), so the same schematic gives the same bytes.
 ## kicad_gerbers
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_gerbers")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_gerbers")
 
 kicad_gerbers(<a href="#kicad_gerbers-name">name</a>, <a href="#kicad_gerbers-layers">layers</a>, <a href="#kicad_gerbers-pcb">pcb</a>)
 </pre>
@@ -201,7 +201,7 @@ The default `layers` lists every copper layer KiCad has; kicad-cli skips
 the ones a board does not have, so a board gets all of its copper layers,
 however many. Besides copper: paste, silkscreen and mask on both sides,
 and the board outline. The time stamps are set to
-`--@rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
+`--@hdlf_rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
 same board gives the same bytes.
 
 **ATTRIBUTES**
@@ -210,7 +210,7 @@ same board gives the same bytes.
 | Name  | Description | Type | Mandatory | Default |
 | :------------- | :------------- | :------------- | :------------- | :------------- |
 | <a id="kicad_gerbers-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
-| <a id="kicad_gerbers-layers"></a>layers |  The layers to plot, by KiCad's names (F.Cu, In1.Cu, Edge.Cuts, ...). Layers the board does not have are skipped. The default is `DEFAULT_GERBER_LAYERS` from `@rules_kicad//kicad:defs.bzl`; to add a layer, write `layers = DEFAULT_GERBER_LAYERS + ["F.Fab"]`.   | List of strings | optional |  `["F.Cu", "In1.Cu", "In2.Cu", "In3.Cu", "In4.Cu", "In5.Cu", "In6.Cu", "In7.Cu", "In8.Cu", "In9.Cu", "In10.Cu", "In11.Cu", "In12.Cu", "In13.Cu", "In14.Cu", "In15.Cu", "In16.Cu", "In17.Cu", "In18.Cu", "In19.Cu", "In20.Cu", "In21.Cu", "In22.Cu", "In23.Cu", "In24.Cu", "In25.Cu", "In26.Cu", "In27.Cu", "In28.Cu", "In29.Cu", "In30.Cu", "B.Cu", "F.Paste", "B.Paste", "F.Silkscreen", "B.Silkscreen", "F.Mask", "B.Mask", "Edge.Cuts"]`  |
+| <a id="kicad_gerbers-layers"></a>layers |  The layers to plot, by KiCad's names (F.Cu, In1.Cu, Edge.Cuts, ...). Layers the board does not have are skipped. The default is `DEFAULT_GERBER_LAYERS` from `@hdlf_rules_kicad//kicad:defs.bzl`; to add a layer, write `layers = DEFAULT_GERBER_LAYERS + ["F.Fab"]`.   | List of strings | optional |  `["F.Cu", "In1.Cu", "In2.Cu", "In3.Cu", "In4.Cu", "In5.Cu", "In6.Cu", "In7.Cu", "In8.Cu", "In9.Cu", "In10.Cu", "In11.Cu", "In12.Cu", "In13.Cu", "In14.Cu", "In15.Cu", "In16.Cu", "In17.Cu", "In18.Cu", "In19.Cu", "In20.Cu", "In21.Cu", "In22.Cu", "In23.Cu", "In24.Cu", "In25.Cu", "In26.Cu", "In27.Cu", "In28.Cu", "In29.Cu", "In30.Cu", "B.Cu", "F.Paste", "B.Paste", "F.Silkscreen", "B.Silkscreen", "F.Mask", "B.Mask", "Edge.Cuts"]`  |
 | <a id="kicad_gerbers-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 
 
@@ -219,7 +219,7 @@ same board gives the same bytes.
 ## kicad_lib_tables
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_lib_tables")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_lib_tables")
 
 kicad_lib_tables(<a href="#kicad_lib_tables-name">name</a>, <a href="#kicad_lib_tables-library">library</a>)
 </pre>
@@ -244,7 +244,7 @@ the same way.
 ## kicad_library
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_library")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_library")
 
 kicad_library(<a href="#kicad_library-name">name</a>, <a href="#kicad_library-deps">deps</a>, <a href="#kicad_library-footprints">footprints</a>, <a href="#kicad_library-symbols">symbols</a>)
 </pre>
@@ -287,7 +287,7 @@ host.
 ## kicad_netlist
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_netlist")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_netlist")
 
 kicad_netlist(<a href="#kicad_netlist-name">name</a>, <a href="#kicad_netlist-schematic">schematic</a>)
 </pre>
@@ -306,7 +306,7 @@ The output is `<name>.net` (or `<name>` when the name already ends in
 nets with the pins on each. `kicad_pcb` takes it as `netlist`, and rules_netlist
 compares netlists. KiCad writes the export's date and the absolute paths
 of the schematic and of its libraries into the header. The date is set
-to `--@rules_kicad//kicad:source_date_epoch` (default 1970-01-01) and the
+to `--@hdlf_rules_kicad//kicad:source_date_epoch` (default 1970-01-01) and the
 paths are cut to file names (spec D2, no time stamps in outputs), so the
 same schematic gives the same bytes in any build directory.
 
@@ -324,7 +324,7 @@ same schematic gives the same bytes in any build directory.
 ## kicad_pcb
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_pcb")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_pcb")
 
 kicad_pcb(<a href="#kicad_pcb-name">name</a>, <a href="#kicad_pcb-deps">deps</a>, <a href="#kicad_pcb-board">board</a>, <a href="#kicad_pcb-design_rules">design_rules</a>, <a href="#kicad_pcb-netlist">netlist</a>, <a href="#kicad_pcb-project">project</a>, <a href="#kicad_pcb-schematic">schematic</a>)
 </pre>
@@ -369,7 +369,7 @@ board's: `<board name>.kicad_pcb`, `<board name>.net` and
 ## kicad_pos
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_pos")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_pos")
 
 kicad_pos(<a href="#kicad_pos-name">name</a>, <a href="#kicad_pos-bottom_negate_x">bottom_negate_x</a>, <a href="#kicad_pos-exclude_dnp">exclude_dnp</a>, <a href="#kicad_pos-exclude_th">exclude_th</a>, <a href="#kicad_pos-pcb">pcb</a>, <a href="#kicad_pos-smd_only">smd_only</a>, <a href="#kicad_pos-use_drill_file_origin">use_drill_file_origin</a>)
 </pre>
@@ -412,7 +412,7 @@ usually wants. The output has no time stamp.
 ## kicad_render
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_render")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_render")
 
 kicad_render(<a href="#kicad_render-name">name</a>, <a href="#kicad_render-height">height</a>, <a href="#kicad_render-pcb">pcb</a>, <a href="#kicad_render-width">width</a>)
 </pre>
@@ -458,7 +458,7 @@ rule 5).
 ## kicad_sch_pdf
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_sch_pdf")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_sch_pdf")
 
 kicad_sch_pdf(<a href="#kicad_sch_pdf-name">name</a>, <a href="#kicad_sch_pdf-schematic">schematic</a>)
 </pre>
@@ -474,7 +474,7 @@ kicad_sch_pdf(
 
 The output is `<name>.pdf` (or `<name>` when the name already ends in
 `.pdf`). kicad-cli plots the schematic's staged project. The PDF's creation
-date is set to `--@rules_kicad//kicad:source_date_epoch` (default
+date is set to `--@hdlf_rules_kicad//kicad:source_date_epoch` (default
 1970-01-01; spec D2, no time stamps in outputs), so the same schematic
 gives the same bytes.
 
@@ -492,7 +492,7 @@ gives the same bytes.
 ## kicad_sch_render
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_sch_render")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_sch_render")
 
 kicad_sch_render(<a href="#kicad_sch_render-name">name</a>, <a href="#kicad_sch_render-dpi">dpi</a>, <a href="#kicad_sch_render-schematic">schematic</a>)
 </pre>
@@ -531,7 +531,7 @@ rule 5).
 ## kicad_schematic
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_schematic")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_schematic")
 
 kicad_schematic(<a href="#kicad_schematic-name">name</a>, <a href="#kicad_schematic-deps">deps</a>, <a href="#kicad_schematic-srcs">srcs</a>, <a href="#kicad_schematic-project">project</a>, <a href="#kicad_schematic-root">root</a>)
 </pre>
@@ -574,7 +574,7 @@ and names the sheet.
 ## kicad_step
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_step")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_step")
 
 kicad_step(<a href="#kicad_step-name">name</a>, <a href="#kicad_step-copper">copper</a>, <a href="#kicad_step-models">models</a>, <a href="#kicad_step-pcb">pcb</a>)
 </pre>
@@ -606,14 +606,14 @@ kicad_step(
 ```
 
 Only the libraries listed are fetched (over BitTorrent; see
-`@rules_kicad//kicad:models.bzl`). With `models`, the build fails when a
+`@hdlf_rules_kicad//kicad:models.bzl`). With `models`, the build fails when a
 part's model is not in them, and names the library to add. kicad-cli
 writes the shells of copper and parts in a different order on every run;
 the normalizer renumbers them canonically (issue #63), so the bytes are
 stable.
 
 The time stamp in the header is set to
-`--@rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
+`--@hdlf_rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
 same board gives the same bytes on the same platform. Across platforms
 the geometry may differ in the last digits; rules_brep compares models
 by tolerance.
@@ -634,18 +634,18 @@ by tolerance.
 ## kicad_toolchain
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_toolchain")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_toolchain")
 
 kicad_toolchain(<a href="#kicad_toolchain-name">name</a>, <a href="#kicad_toolchain-data">data</a>, <a href="#kicad_toolchain-fonts">fonts</a>, <a href="#kicad_toolchain-fonts_conf">fonts_conf</a>, <a href="#kicad_toolchain-kicad_cli">kicad_cli</a>, <a href="#kicad_toolchain-version">version</a>)
 </pre>
 
-A KiCad toolchain, for the toolchain type `@rules_kicad//kicad:toolchain_type`.
+A KiCad toolchain, for the toolchain type `@hdlf_rules_kicad//kicad:toolchain_type`.
 
 The `kicad` module extension makes one from the prebuilt KiCad. A user who
 builds or fetches KiCad another way declares their own:
 
 ```starlark
-load("@rules_kicad//kicad:defs.bzl", "kicad_toolchain")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_toolchain")
 
 kicad_toolchain(
     name = "my_kicad_impl",
@@ -659,9 +659,9 @@ kicad_toolchain(
 toolchain(
     name = "my_kicad",
     exec_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
-    target_settings = ["@rules_kicad//kicad/toolchains:stub_off"],
+    target_settings = ["@hdlf_rules_kicad//kicad/toolchains:stub_off"],
     toolchain = ":my_kicad_impl",
-    toolchain_type = "@rules_kicad//kicad:toolchain_type",
+    toolchain_type = "@hdlf_rules_kicad//kicad:toolchain_type",
 )
 ```
 
@@ -688,7 +688,7 @@ the XDG directories all point inside the action (spec H3), and
 ## timestamp_scan_test
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "timestamp_scan_test")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "timestamp_scan_test")
 
 timestamp_scan_test(<a href="#timestamp_scan_test-name">name</a>, <a href="#timestamp_scan_test-srcs">srcs</a>, <a href="#timestamp_scan_test-expect">expect</a>, <a href="#timestamp_scan_test-sources">sources</a>)
 </pre>
@@ -714,7 +714,7 @@ optional time and zone (`2026-10-29T08:31:59.5+01:00`), PDF dates
 next to other digits is not a date, so a PDF's cross-reference offsets
 do not count.
 
-Each date must be `--@rules_kicad//kicad:source_date_epoch` (default
+Each date must be `--@hdlf_rules_kicad//kicad:source_date_epoch` (default
 1970-01-01T00:00:00 UTC) in every part it has: the date, then the hour,
 minute and second, with no zone, `Z` or a zero offset. A time out of
 range never passes. A date without a time that is also in one of
@@ -740,7 +740,7 @@ The test prints every date that fails, with its file and line.
 ## tool_toolchain
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "tool_toolchain")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "tool_toolchain")
 
 tool_toolchain(<a href="#tool_toolchain-name">name</a>, <a href="#tool_toolchain-tools">tools</a>)
 </pre>
@@ -760,7 +760,7 @@ tool_toolchain(
 toolchain(
     name = "my_kicad",
     # So that swap_test can put the stub in its place.
-    target_settings = ["@rules_kicad//kicad/toolchains:stub_off"],
+    target_settings = ["@hdlf_rules_kicad//kicad/toolchains:stub_off"],
     toolchain = ":my_kicad_impl",
     toolchain_type = "//my:toolchain_type",
 )
@@ -780,7 +780,7 @@ toolchain(
 ## GoldenInfo
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "GoldenInfo")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "GoldenInfo")
 
 GoldenInfo(<a href="#GoldenInfo-built">built</a>, <a href="#GoldenInfo-golden">golden</a>)
 </pre>
@@ -800,7 +800,7 @@ A golden file and the built file that must equal it.
 ## KicadLibraryInfo
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "KicadLibraryInfo")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "KicadLibraryInfo")
 
 KicadLibraryInfo(<a href="#KicadLibraryInfo-symbols">symbols</a>, <a href="#KicadLibraryInfo-footprints">footprints</a>, <a href="#KicadLibraryInfo-files">files</a>)
 </pre>
@@ -821,7 +821,7 @@ Symbol and footprint libraries, by the nickname KiCad uses for each.
 ## KicadPcbInfo
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "KicadPcbInfo")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "KicadPcbInfo")
 
 KicadPcbInfo(<a href="#KicadPcbInfo-board">board</a>, <a href="#KicadPcbInfo-schematic">schematic</a>, <a href="#KicadPcbInfo-netlist">netlist</a>, <a href="#KicadPcbInfo-design_rules">design_rules</a>, <a href="#KicadPcbInfo-project">project</a>, <a href="#KicadPcbInfo-project_dir">project_dir</a>, <a href="#KicadPcbInfo-library">library</a>, <a href="#KicadPcbInfo-files">files</a>)
 </pre>
@@ -847,7 +847,7 @@ A board, staged as a KiCad project with its schematic.
 ## KicadSchematicInfo
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "KicadSchematicInfo")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "KicadSchematicInfo")
 
 KicadSchematicInfo(<a href="#KicadSchematicInfo-root">root</a>, <a href="#KicadSchematicInfo-sheets">sheets</a>, <a href="#KicadSchematicInfo-project">project</a>, <a href="#KicadSchematicInfo-project_dir">project_dir</a>, <a href="#KicadSchematicInfo-library">library</a>, <a href="#KicadSchematicInfo-files">files</a>)
 </pre>
@@ -871,7 +871,7 @@ A schematic, staged as a KiCad project.
 ## KicadToolchainInfo
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "KicadToolchainInfo")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "KicadToolchainInfo")
 
 KicadToolchainInfo(<a href="#KicadToolchainInfo-version">version</a>, <a href="#KicadToolchainInfo-major">major</a>)
 </pre>
@@ -891,7 +891,7 @@ What a KiCad toolchain offers beyond the `kicad_cli` tool.
 ## NormalizeToolchainInfo
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "NormalizeToolchainInfo")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "NormalizeToolchainInfo")
 
 NormalizeToolchainInfo(<a href="#NormalizeToolchainInfo-epoch">epoch</a>)
 </pre>
@@ -910,7 +910,7 @@ What the normalize toolchain offers beyond the `normalize` tool.
 ## determinism_test
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "determinism_test")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test")
 
 determinism_test(<a href="#determinism_test-name">name</a>, <a href="#determinism_test-target">target</a>, <a href="#determinism_test-kwargs">**kwargs</a>)
 </pre>
@@ -952,7 +952,7 @@ determinism_test(
 ## golden_test
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "golden_test")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "golden_test")
 
 golden_test(<a href="#golden_test-name">name</a>, <a href="#golden_test-src">src</a>, <a href="#golden_test-golden">golden</a>, <a href="#golden_test-visibility">visibility</a>, <a href="#golden_test-kwargs">**kwargs</a>)
 </pre>
@@ -994,7 +994,7 @@ The test is visible to the module's root package, where
 ## kicad_drc_test
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_drc_test")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_drc_test")
 
 kicad_drc_test(<a href="#kicad_drc_test-name">name</a>, <a href="#kicad_drc_test-pcb">pcb</a>, <a href="#kicad_drc_test-expect">expect</a>, <a href="#kicad_drc_test-kwargs">**kwargs</a>)
 </pre>
@@ -1030,7 +1030,7 @@ kicad_drc_test(
 ## kicad_erc_test
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "kicad_erc_test")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_erc_test")
 
 kicad_erc_test(<a href="#kicad_erc_test-name">name</a>, <a href="#kicad_erc_test-schematic">schematic</a>, <a href="#kicad_erc_test-expect">expect</a>, <a href="#kicad_erc_test-kwargs">**kwargs</a>)
 </pre>
@@ -1065,7 +1065,7 @@ kicad_erc_test(
 ## lib_table_test
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "lib_table_test")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "lib_table_test")
 
 lib_table_test(<a href="#lib_table_test-name">name</a>, <a href="#lib_table_test-tables">tables</a>, <a href="#lib_table_test-expect">expect</a>, <a href="#lib_table_test-kwargs">**kwargs</a>)
 </pre>
@@ -1101,14 +1101,14 @@ lib_table_test(
 ## swap_test
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "swap_test")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "swap_test")
 
 swap_test(<a href="#swap_test-name">name</a>, <a href="#swap_test-targets">targets</a>, <a href="#swap_test-kwargs">**kwargs</a>)
 </pre>
 
 Builds targets with every tool swapped for a stub, and checks them.
 
-The targets are built with `--@rules_kicad//kicad/toolchains:use_stub`,
+The targets are built with `--@hdlf_rules_kicad//kicad/toolchains:use_stub`,
 so each tool toolchain that honors the flag resolves to the stub tool.
 The stub writes a record into every output, files and directories
 alike. The test fails if any output file of the targets lacks the
@@ -1139,7 +1139,7 @@ swap_test(
 ## update_goldens
 
 <pre>
-load("@rules_kicad//kicad:defs.bzl", "update_goldens")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "update_goldens")
 
 update_goldens(<a href="#update_goldens-name">name</a>, <a href="#update_goldens-tests">tests</a>, <a href="#update_goldens-kwargs">**kwargs</a>)
 </pre>

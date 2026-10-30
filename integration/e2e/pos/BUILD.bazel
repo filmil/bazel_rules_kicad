@@ -3,7 +3,7 @@
 # The e2e board's footprint positions (issue #24), the same bytes in two
 # configurations. The expected file is written by hand: it is what
 # rules_fab will read.
-load("@rules_kicad//kicad:defs.bzl", "determinism_test", "golden_test", "kicad_pos")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "golden_test", "kicad_pos")
 
 kicad_pos(
     name = "pos",

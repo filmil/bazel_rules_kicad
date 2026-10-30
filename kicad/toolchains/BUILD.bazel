@@ -5,7 +5,7 @@ load("//kicad/private:kicad_toolchain.bzl", "kicad_stub_toolchain")
 load("//kicad/private:normalize.bzl", "normalize_toolchain")
 load("//kicad/private:toolchains.bzl", "helpers_toolchain", "unsupported_platform_toolchain")
 
-# --@rules_kicad//kicad/toolchains:use_stub swaps every tool for the stub.
+# --@hdlf_rules_kicad//kicad/toolchains:use_stub swaps every tool for the stub.
 # swap_test sets it with a transition. A tool toolchain honors it by
 # carrying target_settings = [":stub_off"], and its stub twin
 # target_settings = [":stub_on"].

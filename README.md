@@ -4,7 +4,7 @@
 [![Publish to my Bazel registry](https://github.com/filmil/bazel_rules_kicad/actions/workflows/publish.yml/badge.svg)](https://github.com/filmil/bazel_rules_kicad/actions/workflows/publish.yml)
 [![Publish on Bazel Central Registry](https://github.com/filmil/bazel_rules_kicad/actions/workflows/publish-bcr.yml/badge.svg)](https://github.com/filmil/bazel_rules_kicad/actions/workflows/publish-bcr.yml)
 
-# rules_kicad
+# hdlf_rules_kicad
 
 Hermetic Bazel rules for KiCad schematics and boards.
 The build checks a design (ERC, DRC) and makes its outputs (PDF, netlist,
@@ -20,7 +20,7 @@ Only Linux x86_64 hosts are supported.
 ## Using it
 
 ```starlark
-bazel_dep(name = "rules_kicad", version = "0.1.0")
+bazel_dep(name = "hdlf_rules_kicad", version = "0.1.0")
 ```
 
 `.bazelrc`, while the module is only in the filmil registry:
@@ -38,7 +38,7 @@ The rules are documented in [docs/defs.md](docs/defs.md).
 libraries come from their own module extension:
 
 ```starlark
-models = use_extension("@rules_kicad//kicad:models.bzl", "models")
+models = use_extension("@hdlf_rules_kicad//kicad:models.bzl", "models")
 use_repo(models, "kicad_models")
 ```
 

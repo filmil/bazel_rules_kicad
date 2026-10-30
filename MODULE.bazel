@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 module(
-    name = "rules_kicad",
+    name = "hdlf_rules_kicad",
     version = "0.0.0",
     bazel_compatibility = [">=8.0.0"],
 )

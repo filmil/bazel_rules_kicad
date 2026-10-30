@@ -119,7 +119,7 @@ jobs:
           if bazel build --host_platform=//tests/platform:macos_arm64 //kicad/private/swapdemo:demo > "${HOME}/p1.log" 2>&1; then
             echo "the build succeeded on an unsupported host"; exit 1
           fi
-          grep -F "rules_kicad v1 supports only Linux x86_64 hosts" "${HOME}/p1.log"
+          grep -F "hdlf_rules_kicad v1 supports only Linux x86_64 hosts" "${HOME}/p1.log"
 
       # Spec T3: a schematic whose root references a sheet missing from
       # srcs fails to build, and the message names the sheet.

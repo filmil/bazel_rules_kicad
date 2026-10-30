@@ -83,7 +83,7 @@ its holes by size: `<board>-drl_map.gbr` for `gerberx2`, or
 `separate_th`).
 
 The time stamps, the date of the drill file's header and the map's, are set
-to `--@rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
+to `--@hdlf_rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
 same board gives the same bytes.
 """,
     attrs = {

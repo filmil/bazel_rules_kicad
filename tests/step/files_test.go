@@ -53,7 +53,7 @@ func products(s string) []string {
 }
 
 // A STEP file whose header time is the epoch
-// (--@rules_kicad//kicad:source_date_epoch defaults to 0).
+// (--@hdlf_rules_kicad//kicad:source_date_epoch defaults to 0).
 func checkHeader(t *testing.T, name, s string) {
 	t.Helper()
 	if !strings.HasPrefix(s, "ISO-10303-21;") {

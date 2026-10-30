@@ -56,7 +56,7 @@ diff_test(
     file2 = ":drl_b",
 )
 
-# --@rules_kicad//kicad:source_date_epoch reaches the tool. The expected
+# --@hdlf_rules_kicad//kicad:source_date_epoch reaches the tool. The expected
 # file is the fixture with its two dates edited by hand.
 normalized(
     name = "drl_86400",

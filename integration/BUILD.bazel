@@ -1,23 +1,23 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# The example consumer. It uses only the public API of rules_kicad, as a
+# The example consumer. It uses only the public API of hdlf_rules_kicad, as a
 # user of the published module would. The e2e design arrives with the
 # kicad_schematic and kicad_pcb rules (milestone M1).
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("@rules_kicad//kicad:defs.bzl", "RULES_KICAD_API_VERSION", "golden_test", "kicad_lib_tables", "lib_table_test", "update_goldens")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "RULES_KICAD_API_VERSION", "golden_test", "kicad_lib_tables", "lib_table_test", "update_goldens")
 
 # The public packages load and build: the rules, and the root package
-# with the --@rules_kicad//:tools flag that every user's build reads.
+# with the --@hdlf_rules_kicad//:tools flag that every user's build reads.
 build_test(
     name = "public_api_builds",
     size = "small",
     targets = [
-        "@rules_kicad//:tools",
-        "@rules_kicad//:tools_prebuilt",
-        "@rules_kicad//:tools_source",
-        "@rules_kicad//kicad:defs",
-        "@rules_kicad//kicad:extensions",
+        "@hdlf_rules_kicad//:tools",
+        "@hdlf_rules_kicad//:tools_prebuilt",
+        "@hdlf_rules_kicad//:tools_source",
+        "@hdlf_rules_kicad//kicad:defs",
+        "@hdlf_rules_kicad//kicad:extensions",
     ],
 )
 

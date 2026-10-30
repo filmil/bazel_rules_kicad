@@ -2,7 +2,7 @@
 #
 # The e2e board as a STEP model: the board alone, with copper, and with its
 # parts; the same bytes in two configurations (issues #25, #63 and #43).
-load("@rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_step")
+load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_step")
 
 kicad_step(
     name = "step",
