@@ -10,7 +10,7 @@ def _step_action_impl(ctx):
     asserts.equals(env, 1, len(actions), "KicadStep actions")
     argv = actions[0].argv
     args = argv[argv.index("--") + 2:]
-    asserts.equals(env, ["pcb", "export", "step", "--no-components", "--output"], args[:-2])
+    asserts.equals(env, ["pcb", "export", "step", "--no-components"] + ctx.attr.flags + ["--output"], args[:-2])
     raw = args[-2]
     asserts.true(env, args[-1].endswith("/pcb_project/main.kicad_pcb"), "the staged board: %s" % args[-1])
     asserts.equals(env, [raw], [f.path for f in actions[0].outputs.to_list()])
@@ -26,6 +26,7 @@ def _step_action_impl(ctx):
 step_action_test = analysistest.make(
     _step_action_impl,
     attrs = {
+        "flags": attr.string_list(doc = "The flags after --no-components."),
         "output": attr.string(mandatory = True),
     },
 )

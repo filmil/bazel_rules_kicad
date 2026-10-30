@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# kicad_step on the board of //tests/design (issue #25): through the KiCad
-# and normalize toolchains, the same bytes in two configurations, and the
-# model itself.
+# kicad_step on the board of //tests/design (issue #25), without and with
+# copper (issue #63): through the KiCad and normalize toolchains, the same
+# bytes in two configurations, and the models themselves.
 load("@rules_go//go:def.bzl", "go_test")
 load("//kicad:defs.bzl", "determinism_test", "kicad_step", "swap_test")
 load(":action_test.bzl", "step_action_test")
@@ -19,10 +19,31 @@ step_action_test(
     target_under_test = ":step",
 )
 
+kicad_step(
+    name = "copper",
+    copper = True,
+    pcb = "//tests/design:pcb",
+)
+
+step_action_test(
+    name = "copper_action_test",
+    size = "small",
+    flags = [
+        "--include-tracks",
+        "--include-pads",
+        "--include-zones",
+    ],
+    output = "copper.step",
+    target_under_test = ":copper",
+)
+
 swap_test(
     name = "step_swap_test",
     size = "small",
-    targets = [":step"],
+    targets = [
+        ":copper",
+        ":step",
+    ],
 )
 
 determinism_test(
@@ -31,13 +52,26 @@ determinism_test(
     target = ":step",
 )
 
-# The model: the header time at the epoch, a solid, the board body only.
+determinism_test(
+    name = "copper_determinism_test",
+    size = "small",
+    target = ":copper",
+)
+
+# The models: the header time at the epoch, a solid, the board body, and
+# the copper only where asked for.
 go_test(
     name = "step_files_test",
     size = "small",
     srcs = ["files_test.go"],
-    args = ["--step=$(rlocationpath :step)"],
-    data = [":step"],
+    args = [
+        "--step=$(rlocationpath :step)",
+        "--copper=$(rlocationpath :copper)",
+    ],
+    data = [
+        ":copper",
+        ":step",
+    ],
     pure = "on",
     deps = ["@rules_go//go/runfiles"],
 )

@@ -15,7 +15,10 @@ import (
 	"github.com/bazelbuild/rules_go/go/runfiles"
 )
 
-var step = flag.String("step", "", "the output of :step, as a runfiles path")
+var (
+	step   = flag.String("step", "", "the output of :step, as a runfiles path")
+	copper = flag.String("copper", "", "the output of :copper, as a runfiles path")
+)
 
 func read(t *testing.T, rpath string) string {
 	t.Helper()
@@ -64,11 +67,23 @@ func checkHeader(t *testing.T, name, s string) {
 	}
 }
 
-// The board body only: no copper (issue #63), no parts (issue #43).
+// The board body only: no copper unless asked for, no parts (issue #43).
 func TestBoardBody(t *testing.T) {
 	s := read(t, *step)
 	checkHeader(t, "step.step", s)
 	if got := strings.Join(products(s), " "); got != "main_PCB" {
 		t.Errorf("products %q, want main_PCB", got)
+	}
+}
+
+// copper = True adds the tracks, the pads and the vias (issue #63). The
+// board has no zone, so the zones are checked only by their flag, in
+// copper_action_test.
+func TestCopper(t *testing.T) {
+	s := read(t, *copper)
+	checkHeader(t, "copper.step", s)
+	want := "main_PCB main_copper main_pad main_via"
+	if got := strings.Join(products(s), " "); got != want {
+		t.Errorf("products %q, want %q", got, want)
 	}
 }

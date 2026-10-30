@@ -13,9 +13,9 @@ def _kicad_step_impl(ctx):
 
     # No parts: their 3D models are not in the build yet (issue #43). Without
     # this flag kicad-cli leaves each part out with a warning and exits 0.
-    # No copper either: kicad-cli 9.0.9 orders the copper shells differently
-    # on every run (issue #63).
-    args = ["pcb", "export", "step", "--no-components", "--output", raw.path, pcb.board.path]
+    # Copper is optional: the normalizer renumbers its shells, which kicad-cli
+    # 9.0.9 writes in a different order on every run (issue #63).
+    args = ["pcb", "export", "step", "--no-components"] + (["--include-tracks", "--include-pads", "--include-zones"] if ctx.attr.copper else []) + ["--output", raw.path, pcb.board.path]
     run_tool(
         ctx,
         _KICAD,
@@ -43,8 +43,8 @@ kicad_step(
 
 The model holds the board body: its outline, thickness and holes, as
 `<board>_PCB`. It holds no parts yet: their 3D models come with issue
-#43. It holds no copper: kicad-cli writes tracks, pads and zones in a
-different order on every run (issue #63).
+#43. With `copper = True` it also holds the copper: tracks and zones
+as `<board>_copper`, pads as `<board>_pad`, and vias as `<board>_via`.
 
 The time stamp in the header is set to
 `--@rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
@@ -53,6 +53,9 @@ the geometry may differ in the last digits; rules_brep compares models
 by tolerance.
 """,
     attrs = {
+        "copper": attr.bool(
+            doc = "Export the copper too: tracks, vias, pads and zones.",
+        ),
         "pcb": attr.label(
             doc = "The board (`kicad_pcb`).",
             mandatory = True,
