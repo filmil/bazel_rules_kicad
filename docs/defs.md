@@ -576,7 +576,7 @@ and names the sheet.
 <pre>
 load("@rules_kicad//kicad:defs.bzl", "kicad_step")
 
-kicad_step(<a href="#kicad_step-name">name</a>, <a href="#kicad_step-copper">copper</a>, <a href="#kicad_step-pcb">pcb</a>)
+kicad_step(<a href="#kicad_step-name">name</a>, <a href="#kicad_step-copper">copper</a>, <a href="#kicad_step-models">models</a>, <a href="#kicad_step-pcb">pcb</a>)
 </pre>
 
 A board as a STEP model: `<name>.step`.
@@ -589,9 +589,28 @@ kicad_step(
 ```
 
 The model holds the board body: its outline, thickness and holes, as
-`<board>_PCB`. It holds no parts yet: their 3D models come with issue
-#43. With `copper = True` it also holds the copper: tracks and zones
-as `<board>_copper`, pads as `<board>_pad`, and vias as `<board>_via`.
+`<board>_PCB`. With `copper = True` it also holds the copper: tracks and
+zones as `<board>_copper`, pads as `<board>_pad`, and vias as
+`<board>_via`. With `models`, it also holds the parts whose footprints
+name a model in those libraries:
+
+```starlark
+kicad_step(
+    name = "step",
+    models = [
+        "@kicad_models//:LED_SMD",
+        "@kicad_models//:Resistor_SMD",
+    ],
+    pcb = ":pcb",
+)
+```
+
+Only the libraries listed are fetched (over BitTorrent; see
+`@rules_kicad//kicad:models.bzl`). With `models`, the build fails when a
+part's model is not in them, and names the library to add. kicad-cli
+writes the shells of copper and parts in a different order on every run;
+the normalizer renumbers them canonically (issue #63), so the bytes are
+stable.
 
 The time stamp in the header is set to
 `--@rules_kicad//kicad:source_date_epoch` (default 1970-01-01), so the
@@ -606,6 +625,7 @@ by tolerance.
 | :------------- | :------------- | :------------- | :------------- | :------------- |
 | <a id="kicad_step-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
 | <a id="kicad_step-copper"></a>copper |  Export the copper too: tracks, vias, pads and zones.   | Boolean | optional |  `False`  |
+| <a id="kicad_step-models"></a>models |  3D model libraries: targets of `@kicad_models` (one per library), or files under `<name>.3dshapes/` of a library of your own. Without them the model has no parts.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="kicad_step-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 
 

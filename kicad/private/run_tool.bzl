@@ -24,7 +24,8 @@ def run_tool(
         env = {},
         home_env = [],
         tools = [],
-        stdout = None):
+        stdout = None,
+        path_env = {}):
     """Runs a tool from a toolchain, with a private home, as one action.
 
     The tool comes from `ctx.toolchains[toolchain_type].tools[tool]`. It runs
@@ -60,6 +61,9 @@ def run_tool(
       tools: more executables the action needs, from toolchains.
       stdout: a declared output `File` that gets the tool's standard output.
         It is added to `outputs`.
+      path_env: dict from name to a path relative to the execution root (a
+        string) or a `File`; the tool sees it made absolute. It adds to the
+        toolchain's `path_env`, and wins over `env` for the same name.
     """
     info = ctx.toolchains[toolchain_type]
     if info == None:
@@ -74,7 +78,10 @@ def run_tool(
         outputs.append(stdout)
     all_env = dict(getattr(info, "env", None) or {})
     all_env.update(env)
-    path_env = getattr(info, "path_env", None) or {}
+    abs_env = {k: v.path for k, v in (getattr(info, "path_env", None) or {}).items()}
+    for k, v in path_env.items():
+        abs_env[k] = v if type(v) == "string" else v.path
+        all_env.pop(k, None)
     all_home_env = sorted({n: True for n in list(getattr(info, "home_env", None) or []) + list(home_env)}.keys())
     tool_inputs = getattr(info, "tool_inputs", None) or depset()
     if type(inputs) == "depset":
@@ -87,9 +94,9 @@ def run_tool(
         pre.add("--home-env", name)
     for k in sorted(all_env.keys()):
         pre.add("--env", "%s=%s" % (k, all_env[k]))
-    for k in sorted(path_env.keys()):
+    for k in sorted(abs_env.keys()):
         if k not in all_env:
-            pre.add("--env-abs", "%s=%s" % (k, path_env[k].path))
+            pre.add("--env-abs", "%s=%s" % (k, abs_env[k]))
     if stdout != None:
         pre.add("--stdout", stdout.path)
     for out in outputs:

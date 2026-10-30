@@ -24,6 +24,9 @@ footprint libraries of the same version: `@kicad_libs//:standard`,
 `:symbols` and `:footprints`, each a `kicad_library`. Bring it in with
 `use_repo(kicad, "kicad_libs")`.
 
+KiCad's 3D model libraries come from a second extension, `models` in
+`@rules_kicad//kicad:models.bzl`.
+
 The root module can pick another
 version that rules_kicad has a prebuilt for:
 

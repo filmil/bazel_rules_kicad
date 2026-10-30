@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: Apache-2.0
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+# Fails kicad_step when kicad-cli left a part out for want of its 3D model
+# (issue #43). It reads kicad-cli's log; see main.go.
+
+go_library(
+    name = "stepcheck_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/filmil/bazel_rules_kicad/kicad/private/stepcheck",
+    visibility = ["//visibility:private"],
+)
+
+# Pure Go, so a user of the module needs no C++ toolchain to build it.
+go_binary(
+    name = "stepcheck",
+    embed = [":stepcheck_lib"],
+    pure = "on",
+    visibility = ["//kicad/toolchains:__pkg__"],
+)
+
+go_test(
+    name = "stepcheck_test",
+    size = "small",
+    srcs = ["main_test.go"],
+    embed = [":stepcheck_lib"],
+    pure = "on",
+)

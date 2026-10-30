@@ -32,6 +32,21 @@ common --registry=https://bcr.bazel.build
 
 The rules are documented in [docs/defs.md](docs/defs.md).
 
+### 3D models
+
+`kicad_step(models = [...])` puts the parts on the board. KiCad's 3D model
+libraries come from their own module extension:
+
+```starlark
+models = use_extension("@rules_kicad//kicad:models.bzl", "models")
+use_repo(models, "kicad_models")
+```
+
+Each library, such as `@kicad_models//:Resistor_SMD`, is fetched over
+BitTorrent (rules_bittorrent) from a `.torrent` whose web seed is
+https://bt.hdlfactory.com/, and only when a build uses it. With no peers
+online, the web seed serves the whole file.
+
 ## Building
 
 ```sh
@@ -65,3 +80,8 @@ See the overall description at the [project page][pp].
 This repository is under the Apache License 2.0 (`LICENSE`).
 Prebuilt tools and libraries that the build downloads are listed here, with
 their versions, sources and licenses, as they are added.
+
+* KiCad's 3D models (kicad-packages3D 9.0.9,
+  https://gitlab.com/kicad/libraries/kicad-packages3D): CC-BY-SA 4.0 with
+  the KiCad libraries exception. Each library's archive carries the
+  upstream `LICENSE.md`, and so does the directory it is served from.
