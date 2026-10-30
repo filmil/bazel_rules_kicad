@@ -63,8 +63,41 @@ jobs:
             echo "changed=true" >> "${GITHUB_OUTPUT}"
           fi
 
-  tag:
+  # The BCR rejects a module whose dependencies are only in the filmil
+  # registry. Pull requests do not wait for that (Test's bcr-ready job is
+  # advisory); a release does, before anything is tagged.
+  bcr_ready:
     needs: check
+    if: ${{ needs.check.outputs.changed == 'true' }}
+    runs-on: ubuntu-latest
+    container: buildpack-deps:bullseye-curl@sha256:7c8d79c31eb106cca055357456a2fa89b10fa20f254da6fe3eca937439696c62
+    defaults:
+      run:
+        shell: bash
+    env:
+      BAZELISK_VERSION: v1.29.0
+      BAZELISK_SHA256: 5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992
+    steps:
+      - name: Install bazelisk
+        run: |
+          set -o errexit -o nounset -o pipefail
+          curl -fsSL -o /usr/local/bin/bazel \
+            "https://github.com/bazelbuild/bazelisk/releases/download/${BAZELISK_VERSION}/bazelisk-linux-amd64"
+          echo "${BAZELISK_SHA256}  /usr/local/bin/bazel" | sha256sum -c -
+          chmod +x /usr/local/bin/bazel
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Dependencies resolve from the BCR alone
+        run: bazel --ignore_all_rc_files mod graph --registry=https://bcr.bazel.build > /dev/null
+
+      - name: Integration dependencies resolve from the BCR alone
+        working-directory: integration
+        run: bazel --ignore_all_rc_files mod graph --registry=https://bcr.bazel.build > /dev/null
+
+  tag:
+    needs: [check, bcr_ready]
     if: ${{ needs.check.outputs.changed == 'true' }}
     runs-on: ubuntu-latest
     permissions:
