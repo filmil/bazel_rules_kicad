@@ -9,7 +9,7 @@
 # Locally the override makes the module resolve to the parent directory, so
 # `cd integration && bazel test //...` exercises the working tree.
 module(
-    name = "rules_kicad_integration",
+    name = "hdlf_rules_kicad_integration",
     version = "0.0.0",
 )
 
