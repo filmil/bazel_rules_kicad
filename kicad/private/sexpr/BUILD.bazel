@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: Apache-2.0
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+# The S-expression reader of the checkers that read KiCad's files.
+go_library(
+    name = "sexpr",
+    srcs = ["sexpr.go"],
+    importpath = "github.com/filmil/bazel_rules_kicad/kicad/private/sexpr",
+    visibility = [
+        "//kicad/private/modelcheck:__pkg__",
+        "//kicad/private/sheetcheck:__pkg__",
+    ],
+)
+
+go_test(
+    name = "sexpr_test",
+    size = "small",
+    srcs = ["sexpr_test.go"],
+    embed = [":sexpr"],
+    pure = "on",
+)

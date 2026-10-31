@@ -30,28 +30,30 @@ import (
 	"slices"
 	"sort"
 	"strings"
+
+	"github.com/filmil/bazel_rules_kicad/kicad/private/sexpr"
 )
 
 // Sheetfiles returns the Sheetfile of every sheet that a schematic's text
 // places, in order. It reads KiCad's S-expressions: lists, quoted strings
 // with backslash escapes, and bare atoms.
 func Sheetfiles(text string) ([]string, error) {
-	root, err := parse(text)
+	root, err := sexpr.Parse(text)
 	if err != nil {
 		return nil, err
 	}
-	if root.head() != "kicad_sch" {
-		return nil, fmt.Errorf("not a KiCad schematic (it starts with %q)", root.head())
+	if root.Head() != "kicad_sch" {
+		return nil, fmt.Errorf("not a KiCad schematic (it starts with %q)", root.Head())
 	}
 	var out []string
-	for _, n := range root.list[1:] {
-		if n.head() != "sheet" {
+	for _, n := range root.List[1:] {
+		if n.Head() != "sheet" {
 			continue
 		}
 		file := ""
-		for _, p := range n.list[1:] {
-			if p.head() == "property" && len(p.list) >= 3 && p.list[1].atom == "Sheetfile" {
-				file = p.list[2].atom
+		for _, p := range n.List[1:] {
+			if p.Head() == "property" && len(p.List) >= 3 && p.List[1].Atom == "Sheetfile" {
+				file = p.List[2].Atom
 			}
 		}
 		if file == "" {

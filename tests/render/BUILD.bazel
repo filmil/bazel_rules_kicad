@@ -23,7 +23,10 @@ render_action_test(
 swap_test(
     name = "render_swap_test",
     size = "small",
-    targets = [":render"],
+    targets = [
+        ":render",
+        ":render_models",
+    ],
 )
 
 determinism_test(
@@ -75,6 +78,79 @@ fails_test(
     size = "small",
     message = "height is 63; it must be at least 64",
     target_under_test = ":render_flat",
+)
+
+# With models: a made-up library of //tests/step stands in for
+# @kicad_models, so the analysis needs no network. integration/e2e/render
+# renders the real parts, and checks that a missing model fails.
+kicad_render(
+    name = "render_models",
+    models = ["//tests/step:fake_lib"],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+determinism_test(
+    name = "render_models_determinism_test",
+    size = "small",
+    target = ":render_models",
+)
+
+render_action_test(
+    name = "render_models_action_test",
+    size = "small",
+    height = 900,
+    models_dir = "render_models_models",
+    target_under_test = ":render_models",
+    width = 1600,
+)
+
+# The staging is kicad_step's, so its known-bad inputs fail here too.
+kicad_render(
+    name = "render_stray_model",
+    models = ["//tests/step:stray.step"],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "render_stray_model_test",
+    size = "small",
+    message = "is not in a <name>.3dshapes directory",
+    target_under_test = ":render_stray_model",
+)
+
+# The same model path from two libraries.
+kicad_render(
+    name = "render_dup_model",
+    models = [
+        "//tests/step:fake_lib",
+        "//tests/step/second:fake_lib",
+    ],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "render_dup_model_test",
+    size = "small",
+    message = "comes from two models targets",
+    target_under_test = ":render_dup_model",
+)
+
+# A library with only its license: no model file.
+kicad_render(
+    name = "render_license_only",
+    models = ["//tests/step:LICENSE.md"],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "render_license_only_test",
+    size = "small",
+    message = "models has no model file",
+    target_under_test = ":render_license_only",
 )
 
 # The images themselves: names, size, no metadata, and the pixels of each

@@ -18,6 +18,7 @@ timestamp_scan_test(
         "//e2e/netlist",
         "//e2e/pos",
         "//e2e/render",
+        "//e2e/render:render_parts",
         "//e2e/sch_pdf",
         "//e2e/sch_render",
         "//e2e/step",

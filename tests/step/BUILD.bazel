@@ -84,6 +84,15 @@ go_test(
 filegroup(
     name = "fake_lib",
     srcs = ["Fake_Lib.3dshapes/part.step"],
+    visibility = ["//tests/render:__pkg__"],
+)
+
+exports_files(
+    [
+        "LICENSE.md",
+        "stray.step",
+    ],
+    visibility = ["//tests/render:__pkg__"],
 )
 
 kicad_step(

@@ -414,7 +414,7 @@ usually wants. The output has no time stamp.
 <pre>
 load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_render")
 
-kicad_render(<a href="#kicad_render-name">name</a>, <a href="#kicad_render-height">height</a>, <a href="#kicad_render-pcb">pcb</a>, <a href="#kicad_render-width">width</a>)
+kicad_render(<a href="#kicad_render-name">name</a>, <a href="#kicad_render-height">height</a>, <a href="#kicad_render-models">models</a>, <a href="#kicad_render-pcb">pcb</a>, <a href="#kicad_render-width">width</a>)
 </pre>
 
 A board's top and bottom, rendered in 3D as PNG images.
@@ -436,8 +436,28 @@ KiCad makes the image a little smaller than `width` by `height`: 1600 by
 that gives the same bytes on every run. The PNGs hold no time stamp and
 no text, so the same board gives the same bytes.
 
-The images show no 3D models of the parts: the KiCad toolchain does not
-include KiCad's 3D model libraries.
+Without `models`, the images show no 3D models of the parts: the KiCad
+toolchain does not include KiCad's 3D model libraries. With `models`,
+they show the parts whose footprints name a model in those libraries:
+
+```starlark
+kicad_render(
+    name = "render",
+    models = [
+        "@kicad_models//:LED_SMD",
+        "@kicad_models//:Resistor_SMD",
+    ],
+    pcb = ":pcb",
+)
+```
+
+Only the libraries listed are fetched (over BitTorrent; see
+`@hdlf_rules_kicad//kicad:models.bzl`). With `models`, the build fails
+when a part's model is not in them, and names the part and the library
+to add, as for `kicad_step`. A model under `${KIPRJMOD}`, or a relative
+one, must be next to the board; one under no variable KiCad's libraries
+use fails too, as the build cannot give it. Hidden models are left out
+of that check, as KiCad leaves them out of the image.
 
 A pull request that changes a board attaches these images (AGENTS.md
 rule 5).
@@ -449,6 +469,7 @@ rule 5).
 | :------------- | :------------- | :------------- | :------------- | :------------- |
 | <a id="kicad_render-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
 | <a id="kicad_render-height"></a>height |  The image height asked of KiCad, in pixels; at least 64.   | Integer | optional |  `900`  |
+| <a id="kicad_render-models"></a>models |  3D model libraries: targets of `@kicad_models` (one per library), or files under `<name>.3dshapes/` of a library of your own, with `<name>.3dshapes/` at the top of its Bazel package. Without them the images show no parts.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="kicad_render-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 | <a id="kicad_render-width"></a>width |  The image width asked of KiCad, in pixels; at least 64.   | Integer | optional |  `1600`  |
 
@@ -625,7 +646,7 @@ by tolerance.
 | :------------- | :------------- | :------------- | :------------- | :------------- |
 | <a id="kicad_step-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
 | <a id="kicad_step-copper"></a>copper |  Export the copper too: tracks, vias, pads and zones.   | Boolean | optional |  `False`  |
-| <a id="kicad_step-models"></a>models |  3D model libraries: targets of `@kicad_models` (one per library), or files under `<name>.3dshapes/` of a library of your own. Without them the model has no parts.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="kicad_step-models"></a>models |  3D model libraries: targets of `@kicad_models` (one per library), or files under `<name>.3dshapes/` of a library of your own, with `<name>.3dshapes/` at the top of its Bazel package. Without them the model has no parts.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="kicad_step-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 
 

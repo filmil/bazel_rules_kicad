@@ -1,20 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 
-package main
+// Package sexpr parses the S-expressions KiCad writes: its schematics and
+// boards. sheetcheck and modelcheck share it.
+package sexpr
 
 import (
 	"fmt"
 	"strings"
 )
 
-// node is an S-expression: an atom (a symbol or a string) or a list.
-type node struct {
-	atom   string
-	list   []*node
-	isList bool
+// Node is an S-expression: an atom (a symbol or a string) or a list.
+type Node struct {
+	Atom   string
+	List   []*Node
+	IsList bool
 }
 
-func parse(text string) (*node, error) {
+// Parse reads one S-expression, which must be all of text but for white
+// space around it.
+func Parse(text string) (*Node, error) {
 	p := &parser{s: text}
 	p.space()
 	n, err := p.node()
@@ -39,14 +43,14 @@ func (p *parser) space() {
 	}
 }
 
-func (p *parser) node() (*node, error) {
+func (p *parser) node() (*Node, error) {
 	if p.i >= len(p.s) {
 		return nil, fmt.Errorf("unexpected end")
 	}
 	switch c := p.s[p.i]; {
 	case c == '(':
 		p.i++
-		n := &node{isList: true}
+		n := &Node{IsList: true}
 		for {
 			p.space()
 			if p.i >= len(p.s) {
@@ -60,7 +64,7 @@ func (p *parser) node() (*node, error) {
 			if err != nil {
 				return nil, err
 			}
-			n.list = append(n.list, c)
+			n.List = append(n.List, c)
 		}
 	case c == ')':
 		return nil, fmt.Errorf("unexpected ) at byte %d", p.i)
@@ -74,7 +78,7 @@ func (p *parser) node() (*node, error) {
 			c := p.s[p.i]
 			p.i++
 			if c == '"' {
-				return &node{atom: b.String()}, nil
+				return &Node{Atom: b.String()}, nil
 			}
 			if c == '\\' {
 				if p.i >= len(p.s) {
@@ -90,13 +94,32 @@ func (p *parser) node() (*node, error) {
 		for p.i < len(p.s) && !strings.ContainsRune(" \t\r\n()\"", rune(p.s[p.i])) {
 			p.i++
 		}
-		return &node{atom: p.s[start:p.i]}, nil
+		return &Node{Atom: p.s[start:p.i]}, nil
 	}
 }
 
-func (n *node) head() string {
-	if !n.isList || len(n.list) == 0 || n.list[0].isList {
+// Head is a list's first atom: "footprint" for (footprint "R" ...), or
+// "" for an atom or a list that starts with a list.
+func (n *Node) Head() string {
+	if !n.IsList || len(n.List) == 0 || n.List[0].IsList {
 		return ""
 	}
-	return n.list[0].atom
+	return n.List[0].Atom
+}
+
+// Arg is a list's i-th atom after its head, or "".
+func (n *Node) Arg(i int) string {
+	if !n.IsList || len(n.List) == 0 {
+		return ""
+	}
+	k := 0
+	for _, c := range n.List[1:] {
+		if !c.IsList {
+			if k == i {
+				return c.Atom
+			}
+			k++
+		}
+	}
+	return ""
 }
