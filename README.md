@@ -109,6 +109,8 @@ kicad_render(
 )
 ```
 
+The board takes the schematic's libraries; `kicad_pcb(deps = [...])`
+adds any the schematic does not bring.
 `bazel test //...` runs ERC and DRC; `bazel build //...` makes the PDF,
 BOM, Gerbers, drill and position files, and the renders. The DRC test
 also checks that the board follows the schematic (schematic parity).
@@ -193,7 +195,8 @@ versions, sources and licenses:
   https://gitlab.com/kicad/libraries/kicad-packages3D): CC-BY-SA 4.0 with
   the KiCad libraries exception. Each library's archive carries the
   upstream `LICENSE.md`, and so does the directory it is served from.
-  Fetched only when a build names a library in `models`.
+  Fetched only when a build names a library in `models` of
+  `kicad_step` or `kicad_render`.
 * rain 2.2.1 (https://github.com/cenkalti/rain), the BitTorrent client
   that rules_bittorrent 2.1.1 runs to fetch the 3D models: MIT. Fetched
   only with the 3D models.

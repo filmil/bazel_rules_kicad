@@ -39,7 +39,8 @@ the change.
 7. Stop and ask the operator before you:
    * change or remove an ERC, DRC or fab rule file;
    * delete a test, or make a tolerance larger;
-   * change a toolchain version or a library version;
+   * change a toolchain version or a library version (the pull request
+     also updates its entry under Licenses in `README.md`);
    * change a net or a part that has the `critical` tag;
    * run a release or publish workflow, or set a secret.
 8. When a test fails and the cause is not clear after three attempts, stop.
