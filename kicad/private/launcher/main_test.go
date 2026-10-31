@@ -45,7 +45,7 @@ func TestEnvironPointsInsideHome(t *testing.T) {
 		// A fixed --env value passes even with a dropped prefix.
 		"KICAD9_TEMPLATE_DIR": "/pinned",
 		"RUN_TOOL_STDOUT":     "b",
-		"ABS": "/etc/f.conf",
+		"ABS":                 "/etc/f.conf",
 		// A fixed --env value wins, even over HOME.
 		"HOME": "/never",
 	} {
@@ -57,6 +57,40 @@ func TestEnvironPointsInsideHome(t *testing.T) {
 		if _, ok := env[k]; ok {
 			t.Errorf("%s reached the tool", k)
 		}
+	}
+}
+
+// A host RUN_TOOL_ variable does not reach the tool: RUN_TOOL_STDOUT only
+// with --stdout, and RUN_TOOL_OUTPUTS is the flags' value (issue #82).
+func TestEnvironDropsHostRunToolVariables(t *testing.T) {
+	host := []string{"RUN_TOOL_STDOUT=/host/out", "RUN_TOOL_OUTPUTS=/host/x", "RUN_TOOL_OTHER=1", "PATH=/bin"}
+	env := Environ(host, "/act/h", "/act", Request{Outputs: []string{"a"}})
+	got := map[string]string{}
+	for _, kv := range env {
+		k, v, _ := strings.Cut(kv, "=")
+		got[k] = v
+	}
+	if v, ok := got["RUN_TOOL_STDOUT"]; ok {
+		t.Errorf("host RUN_TOOL_STDOUT=%s reached the tool", v)
+	}
+	if v, ok := got["RUN_TOOL_OTHER"]; ok {
+		t.Errorf("host RUN_TOOL_OTHER=%s reached the tool", v)
+	}
+	if got["RUN_TOOL_OUTPUTS"] != "a" {
+		t.Errorf("RUN_TOOL_OUTPUTS is %q, want the flag's \"a\"", got["RUN_TOOL_OUTPUTS"])
+	}
+	if got["PATH"] != "/bin" {
+		t.Errorf("PATH is %q: other variables must pass", got["PATH"])
+	}
+	// With --stdout, the flag's value, once.
+	var stdout []string
+	for _, kv := range Environ(host, "/act/h", "/act", Request{Stdout: "o.txt"}) {
+		if strings.HasPrefix(kv, "RUN_TOOL_STDOUT=") {
+			stdout = append(stdout, kv)
+		}
+	}
+	if len(stdout) != 1 || stdout[0] != "RUN_TOOL_STDOUT=o.txt" {
+		t.Errorf("with --stdout, RUN_TOOL_STDOUT entries are %q, want just RUN_TOOL_STDOUT=o.txt", stdout)
 	}
 }
 
