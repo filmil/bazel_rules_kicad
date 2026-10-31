@@ -33,6 +33,7 @@ helpers_toolchain(
     compare = "//kicad/private/detcompare",
     drucanary = "//kicad/private/drucanary",
     golden = "//kicad/private/golden:cmd",
+    kicad_merge = "//kicad/private/merge:cmd",
     launcher = "//kicad/private/launcher",
     modelcheck = "//kicad/private/modelcheck",
     reportcheck = "//kicad/private/reportcheck",

@@ -51,6 +51,42 @@ BitTorrent (rules_bittorrent) from a `.torrent` whose web seed is
 https://bt.hdlfactory.com/, and only when a build uses it. With no peers
 online, the web seed serves the whole file.
 
+### Merging KiCad files in git
+
+Git merges `.kicad_sch`, `.kicad_pcb` and `.kicad_sym` files line by line.
+KiCad's elements span many lines, so a line merge can interleave two of
+them or leave a list unclosed, and KiCad no longer loads the file.
+`kicad_merge` merges them element by element instead:
+
+* Each top-level element is keyed by its `uuid`: symbols, wires,
+  junctions, labels, sheets, footprints, tracks, vias and zones.
+  `lib_symbols` is merged symbol by symbol, and a board's nets by number.
+* An element added on one side is kept. One deleted on one side and
+  unchanged on the other is deleted. One changed on one side takes the
+  change.
+* An element changed differently on both sides is a conflict. The driver
+  names it by its key, leaves your side as it was, and git marks the file
+  conflicted.
+* Unchanged elements come out byte for byte, so the result diffs well.
+
+To install it for a repository, build the driver, then tell git when to
+use it:
+
+```sh
+bazel build @hdlf_rules_kicad//kicad:kicad_merge
+cp "$(bazel cquery --output=files @hdlf_rules_kicad//kicad:kicad_merge)" ~/bin/kicad_merge
+
+git config merge.kicad.name "KiCad S-expression merge"
+git config merge.kicad.driver "kicad_merge %O %A %B %P"
+```
+
+```
+# .gitattributes
+*.kicad_sch merge=kicad
+*.kicad_pcb merge=kicad
+*.kicad_sym merge=kicad
+```
+
 ## Building
 
 ```sh
