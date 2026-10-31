@@ -43,7 +43,7 @@ def _kicad_render_impl(ctx):
             HELPERS_TOOLCHAIN_TYPE,
             "modelcheck",
             arguments = ["--stamp", stamp.path, "--models_dir", models_dir, pcb.board.path],
-            inputs = depset([pcb.board], transitive = [staged]),
+            inputs = depset(transitive = [pcb.files, staged]),
             outputs = [stamp],
             mnemonic = "KicadRenderModelCheck",
             progress_message = "Checking that every part of %{label} has its 3D model",
@@ -134,8 +134,10 @@ kicad_render(
 Only the libraries listed are fetched (over BitTorrent; see
 `@hdlf_rules_kicad//kicad:models.bzl`). With `models`, the build fails
 when a part's model is not in them, and names the part and the library
-to add, as for `kicad_step`. Hidden models are left out of that check,
-as KiCad leaves them out of the image.
+to add, as for `kicad_step`. A model under `${KIPRJMOD}`, or a relative
+one, must be next to the board; one under no variable KiCad's libraries
+use fails too, as the build cannot give it. Hidden models are left out
+of that check, as KiCad leaves them out of the image.
 
 A pull request that changes a board attaches these images (AGENTS.md
 rule 5).
@@ -148,7 +150,8 @@ rule 5).
         ),
         "models": attr.label_list(
             doc = "3D model libraries: targets of `@kicad_models` (one per library), or " +
-                  "files under `<name>.3dshapes/` of a library of your own. " +
+                  "files under `<name>.3dshapes/` of a library of your own, with " +
+                  "`<name>.3dshapes/` at the top of its Bazel package. " +
                   "Without them the images show no parts.",
             allow_files = True,
         ),

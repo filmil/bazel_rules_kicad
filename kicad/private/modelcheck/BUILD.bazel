@@ -10,6 +10,7 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/filmil/bazel_rules_kicad/kicad/private/modelcheck",
     visibility = ["//visibility:private"],
+    deps = ["//kicad/private/sexpr"],
 )
 
 # Pure Go, so a user of the module needs no C++ toolchain to build it.

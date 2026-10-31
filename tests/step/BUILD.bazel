@@ -88,7 +88,10 @@ filegroup(
 )
 
 exports_files(
-    ["stray.step"],
+    [
+        "LICENSE.md",
+        "stray.step",
+    ],
     visibility = ["//tests/render:__pkg__"],
 )
 

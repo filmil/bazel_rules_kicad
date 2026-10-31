@@ -127,7 +127,8 @@ by tolerance.
         ),
         "models": attr.label_list(
             doc = "3D model libraries: targets of `@kicad_models` (one per library), or " +
-                  "files under `<name>.3dshapes/` of a library of your own. " +
+                  "files under `<name>.3dshapes/` of a library of your own, with " +
+                  "`<name>.3dshapes/` at the top of its Bazel package. " +
                   "Without them the model has no parts.",
             allow_files = True,
         ),

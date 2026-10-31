@@ -37,7 +37,8 @@ The rules are documented in [docs/defs.md](docs/defs.md).
 `kicad_step(models = [...])` puts the parts on the board's STEP model,
 and `kicad_render(models = [...])` on its images. Either fails the build
 when a part's model is not in the libraries given, and names the
-library to add. KiCad's 3D model libraries come from their own module
+library to add. Without `models`, neither shows any part, and neither
+checks. KiCad's 3D model libraries come from their own module
 extension:
 
 ```starlark

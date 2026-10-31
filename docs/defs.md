@@ -454,8 +454,10 @@ kicad_render(
 Only the libraries listed are fetched (over BitTorrent; see
 `@hdlf_rules_kicad//kicad:models.bzl`). With `models`, the build fails
 when a part's model is not in them, and names the part and the library
-to add, as for `kicad_step`. Hidden models are left out of that check,
-as KiCad leaves them out of the image.
+to add, as for `kicad_step`. A model under `${KIPRJMOD}`, or a relative
+one, must be next to the board; one under no variable KiCad's libraries
+use fails too, as the build cannot give it. Hidden models are left out
+of that check, as KiCad leaves them out of the image.
 
 A pull request that changes a board attaches these images (AGENTS.md
 rule 5).
@@ -467,7 +469,7 @@ rule 5).
 | :------------- | :------------- | :------------- | :------------- | :------------- |
 | <a id="kicad_render-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
 | <a id="kicad_render-height"></a>height |  The image height asked of KiCad, in pixels; at least 64.   | Integer | optional |  `900`  |
-| <a id="kicad_render-models"></a>models |  3D model libraries: targets of `@kicad_models` (one per library), or files under `<name>.3dshapes/` of a library of your own. Without them the images show no parts.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="kicad_render-models"></a>models |  3D model libraries: targets of `@kicad_models` (one per library), or files under `<name>.3dshapes/` of a library of your own, with `<name>.3dshapes/` at the top of its Bazel package. Without them the images show no parts.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="kicad_render-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 | <a id="kicad_render-width"></a>width |  The image width asked of KiCad, in pixels; at least 64.   | Integer | optional |  `1600`  |
 
@@ -644,7 +646,7 @@ by tolerance.
 | :------------- | :------------- | :------------- | :------------- | :------------- |
 | <a id="kicad_step-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
 | <a id="kicad_step-copper"></a>copper |  Export the copper too: tracks, vias, pads and zones.   | Boolean | optional |  `False`  |
-| <a id="kicad_step-models"></a>models |  3D model libraries: targets of `@kicad_models` (one per library), or files under `<name>.3dshapes/` of a library of your own. Without them the model has no parts.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
+| <a id="kicad_step-models"></a>models |  3D model libraries: targets of `@kicad_models` (one per library), or files under `<name>.3dshapes/` of a library of your own, with `<name>.3dshapes/` at the top of its Bazel package. Without them the model has no parts.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="kicad_step-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 
 

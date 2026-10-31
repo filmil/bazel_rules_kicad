@@ -120,6 +120,39 @@ fails_test(
     target_under_test = ":render_stray_model",
 )
 
+# The same model path from two libraries.
+kicad_render(
+    name = "render_dup_model",
+    models = [
+        "//tests/step:fake_lib",
+        "//tests/step/second:fake_lib",
+    ],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "render_dup_model_test",
+    size = "small",
+    message = "comes from two models targets",
+    target_under_test = ":render_dup_model",
+)
+
+# A library with only its license: no model file.
+kicad_render(
+    name = "render_license_only",
+    models = ["//tests/step:LICENSE.md"],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "render_license_only_test",
+    size = "small",
+    message = "models has no model file",
+    target_under_test = ":render_license_only",
+)
+
 # The images themselves: names, size, no metadata, and the pixels of each
 # side.
 go_test(

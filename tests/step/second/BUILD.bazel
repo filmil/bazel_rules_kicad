@@ -6,5 +6,8 @@
 filegroup(
     name = "fake_lib",
     srcs = ["Fake_Lib.3dshapes/part.step"],
-    visibility = ["//tests/step:__pkg__"],
+    visibility = [
+        "//tests/render:__pkg__",
+        "//tests/step:__pkg__",
+    ],
 )

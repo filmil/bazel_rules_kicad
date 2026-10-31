@@ -4,12 +4,10 @@ load("//kicad/private:design.bzl", "sheet_check_test")
 
 go_library(
     name = "sheetcheck_lib",
-    srcs = [
-        "main.go",
-        "sexpr.go",
-    ],
+    srcs = ["main.go"],
     importpath = "github.com/filmil/bazel_rules_kicad/kicad/private/sheetcheck",
     visibility = ["//visibility:private"],
+    deps = ["//kicad/private/sexpr"],
 )
 
 # Pure Go, so a user of the module needs no C++ toolchain to build it.
