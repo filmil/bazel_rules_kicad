@@ -60,13 +60,17 @@ them or leave a list unclosed, and KiCad no longer loads the file.
 
 * Each top-level element is keyed by its `uuid`: symbols, wires,
   junctions, labels, sheets, footprints, tracks, vias and zones.
-  `lib_symbols` is merged symbol by symbol, and a board's nets by number.
+  Kinds without a uuid are keyed by name or number: `lib_symbols` is
+  merged symbol by symbol, `sheet_instances` path by path, a board's nets
+  by number, a library's symbols by name.
 * An element added on one side is kept. One deleted on one side and
   unchanged on the other is deleted. One changed on one side takes the
   change.
 * An element changed differently on both sides is a conflict. The driver
   names it by its key, leaves your side as it was, and git marks the file
   conflicted.
+* Two placed symbols with one reference (both branches added an R1), or
+  two nets with one name, are a conflict too: annotate one again.
 * Unchanged elements come out byte for byte, so the result diffs well.
 
 To install it for a repository, build the driver, then tell git when to
@@ -74,10 +78,11 @@ use it:
 
 ```sh
 bazel build @hdlf_rules_kicad//kicad:kicad_merge
-cp "$(bazel cquery --output=files @hdlf_rules_kicad//kicad:kicad_merge)" ~/bin/kicad_merge
+mkdir -p "$HOME/.local/bin"
+cp "$(bazel cquery --output=files @hdlf_rules_kicad//kicad:kicad_merge)" "$HOME/.local/bin/kicad_merge"
 
 git config merge.kicad.name "KiCad S-expression merge"
-git config merge.kicad.driver "kicad_merge %O %A %B %P"
+git config merge.kicad.driver "$HOME/.local/bin/kicad_merge %O %A %B %P"
 ```
 
 ```

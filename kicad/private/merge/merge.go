@@ -5,56 +5,63 @@
 // which can interleave two elements or leave a list unclosed. This merges
 // them element by element.
 //
-// The elements of the top list are keyed: by their (uuid ...) when they
-// have one (symbols, wires, junctions, labels, sheets, footprints, tracks,
-// vias, zones), else by their head and first argument when the head
-// repeats ((net 3 "GND"), a symbol in lib_symbols), else by their head
-// alone (version, paper, setup). An element keeps its exact text, so an
-// unchanged one comes out byte for byte as it went in, in KiCad's own
-// format.
+// Each element of the top list has a key that does not depend on what else
+// is in the file:
+//
+//   - its (uuid ...), when it has one: symbols, wires, junctions, labels,
+//     sheets, footprints, tracks, vias, zones;
+//   - else, for the kinds that repeat, its name or number: (symbol "R")
+//     in a library or in lib_symbols, (net 3 "GND"), (property "Name"),
+//     (path "/") in sheet_instances;
+//   - else its head, for the kinds a file has once: version, paper, setup.
+//
+// An element of a repeating kind that has none of these (two of the same
+// kind with the same name, say) is keyed by its text; if both sides
+// change such elements of one kind, that is a conflict. Elements keep
+// their exact text, so an unchanged one comes out byte for byte, in KiCad's
+// format. A change in white space outside quoted strings is no change.
 //
 //   - Added on one side: kept, after the last element of its kind.
 //   - Deleted on one side and unchanged on the other: deleted.
 //   - Changed on one side: the change is taken.
 //   - Changed the same way on both sides: taken once.
-//   - Changed differently on both sides: a conflict, named by its key;
-//     but lib_symbols is merged symbol by symbol, so two sides that each
-//     add a library symbol do not conflict.
+//   - Changed differently on both sides: a conflict, named by its key.
 //
-// Changes in white space alone are not changes.
+// lib_symbols, sheet_instances and symbol_instances are merged child by
+// child, so two sides that each add a library symbol or a sheet do not
+// conflict. After the merge, two nets with one name, or two placed symbols
+// with one reference and unit, are conflicts: both sides added an R1, say,
+// and one must be annotated again.
 package merge
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/filmil/bazel_rules_kicad/kicad/private/sexpr"
 )
 
 // Containers are the uuid-less lists merged child by child.
-var Containers = map[string]bool{"lib_symbols": true}
+var Containers = map[string]bool{"lib_symbols": true, "sheet_instances": true, "symbol_instances": true}
 
-// elem is one element of a list: its text, as it stands in the file, and
-// its key.
+// Repeated are the kinds of element, without a uuid, that a list has many
+// of, keyed by their first argument.
+var Repeated = map[string]bool{"symbol": true, "net": true, "property": true, "path": true, "net_class": true}
+
 type elem struct {
-	text string
-	key  string
-	head string
-	node *sexpr.Node
+	text, key, head string
+	node            *sexpr.Node
+	byText          bool // keyed by its text: no stable key
 }
 
-// list is a parsed list: its head line, the separator before each child,
-// its children and its closing text.
 type list struct {
 	open  string // "(kicad_sch"
-	sep   string // "\n\t"
-	close string // "\n)"
 	elems []elem
 }
 
-// scan splits a list's text into its children, keeping each one's text.
-// The children of the lists it merges (a file's top list, lib_symbols)
-// are lists; anything else after the head is an error.
+// scan splits a list's text into its children. The lists it merges (a
+// file's top list, the containers) have only lists after their head.
 func scan(text string) (*list, error) {
 	t := strings.TrimSpace(text)
 	if !strings.HasPrefix(t, "(") || !strings.HasSuffix(t, ")") {
@@ -66,10 +73,8 @@ func scan(text string) (*list, error) {
 		i++
 	}
 	l.open = t[:i]
-	// The head's own atoms, if any, stay with it: (symbol "R" ...) in a
-	// library file is not merged here, only the top list and lib_symbols.
-	var children, seps []string
-	depth, start, gap, inString := 0, -1, i, false
+	var children []string
+	depth, start, inString := 0, -1, false
 	for j := i; j < len(t)-1; j++ {
 		c := t[j]
 		switch {
@@ -81,7 +86,7 @@ func scan(text string) (*list, error) {
 			}
 		case c == '"':
 			if depth == 0 {
-				return nil, fmt.Errorf("an atom outside a list at byte %d", j)
+				return nil, fmt.Errorf("an atom after the head %s, at byte %d", l.open, j)
 			}
 			inString = true
 		case c == '(':
@@ -96,51 +101,40 @@ func scan(text string) (*list, error) {
 			}
 			if depth == 0 {
 				children = append(children, t[start:j+1])
-				seps = append(seps, t[gap:start])
-				gap = j + 1
 			}
 		case depth == 0 && !strings.ContainsRune(" \t\r\n", rune(c)):
-			return nil, fmt.Errorf("an atom outside a list at byte %d", j)
+			return nil, fmt.Errorf("an atom after the head %s, at byte %d", l.open, j)
 		}
 	}
 	if depth != 0 || inString {
 		return nil, fmt.Errorf("unclosed list or string")
 	}
-	l.close = t[gap:]
-	l.sep = "\n\t"
-	for _, s := range seps {
-		if strings.Contains(s, "\n") {
-			l.sep = s
-			break
-		}
-	}
-	counts := map[string]int{}
+	seen := map[string]int{}
 	for _, c := range children {
 		n, err := sexpr.Parse(c)
 		if err != nil {
 			return nil, err
 		}
 		e := elem{text: c, node: n, head: n.Head()}
-		counts[e.head]++
-		l.elems = append(l.elems, e)
-	}
-	seen := map[string]int{}
-	for i := range l.elems {
-		e := &l.elems[i]
 		switch {
-		case uuidOf(e.node) != "":
-			e.key = "uuid:" + uuidOf(e.node)
-		case counts[e.head] > 1 || Containers[l.open[1:]]:
-			e.key = e.head + "|" + e.node.Arg(0)
+		case uuidOf(n) != "":
+			e.key = "uuid:" + uuidOf(n)
+		case Repeated[e.head] && n.Arg(0) != "":
+			e.key = e.head + "|" + n.Arg(0)
+		case Repeated[e.head]:
+			e.key, e.byText = e.head+"|text:"+normalize(c), true
 		default:
 			e.key = e.head
 		}
-		// Keys are unique within a list: the repeats are numbered.
-		base := e.key
-		if n := seen[base]; n > 0 {
-			e.key = fmt.Sprintf("%s#%d", base, n)
+		seen[e.key]++
+		l.elems = append(l.elems, e)
+	}
+	// A key used twice is not stable: key those by text.
+	for i := range l.elems {
+		e := &l.elems[i]
+		if seen[e.key] > 1 && !e.byText {
+			e.key, e.byText = e.head+"|text:"+normalize(e.text), true
 		}
-		seen[base]++
 	}
 	return l, nil
 }
@@ -154,10 +148,40 @@ func uuidOf(n *sexpr.Node) string {
 	return ""
 }
 
-// same says whether two texts differ only in white space.
-func same(a, b string) bool {
-	return strings.Join(strings.Fields(a), " ") == strings.Join(strings.Fields(b), " ")
+// normalize collapses white space outside quoted strings, so a change in
+// layout alone is no change, and one inside a string is.
+func normalize(s string) string {
+	var b strings.Builder
+	inString, space := false, false
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if inString {
+			b.WriteByte(c)
+			if c == '\\' && i+1 < len(s) {
+				i++
+				b.WriteByte(s[i])
+			} else if c == '"' {
+				inString = false
+			}
+			continue
+		}
+		if c == ' ' || c == '\t' || c == '\r' || c == '\n' {
+			space = true
+			continue
+		}
+		if space && b.Len() > 0 && c != ')' && !strings.HasSuffix(b.String(), "(") {
+			b.WriteByte(' ')
+		}
+		space = false
+		if c == '"' {
+			inString = true
+		}
+		b.WriteByte(c)
+	}
+	return b.String()
 }
+
+func same(a, b string) bool { return normalize(a) == normalize(b) }
 
 func index(l *list) map[string]int {
 	m := map[string]int{}
@@ -170,9 +194,12 @@ func index(l *list) map[string]int {
 // Merge merges ours and theirs, both edits of base. It returns the merged
 // text and the conflicts; with conflicts, the text is ours unchanged.
 func Merge(base, ours, theirs string) (string, []string, error) {
-	out, conflicts, err := mergeList(base, ours, theirs, "")
+	out, conflicts, err := mergeList(base, ours, theirs, "", 0)
 	if err != nil {
 		return "", nil, err
+	}
+	if len(conflicts) == 0 {
+		conflicts = checkMerged(out)
 	}
 	if len(conflicts) > 0 {
 		return ours, conflicts, nil
@@ -183,7 +210,7 @@ func Merge(base, ours, theirs string) (string, []string, error) {
 	return lead + out + trail, nil, nil
 }
 
-func mergeList(base, ours, theirs, where string) (string, []string, error) {
+func mergeList(base, ours, theirs, where string, depth int) (string, []string, error) {
 	b, err := scan(base)
 	if err != nil {
 		return "", nil, fmt.Errorf("base%s: %v", where, err)
@@ -197,12 +224,33 @@ func mergeList(base, ours, theirs, where string) (string, []string, error) {
 		return "", nil, fmt.Errorf("theirs%s: %v", where, err)
 	}
 	if a.open != t.open || a.open != b.open {
-		return "", []string{fmt.Sprintf("%s: the files are of different kinds (%s, %s, %s)", where, b.open, a.open, t.open)}, nil
+		return "", []string{fmt.Sprintf("%sthe files are of different kinds (%s, %s, %s)", where, b.open, a.open, t.open)}, nil
 	}
 	bi, ai, ti := index(b), index(a), index(t)
 	var conflicts []string
 	conflict := func(key, why string) {
 		conflicts = append(conflicts, fmt.Sprintf("%s%s: %s", where, key, why))
+	}
+	// Elements keyed by text: a kind both sides changed is a conflict.
+	changedByText := func(l *list, other map[string]int) map[string]bool {
+		m := map[string]bool{}
+		for _, e := range l.elems {
+			if _, ok := other[e.key]; e.byText && !ok {
+				m[e.head] = true
+			}
+		}
+		for _, e := range b.elems {
+			if _, ok := index(l)[e.key]; e.byText && !ok {
+				m[e.head] = true
+			}
+		}
+		return m
+	}
+	ca, ct := changedByText(a, bi), changedByText(t, bi)
+	for h := range ca {
+		if ct[h] {
+			conflict(h, "elements of this kind without a name or uuid changed on both sides")
+		}
 	}
 	var out []elem
 	for _, e := range a.elems {
@@ -210,7 +258,6 @@ func mergeList(base, ours, theirs, where string) (string, []string, error) {
 		tk, inT := ti[e.key]
 		switch {
 		case inB && !inT:
-			// Theirs deleted it.
 			if !same(e.text, b.elems[bk].text) {
 				conflict(e.key, "changed in ours, deleted in theirs")
 				out = append(out, e)
@@ -223,7 +270,7 @@ func mergeList(base, ours, theirs, where string) (string, []string, error) {
 			case same(tt, bt), same(e.text, tt):
 				out = append(out, e)
 			case Containers[e.head]:
-				m, c, err := mergeList(bt, e.text, tt, where+e.key+"/")
+				m, c, err := mergeList(bt, e.text, tt, where+e.key+"/", depth+1)
 				if err != nil {
 					return "", nil, err
 				}
@@ -242,7 +289,6 @@ func mergeList(base, ours, theirs, where string) (string, []string, error) {
 			out = append(out, e) // added in ours
 		}
 	}
-	// What theirs added, or what ours deleted that theirs kept.
 	for ti0, e := range t.elems {
 		if _, inA := ai[e.key]; inA {
 			continue
@@ -254,9 +300,8 @@ func mergeList(base, ours, theirs, where string) (string, []string, error) {
 			continue
 		}
 		// Added in theirs: after the last element of its kind, as KiCad
-		// groups them (wires, then symbols); failing that, after the
-		// nearest element before it in theirs that the result has; else
-		// last.
+		// groups them; failing that, after the nearest element before it
+		// in theirs that the result has; else last.
 		pos := -1
 		for i, o := range out {
 			if o.head == e.head {
@@ -276,12 +321,69 @@ func mergeList(base, ours, theirs, where string) (string, []string, error) {
 		}
 		out = append(out[:pos], append([]elem{e}, out[pos:]...)...)
 	}
+	// KiCad's layout: one child per line, a tab deeper than the list.
+	if len(out) == 0 {
+		return a.open + ")", conflicts, nil
+	}
 	var s strings.Builder
 	s.WriteString(a.open)
+	in := "\n" + strings.Repeat("\t", depth+1)
 	for _, e := range out {
-		s.WriteString(a.sep)
+		s.WriteString(in)
 		s.WriteString(e.text)
 	}
-	s.WriteString(a.close)
+	s.WriteString("\n" + strings.Repeat("\t", depth) + ")")
 	return s.String(), conflicts, nil
+}
+
+// checkMerged finds what no single element shows: two nets of a board with
+// one name, two placed symbols of a schematic with one reference and unit.
+func checkMerged(text string) []string {
+	n, err := sexpr.Parse(text)
+	if err != nil {
+		return []string{"the merge does not parse: " + err.Error()}
+	}
+	var out []string
+	nets := map[string][]string{}
+	refs := map[string][]string{}
+	kind := n.Head()
+	for _, e := range n.List[1:] {
+		switch {
+		case kind == "kicad_pcb" && e.Head() == "net":
+			if name := e.Arg(1); name != "" {
+				nets[name] = append(nets[name], e.Arg(0))
+			}
+		case kind == "kicad_sch" && e.Head() == "symbol":
+			// A placed symbol (a library's symbols have references too,
+			// "R" for all resistors, so only a schematic's count).
+			ref, unit := "", "1"
+			for _, c := range e.List {
+				switch {
+				case c.Head() == "property" && c.Arg(0) == "Reference":
+					ref = c.Arg(1)
+				case c.Head() == "unit":
+					unit = c.Arg(0)
+				}
+			}
+			if ref != "" && !strings.HasSuffix(ref, "?") {
+				refs[ref+" unit "+unit] = append(refs[ref+" unit "+unit], uuidOf(e))
+			}
+		}
+	}
+	for _, m := range []struct {
+		what string
+		m    map[string][]string
+	}{{"net name %q is used by nets %s", nets}, {"reference %s is used by symbols %s; annotate one again", refs}} {
+		var keys []string
+		for k, v := range m.m {
+			if len(v) > 1 {
+				keys = append(keys, k)
+			}
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			out = append(out, fmt.Sprintf(m.what, k, strings.Join(m.m[k], ", ")))
+		}
+	}
+	return out
 }

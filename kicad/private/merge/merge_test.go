@@ -204,3 +204,113 @@ func TestBadInput(t *testing.T) {
 		t.Errorf("a board merged into a schematic without a conflict")
 	}
 }
+
+// A symbol library: symbols are keyed by name, so a second one added on one
+// side does not change the key of the first.
+func TestSymbolLibrary(t *testing.T) {
+	sym := func(name, val string) string {
+		return "\t(symbol \"" + name + "\"\n\t\t(property \"Reference\" \"" + val + "\"\n\t\t\t(at 0 0 0)\n\t\t)\n\t)\n"
+	}
+	lib := func(body string) string {
+		return "(kicad_symbol_lib\n\t(version 20241209)\n\t(generator \"kicad_symbol_editor\")\n" + body + ")\n"
+	}
+	base := lib(sym("A", "R"))
+	ours := lib(sym("A", "R") + sym("B", "R"))
+	theirs := lib(sym("A", "U"))
+	out := clean(t, base, ours, theirs)
+	if !strings.Contains(out, `(symbol "B"`) || !strings.Contains(out, `"U"`) || strings.Count(out, `(symbol "A"`) != 1 {
+		t.Errorf("merge:\n%s", out)
+	}
+}
+
+// lib_symbols emptied on one side and added to on the other: the result is
+// well formed, with only the added symbol.
+func TestEmptiedContainer(t *testing.T) {
+	ours := read(t, "ours.kicad_sch")
+	base := ours
+	// Ours deletes the resistor: its placed symbol, its wire, its library
+	// symbol.
+	emptied := read(t, "base.kicad_sch")
+	theirs := strings.Replace(ours, `(symbol "Device:R"`, `(symbol "Device:R"`, 1)
+	theirsC := read(t, "theirs.kicad_sch")
+	// Theirs keeps the resistor and adds the capacitor's library symbol.
+	i := strings.Index(theirsC, "\t\t(symbol \"Device:C\"")
+	j := strings.Index(theirsC[i:], "\n\t\t)\n") + i + len("\n\t\t)")
+	theirs = strings.Replace(theirs, "\n\t)\n\t(wire", "\n"+theirsC[i:j]+"\n\t)\n\t(wire", 1)
+	out := clean(t, base, emptied, theirs)
+	_, libs := heads(t, out)
+	if strings.Join(libs, " ") != "Device:C" {
+		t.Errorf("lib_symbols has %v; want only Device:C", libs)
+	}
+	if !strings.Contains(out, "\n\t(lib_symbols\n\t\t(symbol \"Device:C\"") || !strings.Contains(out, "\n\t)\n\t(sheet_instances") {
+		t.Errorf("lib_symbols is not in KiCad's layout:\n%s", out[:600])
+	}
+}
+
+// White space inside a string is part of the value.
+func TestSpaceInString(t *testing.T) {
+	base := read(t, "ours.kicad_sch")
+	ours := strings.Replace(base, `"10k"`, `"10 k"`, 1)
+	if out := clean(t, base, ours, base); !strings.Contains(out, `"10 k"`) {
+		t.Errorf("a change inside a string was lost")
+	}
+}
+
+// Elements of a repeating kind with no name are keyed by text: deleting the
+// first does not shift the second's key; changing them on both sides is a
+// conflict.
+func TestKeyedByText(t *testing.T) {
+	pcb := func(body string) string { return "(kicad_pcb\n\t(version 1)\n" + body + ")\n" }
+	base := pcb("\t(property \"\" \"a\")\n\t(property \"\" \"b\")\n")
+	ours := pcb("\t(property \"\" \"b\")\n")
+	out := clean(t, base, ours, base)
+	if strings.Contains(out, `"a"`) || !strings.Contains(out, `"b"`) {
+		t.Errorf("deleting the first unnamed element: %s", out)
+	}
+	theirs := pcb("\t(property \"\" \"a\")\n\t(property \"\" \"c\")\n")
+	if _, c, _ := Merge(base, ours, theirs); len(c) == 0 || !strings.Contains(c[0], "without a name or uuid changed on both sides") {
+		t.Errorf("both sides changed unnamed elements: %v", c)
+	}
+}
+
+// Two nets added with one name, on different numbers: a conflict.
+func TestDuplicateNetName(t *testing.T) {
+	base := "(kicad_pcb\n\t(version 1)\n\t(net 0 \"\")\n)\n"
+	ours := "(kicad_pcb\n\t(version 1)\n\t(net 0 \"\")\n\t(net 2 \"VCC\")\n)\n"
+	theirs := "(kicad_pcb\n\t(version 1)\n\t(net 0 \"\")\n\t(net 3 \"VCC\")\n)\n"
+	if _, c, _ := Merge(base, ours, theirs); len(c) != 1 || !strings.Contains(c[0], `net name "VCC" is used by nets 2, 3`) {
+		t.Errorf("conflicts %v", c)
+	}
+}
+
+// sheet_instances is merged path by path: two sides that each add a sheet
+// do not conflict on it.
+func TestSheetInstances(t *testing.T) {
+	si := func(paths ...string) string {
+		s := "(kicad_sch\n\t(version 20250114)\n\t(sheet_instances"
+		for _, p := range paths {
+			s += "\n\t\t(path \"" + p + "\"\n\t\t\t(page \"1\")\n\t\t)"
+		}
+		return s + "\n\t)\n)\n"
+	}
+	out := clean(t, si("/"), si("/", "/a"), si("/", "/b"))
+	if !strings.Contains(out, `(path "/a"`) || !strings.Contains(out, `(path "/b"`) {
+		t.Errorf("sheet_instances:\n%s", out)
+	}
+}
+
+// Both sides add an R1, as KiCad annotates each branch: the merge would
+// load, and fail ERC; it is a conflict instead, so someone annotates again.
+func TestDuplicateReference(t *testing.T) {
+	base, ours := read(t, "base.kicad_sch"), read(t, "ours.kicad_sch")
+	other := strings.NewReplacer("0000000000a1", "0000000000d1", "0000000000a2", "0000000000d2",
+		"0000000000a3", "0000000000d3", "0000000000a4", "0000000000d4",
+		"(at 101.6 101.6 0)", "(at 109.22 101.6 0)", "xy 101.6", "xy 109.22").Replace(ours)
+	_, c, err := Merge(base, ours, other)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c) != 1 || !strings.Contains(c[0], "reference R1 unit 1 is used by symbols") {
+		t.Errorf("conflicts %v; want the duplicate R1", c)
+	}
+}
