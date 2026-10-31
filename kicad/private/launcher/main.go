@@ -103,7 +103,10 @@ var Dropped = []string{
 // DroppedPrefixes start the names of variables that would point a tool at
 // host libraries, settings or fonts: KiCad's (KICAD9_SYMBOL_DIR and the
 // like) and fontconfig's. A toolchain sets the ones it needs with --env.
-var DroppedPrefixes = []string{"KICAD", "FONTCONFIG_", "FC_"}
+// RUN_TOOL_ ones are the launcher's own: it sets them from its flags, and
+// a host value must not stand in for a missing flag (a host
+// RUN_TOOL_STDOUT would send the stub's record to stdout, issue #82).
+var DroppedPrefixes = []string{"KICAD", "FONTCONFIG_", "FC_", "RUN_TOOL_"}
 
 func dropped(k string, drop map[string]bool) bool {
 	if drop[k] {
