@@ -42,6 +42,8 @@ def _helpers_toolchain_impl(ctx):
         "sheetcheck": ctx.attr.sheetcheck[DefaultInfo].files_to_run,
         # Fails kicad_step when a part's 3D model is missing.
         "stepcheck": ctx.attr.stepcheck[DefaultInfo].files_to_run,
+        # Fails kicad_render when a part's 3D model is missing.
+        "modelcheck": ctx.attr.modelcheck[DefaultInfo].files_to_run,
         # The rule file with the canary rule appended (kicad_drc_report).
         "drucanary": ctx.attr.drucanary[DefaultInfo].files_to_run,
     })]
@@ -56,6 +58,7 @@ helpers_toolchain = rule(
         "tablecheck": attr.label(mandatory = True, executable = True, cfg = "target"),
         "sheetcheck": attr.label(mandatory = True, executable = True, cfg = "exec"),
         "stepcheck": attr.label(mandatory = True, executable = True, cfg = "exec"),
+        "modelcheck": attr.label(mandatory = True, executable = True, cfg = "exec"),
         "sheetcheck_test": attr.label(mandatory = True, executable = True, cfg = "target"),
         "reportcheck": attr.label(mandatory = True, executable = True, cfg = "target"),
         "drucanary": attr.label(mandatory = True, executable = True, cfg = "exec"),

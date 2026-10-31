@@ -34,6 +34,7 @@ helpers_toolchain(
     drucanary = "//kicad/private/drucanary",
     golden = "//kicad/private/golden:cmd",
     launcher = "//kicad/private/launcher",
+    modelcheck = "//kicad/private/modelcheck",
     reportcheck = "//kicad/private/reportcheck",
     sheetcheck = "//kicad/private/sheetcheck",
     sheetcheck_test = "//kicad/private/sheetcheck",

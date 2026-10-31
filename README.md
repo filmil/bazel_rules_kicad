@@ -34,8 +34,11 @@ The rules are documented in [docs/defs.md](docs/defs.md).
 
 ### 3D models
 
-`kicad_step(models = [...])` puts the parts on the board. KiCad's 3D model
-libraries come from their own module extension:
+`kicad_step(models = [...])` puts the parts on the board's STEP model,
+and `kicad_render(models = [...])` on its images. Either fails the build
+when a part's model is not in the libraries given, and names the
+library to add. KiCad's 3D model libraries come from their own module
+extension:
 
 ```starlark
 models = use_extension("@hdlf_rules_kicad//kicad:models.bzl", "models")

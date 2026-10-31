@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # The e2e board's top and bottom as PNG, the same bytes in two
-# configurations (issue #26). A change to the board attaches these
-# (AGENTS.md rule 5).
+# configurations (issue #26), without and with the parts' 3D models. A
+# change to the board attaches these (AGENTS.md rule 5).
 load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_render")
 
 kicad_render(
@@ -15,4 +15,37 @@ determinism_test(
     name = "render_determinism_test",
     size = "small",
     target = ":render",
+)
+
+# With the parts: the three model libraries the board's footprints use,
+# fetched over BitTorrent from bt.hdlfactory.com. Building it runs
+# modelcheck, which fails when a part has no model.
+kicad_render(
+    name = "render_parts",
+    models = [
+        "@kicad_models//:Connector_PinHeader_2.54mm",
+        "@kicad_models//:LED_SMD",
+        "@kicad_models//:Resistor_SMD",
+    ],
+    pcb = "//e2e:pcb",
+    visibility = ["//e2e/timestamp_scan:__pkg__"],
+)
+
+determinism_test(
+    name = "render_parts_determinism_test",
+    size = "small",
+    target = ":render_parts",
+)
+
+# Known bad: LED_SMD is left out, so D1 has no model. The build fails and
+# names D1 and @kicad_models//:LED_SMD; CI checks that
+# (.github/workflows/test.yml). Manual, so that //... builds.
+kicad_render(
+    name = "render_parts_missing",
+    models = [
+        "@kicad_models//:Connector_PinHeader_2.54mm",
+        "@kicad_models//:Resistor_SMD",
+    ],
+    pcb = "//e2e:pcb",
+    tags = ["manual"],
 )
