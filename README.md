@@ -22,7 +22,7 @@ Only Linux x86_64 hosts are supported.
 In `MODULE.bazel`:
 
 ```starlark
-bazel_dep(name = "hdlf_rules_kicad", version = "0.1.0")
+bazel_dep(name = "hdlf_rules_kicad", version = "0.0.1")
 
 # KiCad's symbol and footprint libraries, for designs that use them.
 kicad = use_extension("@hdlf_rules_kicad//kicad:extensions.bzl", "kicad")
