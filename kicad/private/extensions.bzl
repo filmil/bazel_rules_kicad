@@ -209,6 +209,10 @@ footprint libraries of the same version: `@kicad_libs//:standard`,
 `:symbols` and `:footprints`, each a `kicad_library`. Bring it in with
 `use_repo(kicad, "kicad_libs")`.
 
+The extension also makes `@freerouting`, Freerouting's jar, which the
+registered Freerouting toolchain of `kicad_autoroute` runs; it is
+fetched only when a build routes a board.
+
 KiCad's 3D model libraries come from a second extension, `models` in
 `@hdlf_rules_kicad//kicad:models.bzl`.
 

@@ -16,7 +16,11 @@ def _kicad_autoroute_impl(ctx):
     report = ctx.actions.declare_file(base + ".routing.md")
 
     # 1. The board as Specctra DSN, with the vendor's clearance.
-    args = [ctx.file._dsn.path, "--board", pcb.board.path, "--out", dsn.path]
+    if ctx.attr.max_passes < 0:
+        fail("%s: max_passes must be 0 (Freerouting's default) or more, not %d" % (ctx.label, ctx.attr.max_passes))
+
+    # -I: the scripts see no PYTHON* variable, user site or current directory.
+    args = ["-I", ctx.file._dsn.path, "--board", pcb.board.path, "--out", dsn.path]
     inputs = [ctx.file._dsn]
     if pcb.design_rules:
         args += ["--rules", pcb.design_rules.path]
@@ -67,7 +71,7 @@ def _kicad_autoroute_impl(ctx):
     )
 
     # 3. The routes, back into the board.
-    sargs = [ctx.file._ses.path, "--board", pcb.board.path, "--ses", ses.path, "--out", out.path, "--report", report.path]
+    sargs = ["-I", ctx.file._ses.path, "--board", pcb.board.path, "--ses", ses.path, "--out", out.path, "--report", report.path]
     if ctx.attr.allow_unrouted:
         sargs.append("--allow_unrouted")
     run_tool(
@@ -165,4 +169,30 @@ output groups `dsn` and `ses` hold the DSN and Freerouting's session.
         ),
     },
     toolchains = [_KICAD, _FREEROUTING] + RUN_TOOL_TOOLCHAINS,
+)
+
+def _autoroute_selftest_impl(ctx):
+    out = ctx.actions.declare_file(ctx.label.name + ".txt")
+    run_tool(
+        ctx,
+        _KICAD,
+        "kicad_python",
+        arguments = ["-I", ctx.file._dsn.path, "--selftest"],
+        inputs = [ctx.file._dsn],
+        stdout = out,
+        mnemonic = "KicadDsnSelftest",
+        progress_message = "Checking the design rules reader of kicad_autoroute",
+    )
+    return [DefaultInfo(files = depset([out]))]
+
+autoroute_selftest = rule(
+    implementation = _autoroute_selftest_impl,
+    doc = "Runs dsn.py's self-test of its design rules reader; it builds only if the test passes.",
+    attrs = {
+        "_dsn": attr.label(
+            default = "//kicad/private/autoroute:dsn.py",
+            allow_single_file = True,
+        ),
+    },
+    toolchains = [_KICAD] + RUN_TOOL_TOOLCHAINS,
 )

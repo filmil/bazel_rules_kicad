@@ -3,10 +3,26 @@
 # The scripts that kicad_autoroute runs with KiCad's own Python: the
 # Specctra DSN export and the session import are in its pcbnew module, and
 # kicad-cli has no command for them.
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("//kicad/private:autoroute.bzl", "autoroute_selftest")
+
 exports_files(
     [
         "dsn.py",
         "ses.py",
     ],
     visibility = ["//visibility:public"],
+)
+
+# dsn.py's design rules reader: opt, min and max in any order, units, a #
+# in a string, comments, and rules for some nets or ignored. It builds
+# only if every case passes.
+autoroute_selftest(
+    name = "dsn_selftest",
+)
+
+build_test(
+    name = "dsn_selftest_test",
+    size = "small",
+    targets = [":dsn_selftest"],
 )

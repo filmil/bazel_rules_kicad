@@ -17,7 +17,10 @@ def _kicad_toolchain_impl(ctx):
     major = ctx.attr.version.split(".")[0]
     tools = {"kicad_cli": cli}
     if ctx.attr.kicad_python:
-        tools["kicad_python"] = ctx.attr.kicad_python[DefaultInfo].files_to_run
+        py = ctx.attr.kicad_python[DefaultInfo].files_to_run
+        if py == None or py.executable == None:
+            fail("kicad_python: %s is not executable" % ctx.attr.kicad_python.label)
+        tools["kicad_python"] = py
     return [platform_common.ToolchainInfo(
         tools = tools,
         tool_inputs = depset(ctx.files.data + ctx.files.fonts + [ctx.file.fonts_conf]),

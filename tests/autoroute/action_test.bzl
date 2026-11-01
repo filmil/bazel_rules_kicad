@@ -19,7 +19,8 @@ def _autoroute_action_impl(ctx):
     env = analysistest.begin(ctx)
     by = _actions(env)
     dsn = _tool_args(by["KicadDsn"][0])
-    asserts.true(env, dsn[0].endswith("/autoroute/dsn.py"), "the export script: %s" % dsn[0])
+    asserts.equals(env, "-I", dsn[0], "isolated Python")
+    asserts.true(env, dsn[1].endswith("/autoroute/dsn.py"), "the export script: %s" % dsn[1])
     asserts.true(env, "--rules" in dsn, "the design rules go to the export")
     if "--rules" in dsn:
         asserts.true(env, dsn[dsn.index("--rules") + 1].endswith("placed_project/board.kicad_dru"), "the staged rules")
@@ -39,7 +40,8 @@ def _autoroute_action_impl(ctx):
     asserts.true(env, args[args.index("-jar") + 1].endswith("freerouting.jar"), "the jar")
 
     ses = _tool_args(by["KicadSes"][0])
-    asserts.true(env, ses[0].endswith("/autoroute/ses.py"), "the import script: %s" % ses[0])
+    asserts.equals(env, "-I", ses[0], "isolated Python")
+    asserts.true(env, ses[1].endswith("/autoroute/ses.py"), "the import script: %s" % ses[1])
     asserts.false(env, "--allow_unrouted" in ses, "unrouted fails by default")
     files = [f.basename for f in analysistest.target_under_test(env)[DefaultInfo].files.to_list()]
     asserts.equals(env, ["routed.kicad_pcb"], files)
@@ -56,3 +58,11 @@ def _autoroute_options_action_impl(ctx):
     return analysistest.end(env)
 
 autoroute_options_action_test = analysistest.make(_autoroute_options_action_impl)
+
+def _autoroute_no_rules_action_impl(ctx):
+    env = analysistest.begin(ctx)
+    by = _actions(env)
+    asserts.false(env, "--rules" in _tool_args(by["KicadDsn"][0]), "no --rules without design rules")
+    return analysistest.end(env)
+
+autoroute_no_rules_action_test = analysistest.make(_autoroute_no_rules_action_impl)

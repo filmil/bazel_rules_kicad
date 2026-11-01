@@ -5,18 +5,30 @@
         --report R.md [--allow_unrouted]
 
 KiCad's own Python runs it. The importer gives each new track and via a
-new UUID; the generator is seeded first, so the same session gives the
-same UUIDs. Unless --allow_unrouted, a connection left unrouted fails.
+new UUID; the generator is seeded first, from a hash of the board and the
+session, so the same inputs give the same UUIDs and other inputs others. Unless --allow_unrouted, a connection left unrouted fails.
+
+Freerouting writes a net name bare when KiCad's export quoted it only
+for being unusual, such as IN|SIDE, and KiCad's session reader then
+rejects the whole file. Every bare net name is quoted before the import.
 
 The report is Markdown, for a person: per net, the track length on each
 copper layer, the tracks and the vias, and the connections left unrouted.
 """
 
 import argparse
+import hashlib
 import os
+import re
 import sys
+import tempfile
 
 import pcbnew
+
+
+def quote_nets(text):
+    """The session with each bare net name, as in (net IN|SIDE, quoted."""
+    return re.sub(r'\(net ([^\s"()]+)', lambda m: '(net "%s"' % m.group(1), text)
 
 
 def report(board, name, left):
@@ -66,9 +78,18 @@ def main(argv):
     p.add_argument("--report", required=True)
     p.add_argument("--allow_unrouted", action="store_true")
     a = p.parse_args(argv)
-    pcbnew.KIID.SeedGenerator(1)
+    h = hashlib.sha256()
+    for path in (a.board, a.ses):
+        with open(path, "rb") as f:
+            h.update(f.read())
+    pcbnew.KIID.SeedGenerator(int.from_bytes(h.digest()[:4], "big"))
     board = pcbnew.LoadBoard(a.board)
-    if not pcbnew.ImportSpecctraSES(board, a.ses):
+    with open(a.ses, encoding="utf-8") as f:
+        session = quote_nets(f.read())
+    fd, quoted = tempfile.mkstemp(suffix=".ses")
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write(session)
+    if not pcbnew.ImportSpecctraSES(board, quoted):
         sys.exit("ses: KiCad could not import %s" % a.ses)
     board.BuildConnectivity()
     left = board.GetConnectivity().GetUnconnectedCount(False)

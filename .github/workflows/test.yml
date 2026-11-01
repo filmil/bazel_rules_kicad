@@ -131,6 +131,23 @@ jobs:
           fi
           grep -F 'sheet "sheets/power.kicad_sch", which main.kicad_sch references, is not in srcs' "${HOME}/sheet.log"
 
+      # kicad_autoroute: a board Freerouting cannot route fails the build,
+      # and the message counts what is left (issue #91).
+      - name: An unroutable board fails the build
+        run: |
+          set -o nounset -o pipefail
+          if bazel build //tests/autoroute:unroutable_routed > "${HOME}/route.log" 2>&1; then
+            echo "the unroutable board built"; exit 1
+          fi
+          grep -F 'ses: Freerouting left 3 connection(s) unrouted' "${HOME}/route.log"
+
+      # kicad_autoroute's Freerouting action runs without network.
+      - name: Freerouting runs without network
+        run: |
+          set -o nounset -o pipefail
+          bazel aquery 'mnemonic(Freerouting, //tests/autoroute:routed)' > "${HOME}/aquery.log"
+          grep -F "ExecutionInfo: {block-network: ''}" "${HOME}/aquery.log"
+
 
   # Advisory: whether every dependency resolves from the published
   # registries, the filmil registry first and then the BCR, with no flag

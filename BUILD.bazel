@@ -42,6 +42,8 @@ update_goldens(
         "//kicad/private/swapdemo:real_tool_test",
         "//tests/autoroute:dsn_test",
         "//tests/autoroute:report_test",
+        "//tests/autoroute:ring_report_test",
+        "//tests/autoroute:unroutable_report_test",
         "//tests/bom:custom_test",
         "//tests/bom:default_test",
         "//tests/bom:no_dnp_test",
