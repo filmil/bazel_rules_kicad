@@ -64,11 +64,13 @@ jobs:
           fi
 
   # Every dependency must resolve from the published registries, the
-  # filmil registry first and then the BCR, with no local override: a
-  # release waits for that, before anything is tagged. It does not wait for
-  # the BCR alone: an hdlf module's dependencies are in the filmil registry
-  # first, and the BCR's review of them takes days (operator, 2026-11-01).
-  bcr_ready:
+  # filmil registry first and then the BCR, with no flag from .bazelrc
+  # (--ignore_all_rc_files). An override in MODULE.bazel would still
+  # apply, so keep the modules free of them. A release waits for this
+  # before anything is tagged. It does not wait for the BCR alone: an hdlf
+  # module's dependencies are in the filmil registry first, and the BCR's
+  # review takes days (operator, 2026-11-01).
+  registry_ready:
     needs: check
     if: ${{ needs.check.outputs.changed == 'true' }}
     runs-on: ubuntu-latest
@@ -104,7 +106,7 @@ jobs:
         run: bazel --ignore_all_rc_files mod graph --registry=https://raw.githubusercontent.com/filmil/bazel-registry/main --registry=https://bcr.bazel.build > /dev/null
 
   tag:
-    needs: [check, bcr_ready]
+    needs: [check, registry_ready]
     if: ${{ needs.check.outputs.changed == 'true' }}
     runs-on: ubuntu-latest
     permissions:
