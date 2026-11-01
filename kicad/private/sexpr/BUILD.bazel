@@ -7,6 +7,7 @@ go_library(
     srcs = ["sexpr.go"],
     importpath = "github.com/filmil/bazel_rules_kicad/kicad/private/sexpr",
     visibility = [
+        "//kicad/private/merge:__pkg__",
         "//kicad/private/modelcheck:__pkg__",
         "//kicad/private/sheetcheck:__pkg__",
     ],

@@ -46,6 +46,8 @@ def _helpers_toolchain_impl(ctx):
         "modelcheck": ctx.attr.modelcheck[DefaultInfo].files_to_run,
         # The rule file with the canary rule appended (kicad_drc_report).
         "drucanary": ctx.attr.drucanary[DefaultInfo].files_to_run,
+        # The merge driver, which its tests run on real schematics.
+        "kicad_merge": ctx.attr.kicad_merge[DefaultInfo].files_to_run,
     })]
 
 helpers_toolchain = rule(
@@ -62,6 +64,7 @@ helpers_toolchain = rule(
         "sheetcheck_test": attr.label(mandatory = True, executable = True, cfg = "target"),
         "reportcheck": attr.label(mandatory = True, executable = True, cfg = "target"),
         "drucanary": attr.label(mandatory = True, executable = True, cfg = "exec"),
+        "kicad_merge": attr.label(mandatory = True, executable = True, cfg = "exec"),
         "canary_board": attr.label(mandatory = True, allow_single_file = [".kicad_pcb"]),
         "golden": attr.label(mandatory = True, executable = True, cfg = "target"),
         "stampscan": attr.label(mandatory = True, executable = True, cfg = "target"),

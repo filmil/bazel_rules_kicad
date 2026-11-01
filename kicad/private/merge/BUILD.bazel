@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: Apache-2.0
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load("//kicad:defs.bzl", "kicad_erc_test", "kicad_schematic")
+load(":merge_files.bzl", "merge_files")
+
+# kicad_merge, a git merge driver for KiCad's S-expression files (issue
+# #58). Users get it as @hdlf_rules_kicad//kicad:kicad_merge.
+go_library(
+    name = "merge",
+    srcs = ["merge.go"],
+    importpath = "github.com/filmil/bazel_rules_kicad/kicad/private/merge",
+    visibility = ["//visibility:private"],
+    deps = ["//kicad/private/sexpr"],
+)
+
+go_test(
+    name = "merge_test",
+    size = "small",
+    srcs = ["merge_test.go"],
+    data = glob(["testdata/*"]),
+    embed = [":merge"],
+    pure = "on",
+    deps = ["//kicad/private/sexpr"],
+)
+
+go_binary(
+    name = "cmd",
+    srcs = ["cmd/main.go"],
+    pure = "on",
+    visibility = [
+        "//kicad:__pkg__",
+        "//kicad/toolchains:__pkg__",
+    ],
+    deps = [":merge"],
+)
+
+go_test(
+    name = "cmd_test",
+    size = "small",
+    srcs = [
+        "cmd/main.go",
+        "cmd/main_test.go",
+    ],
+    pure = "on",
+    deps = [":merge"],
+)
+
+# The acceptance test (issue #58): two branches each add a library symbol,
+# a symbol and a wire to a schematic, ERC-clean on each side; KiCad loads
+# the merge, and its ERC is as clean. Each side is also checked on its own,
+# through an identity merge, so the file names match the project's.
+[
+    merge_files(
+        name = name,
+        out = name + "/merge.kicad_sch",
+        base = base,
+        ours = ours,
+        theirs = theirs,
+    )
+    for name, base, ours, theirs in [
+        ("merged", "testdata/base.kicad_sch", "testdata/ours.kicad_sch", "testdata/theirs.kicad_sch"),
+        ("ours_only", "testdata/ours.kicad_sch", "testdata/ours.kicad_sch", "testdata/ours.kicad_sch"),
+        ("theirs_only", "testdata/theirs.kicad_sch", "testdata/theirs.kicad_sch", "testdata/theirs.kicad_sch"),
+    ]
+]
+
+[
+    [
+        kicad_schematic(
+            name = name + "_sch",
+            root = ":" + name,
+            deps = ["@kicad_libs//:standard"],
+        ),
+        kicad_erc_test(
+            name = name + "_erc_test",
+            size = "small",
+            schematic = ":%s_sch" % name,
+        ),
+    ]
+    for name in [
+        "merged",
+        "ours_only",
+        "theirs_only",
+    ]
+]

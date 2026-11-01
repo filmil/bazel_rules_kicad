@@ -50,3 +50,11 @@ exports_files(
     ],
     visibility = ["//docs:__pkg__"],
 )
+
+# kicad_merge, a git merge driver for KiCad's schematics, boards and symbol
+# libraries (issue #58); see the README for how to install it.
+alias(
+    name = "kicad_merge",
+    actual = "//kicad/private/merge:cmd",
+    visibility = ["//visibility:public"],
+)
