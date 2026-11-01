@@ -1,0 +1,213 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# kicad_autoroute: Freerouting routes the e2e board, whose three tracks
+# are taken out (board.kicad_pcb), with the fabricator's rules of
+# rules.kicad_dru. The routed board must pass the DRC with the same rules,
+# which also fails on any unconnected item; the DSN must carry the rules'
+# clearance and track width; the routing must be deterministic and use
+# only tools from toolchains.
+load("//kicad:defs.bzl", "determinism_test", "golden_test", "kicad_autoroute", "kicad_drc_test", "kicad_pcb", "kicad_render", "swap_test")
+load(":action_test.bzl", "autoroute_action_test", "autoroute_no_rules_action_test", "autoroute_options_action_test")
+
+kicad_pcb(
+    name = "placed",
+    board = "board.kicad_pcb",
+    design_rules = "rules.kicad_dru",
+    netlist = "circuit.net",
+    deps = ["@kicad_libs//:footprints"],
+)
+
+kicad_autoroute(
+    name = "routed",
+    pcb = ":placed",
+)
+
+kicad_pcb(
+    name = "routed_pcb",
+    board = ":routed",
+    design_rules = "rules.kicad_dru",
+    netlist = "circuit.net",
+    deps = ["@kicad_libs//:footprints"],
+)
+
+kicad_drc_test(
+    name = "drc_test",
+    size = "small",
+    pcb = ":routed_pcb",
+)
+
+filegroup(
+    name = "dsn",
+    srcs = [":routed"],
+    output_group = "dsn",
+)
+
+# The DSN that Freerouting reads: its rules carry rules.kicad_dru's
+# largest clearance, 0.3 mm (300 um), and track width, 0.25 mm.
+golden_test(
+    name = "dsn_test",
+    size = "small",
+    src = ":dsn",
+    golden = "expected.dsn",
+)
+
+filegroup(
+    name = "report",
+    srcs = [":routed"],
+    output_group = "report",
+)
+
+# The routing report: the three nets, each on F.Cu, and no unrouted
+# connection.
+golden_test(
+    name = "report_test",
+    size = "small",
+    src = ":report",
+    golden = "expected.routing.md",
+)
+
+autoroute_action_test(
+    name = "action_test",
+    size = "small",
+    target_under_test = ":routed",
+)
+
+kicad_autoroute(
+    name = "routed_options",
+    allow_unrouted = True,
+    max_passes = 7,
+    pcb = ":placed",
+    tags = ["manual"],
+)
+
+autoroute_options_action_test(
+    name = "options_action_test",
+    size = "small",
+    target_under_test = ":routed_options",
+)
+
+determinism_test(
+    name = "determinism_test",
+    size = "small",
+    target = ":routed",
+)
+
+swap_test(
+    name = "swap_test",
+    size = "small",
+    targets = [":routed"],
+)
+
+# The board's images before and after routing, for review.
+kicad_render(
+    name = "placed_render",
+    pcb = ":placed",
+)
+
+kicad_render(
+    name = "render",
+    pcb = ":routed_pcb",
+)
+
+# A board that needs both layers: R1 sits inside a closed ring of the net
+# RING (tracks already on F.Cu, which kicad_autoroute keeps), and its net
+# IN|SIDE leaves the ring for R2. The report shows B.Cu, vias, and the |
+# escaped.
+kicad_pcb(
+    name = "ring_placed",
+    board = "ring.kicad_pcb",
+    design_rules = "rules.kicad_dru",
+    netlist = "circuit.net",
+    deps = ["@kicad_libs//:footprints"],
+)
+
+kicad_autoroute(
+    name = "ring_routed",
+    pcb = ":ring_placed",
+)
+
+kicad_pcb(
+    name = "ring_routed_pcb",
+    board = ":ring_routed",
+    design_rules = "rules.kicad_dru",
+    netlist = "circuit.net",
+    deps = ["@kicad_libs//:footprints"],
+)
+
+kicad_drc_test(
+    name = "ring_drc_test",
+    size = "small",
+    pcb = ":ring_routed_pcb",
+)
+
+filegroup(
+    name = "ring_report",
+    srcs = [":ring_routed"],
+    output_group = "report",
+)
+
+golden_test(
+    name = "ring_report_test",
+    size = "small",
+    src = ":ring_report",
+    golden = "expected_ring.routing.md",
+)
+
+kicad_render(
+    name = "ring_render",
+    pcb = ":ring_routed_pcb",
+)
+
+# A board that cannot be routed. Building :unroutable_routed fails with
+# "Freerouting left N connection(s) unrouted" (the CI workflow checks
+# it); with allow_unrouted it builds, and the report counts what is left.
+kicad_pcb(
+    name = "unroutable",
+    board = "board.kicad_pcb",
+    design_rules = "unroutable.kicad_dru",
+    netlist = "circuit.net",
+)
+
+kicad_autoroute(
+    name = "unroutable_routed",
+    pcb = ":unroutable",
+    tags = ["manual"],
+)
+
+kicad_autoroute(
+    name = "unroutable_allowed",
+    allow_unrouted = True,
+    pcb = ":unroutable",
+)
+
+filegroup(
+    name = "unroutable_report",
+    srcs = [":unroutable_allowed"],
+    output_group = "report",
+)
+
+golden_test(
+    name = "unroutable_report_test",
+    size = "small",
+    src = ":unroutable_report",
+    golden = "expected_unroutable.routing.md",
+)
+
+# Without design rules, the export gets no --rules.
+kicad_pcb(
+    name = "no_rules",
+    board = "board.kicad_pcb",
+    netlist = "circuit.net",
+)
+
+kicad_autoroute(
+    name = "no_rules_routed",
+    pcb = ":no_rules",
+    tags = ["manual"],
+)
+
+autoroute_no_rules_action_test(
+    name = "no_rules_action_test",
+    size = "small",
+    target_under_test = ":no_rules_routed",
+)

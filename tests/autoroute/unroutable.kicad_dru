@@ -1,0 +1,6 @@
+(version 1)
+# A clearance no track of the test board can keep: J1's pads are 2.54 mm
+# apart, so no pad can be left. Routing must fail, or leave the
+# connections unrouted with allow_unrouted.
+(rule "Huge clearance"
+	(constraint clearance (min 3mm)))

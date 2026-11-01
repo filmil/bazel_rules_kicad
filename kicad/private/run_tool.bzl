@@ -25,10 +25,12 @@ def run_tool(
         home_env = [],
         tools = [],
         stdout = None,
-        path_env = {}):
+        path_env = {},
+        block_network = False):
     """Runs a tool from a toolchain, with a private home, as one action.
 
-    The tool comes from `ctx.toolchains[toolchain_type].tools[tool]`. It runs
+    The tool comes from `ctx.toolchains[toolchain_type].tools[tool]`: an
+    executable target's `FilesToRunProvider`, or an executable `File`. It runs
     under the launcher, which points HOME, TMPDIR and the XDG directories,
     and each variable named in `home_env`, at a fresh directory inside the
     action, so the tool reads and writes no host configuration (spec H3).
@@ -64,6 +66,8 @@ def run_tool(
       path_env: dict from name to a path relative to the execution root (a
         string) or a `File`; the tool sees it made absolute. It adds to the
         toolchain's `path_env`, and wins over `env` for the same name.
+      block_network: run the action without network where the strategy can
+        (Bazel's `block-network` execution requirement).
     """
     info = ctx.toolchains[toolchain_type]
     if info == None:
@@ -71,6 +75,7 @@ def run_tool(
     if tool not in info.tools:
         fail("toolchain for %s has no tool %r; it has %s" % (toolchain_type, tool, sorted(info.tools.keys())))
     exe = info.tools[tool]
+    executable = exe if type(exe) == "File" else exe.executable
     launcher = ctx.toolchains[HELPERS_TOOLCHAIN_TYPE].helpers.launcher
 
     outputs = list(outputs)
@@ -103,7 +108,7 @@ def run_tool(
         # The path, so a directory output (a tree artifact) is one value.
         pre.add("--output", out.path)
     pre.add("--")
-    pre.add(exe.executable)
+    pre.add(executable)
 
     ctx.actions.run(
         executable = launcher,
@@ -113,4 +118,5 @@ def run_tool(
         tools = [exe] + list(tools),
         mnemonic = mnemonic,
         progress_message = progress_message,
+        execution_requirements = {"block-network": ""} if block_network else None,
     )

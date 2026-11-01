@@ -12,12 +12,14 @@ https://github.com/filmil/bazel_rules_kicad). This file is the only public
 entry point; everything under `//kicad/private` may change without notice.
 """
 
+load("//kicad/private:autoroute.bzl", _kicad_autoroute = "kicad_autoroute")
 load("//kicad/private:bom.bzl", _kicad_bom = "kicad_bom")
 load("//kicad/private:design.bzl", _KicadPcbInfo = "KicadPcbInfo", _KicadSchematicInfo = "KicadSchematicInfo", _kicad_pcb = "kicad_pcb", _kicad_schematic = "kicad_schematic")
 load("//kicad/private:determinism.bzl", _determinism_test = "determinism_test")
 load("//kicad/private:drc.bzl", _kicad_drc_report = "kicad_drc_report", _kicad_drc_test = "kicad_drc_test")
 load("//kicad/private:drill.bzl", _DRILL_MAP_FORMATS = "DRILL_MAP_FORMATS", _kicad_drill = "kicad_drill")
 load("//kicad/private:erc.bzl", _kicad_erc_report = "kicad_erc_report", _kicad_erc_test = "kicad_erc_test")
+load("//kicad/private:freerouting_toolchain.bzl", _FreeroutingToolchainInfo = "FreeroutingToolchainInfo", _freerouting_toolchain = "freerouting_toolchain")
 load("//kicad/private:gerbers.bzl", _DEFAULT_GERBER_LAYERS = "DEFAULT_GERBER_LAYERS", _kicad_gerbers = "kicad_gerbers")
 load("//kicad/private:golden.bzl", _GoldenInfo = "GoldenInfo", _golden_test = "golden_test", _update_goldens = "update_goldens")
 load("//kicad/private:kicad_toolchain.bzl", _KicadToolchainInfo = "KicadToolchainInfo", _kicad_toolchain = "kicad_toolchain")
@@ -35,6 +37,7 @@ load("//kicad/private:toolchains.bzl", _tool_toolchain = "tool_toolchain")
 
 DEFAULT_GERBER_LAYERS = _DEFAULT_GERBER_LAYERS
 DRILL_MAP_FORMATS = _DRILL_MAP_FORMATS
+FreeroutingToolchainInfo = _FreeroutingToolchainInfo
 GoldenInfo = _GoldenInfo
 KicadLibraryInfo = _KicadLibraryInfo
 KicadPcbInfo = _KicadPcbInfo
@@ -42,7 +45,9 @@ KicadSchematicInfo = _KicadSchematicInfo
 KicadToolchainInfo = _KicadToolchainInfo
 NormalizeToolchainInfo = _NormalizeToolchainInfo
 determinism_test = _determinism_test
+freerouting_toolchain = _freerouting_toolchain
 golden_test = _golden_test
+kicad_autoroute = _kicad_autoroute
 kicad_bom = _kicad_bom
 kicad_drc_report = _kicad_drc_report
 kicad_drc_test = _kicad_drc_test

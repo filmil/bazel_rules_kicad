@@ -6,6 +6,7 @@ load(":library_test.bzl", "relative_path_test", "relative_to_test")
 bzl_library(
     name = "private",
     srcs = [
+        "autoroute.bzl",
         "bom.bzl",
         "design.bzl",
         "determinism.bzl",
@@ -13,6 +14,7 @@ bzl_library(
         "drill.bzl",
         "erc.bzl",
         "extensions.bzl",
+        "freerouting_toolchain.bzl",
         "gerbers.bzl",
         "golden.bzl",
         "kicad_toolchain.bzl",
@@ -34,7 +36,10 @@ bzl_library(
     ],
     # The kicad_toolchains repository loads kicad_toolchain.bzl.
     visibility = ["//visibility:public"],
-    deps = ["@bazel_skylib//rules:common_settings"],
+    deps = [
+        "@bazel_skylib//rules:common_settings",
+        "@rules_java//java/common",
+    ],
 )
 
 # A setting that changes nothing but the configuration. determinism_test

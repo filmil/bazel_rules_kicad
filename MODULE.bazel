@@ -23,6 +23,14 @@ bazel_dep(name = "gazelle", version = "0.54.0")
 # bt.hdlfactory.com (issue #43; kicad/private/models_pins.bzl).
 bazel_dep(name = "rules_bittorrent", version = "2.1.1")
 
+# kicad_autoroute runs Freerouting's jar on rules_java's JDK 25, which
+# rules_java pins by sha256. 9.3.0 is the version the graph resolves
+# already.
+bazel_dep(name = "rules_java", version = "9.3.0")
+
+java_toolchains = use_extension("@rules_java//java:extensions.bzl", "toolchains")
+use_repo(java_toolchains, "remotejdk25_linux")
+
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//:go.mod")
 use_repo(go_deps, "com_github_srwiley_oksvg", "com_github_srwiley_rasterx")
@@ -36,7 +44,7 @@ register_toolchains(
 
 # KiCad itself, prebuilt and pinned by sha256 (kicad/private/extensions.bzl).
 kicad = use_extension("//kicad:extensions.bzl", "kicad")
-use_repo(kicad, "kicad_libs", "kicad_toolchains")
+use_repo(kicad, "freerouting", "kicad_libs", "kicad_toolchains")
 
 register_toolchains(
     "@kicad_toolchains//:all",
@@ -45,6 +53,9 @@ register_toolchains(
     # The normalizer and its stand-in.
     "//kicad/toolchains:normalize",
     "//kicad/toolchains:normalize_stub",
+    # Freerouting, for kicad_autoroute, and its stand-in.
+    "//kicad/toolchains:freerouting",
+    "//kicad/toolchains:freerouting_stub",
 )
 
 # The demonstration tools of the swap test template
@@ -83,3 +94,8 @@ register_toolchains(
 bazel_dep(name = "bazel_lib", version = "3.7.2", dev_dependency = True)
 bazel_dep(name = "buildifier_prebuilt", version = "10.1.0", dev_dependency = True)
 bazel_dep(name = "stardoc", version = "0.8.1", dev_dependency = True)
+
+# The documentation of kicad_autoroute's toolchain: rules_java's
+# java_common loads bazel_features. 1.45.0 is the version the graph
+# resolves already.
+bazel_dep(name = "bazel_features", version = "1.45.0", dev_dependency = True)

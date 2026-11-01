@@ -33,6 +33,18 @@
           "url": "https://gitlab.com/kicad/libraries/kicad-footprints/-/archive/9.0.9/kicad-footprints-9.0.9.tar.gz"
         }
       ]
+    },
+    {
+      "tag": "mirror-freerouting-2.5.0-jar",
+      "title": "Mirror: Freerouting 2.5.0 (jar)",
+      "notes": "The Java build of Freerouting 2.5.0, as https://github.com/freerouting/freerouting/releases/tag/v2.5.0 served it on 2026-11-01, for rules_kicad's autorouting on rules_java's JDK 25. (The native CLI of the same release crashes when it routes.) License: GPL-3.0 (Freerouting).",
+      "assets": [
+        {
+          "name": "freerouting-2.5.0.jar",
+          "sha256": "f6f51bb02245e8e717f9359bd260cc9c5c0b1bc0acc8b7cb2cd5b8ffeb5de3c7",
+          "url": "https://github.com/freerouting/freerouting/releases/download/v2.5.0/freerouting-2.5.0.jar"
+        }
+      ]
     }
   ]
 }
