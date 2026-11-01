@@ -12,6 +12,125 @@ The rules arrive in milestones M1 and M2 (see the issues of
 https://github.com/filmil/bazel_rules_kicad). This file is the only public
 entry point; everything under `//kicad/private` may change without notice.
 
+<a id="freerouting_toolchain"></a>
+
+## freerouting_toolchain
+
+<pre>
+load("@hdlf_rules_kicad//kicad:defs.bzl", "freerouting_toolchain")
+
+freerouting_toolchain(<a href="#freerouting_toolchain-name">name</a>, <a href="#freerouting_toolchain-jar">jar</a>, <a href="#freerouting_toolchain-java_runtime">java_runtime</a>, <a href="#freerouting_toolchain-version">version</a>)
+</pre>
+
+A Freerouting toolchain, for `@hdlf_rules_kicad//kicad:freerouting_toolchain_type`.
+
+hdlf_rules_kicad registers one: Freerouting's jar, pinned by sha256, on
+rules_java's JDK 25. A user who wants another declares their own:
+
+```starlark
+load("@hdlf_rules_kicad//kicad:defs.bzl", "freerouting_toolchain")
+
+freerouting_toolchain(
+    name = "my_freerouting_impl",
+    jar = "@my_freerouting//file",
+    java_runtime = "@remotejdk25_linux//:jdk",
+    version = "2.5.0",
+)
+
+toolchain(
+    name = "my_freerouting",
+    exec_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
+    target_settings = ["@hdlf_rules_kicad//kicad/toolchains:stub_off"],
+    toolchain = ":my_freerouting_impl",
+    toolchain_type = "@hdlf_rules_kicad//kicad:freerouting_toolchain_type",
+)
+```
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="freerouting_toolchain-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="freerouting_toolchain-jar"></a>jar |  Freerouting's jar.   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+| <a id="freerouting_toolchain-java_runtime"></a>java_runtime |  The Java runtime (a `java_runtime`) that runs the jar.   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+| <a id="freerouting_toolchain-version"></a>version |  Freerouting's version, such as "2.5.0".   | String | required |  |
+
+
+<a id="kicad_autoroute"></a>
+
+## kicad_autoroute
+
+<pre>
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_autoroute")
+
+kicad_autoroute(<a href="#kicad_autoroute-name">name</a>, <a href="#kicad_autoroute-allow_unrouted">allow_unrouted</a>, <a href="#kicad_autoroute-max_passes">max_passes</a>, <a href="#kicad_autoroute-pcb">pcb</a>)
+</pre>
+
+A board's copper, routed by Freerouting.
+
+```starlark
+kicad_pcb(
+    name = "placed",
+    board = "placed.kicad_pcb",     # footprints placed, nets assigned, no copper
+    design_rules = ":jlcpcb_rules",  # hdlf_rules_fab's fab_rules, or a .kicad_dru
+    netlist = ":netlist",
+)
+
+kicad_autoroute(
+    name = "routed",
+    pcb = ":placed",
+)
+
+kicad_pcb(
+    name = "pcb",
+    board = ":routed",              # routed.kicad_pcb
+    design_rules = ":jlcpcb_rules",
+    netlist = ":netlist",
+)
+
+kicad_drc_test(
+    name = "drc_test",
+    pcb = ":pcb",
+)
+```
+
+The output is `<name>.kicad_pcb`: the board of `pcb` with Freerouting's
+tracks and vias. Three actions make it:
+
+1. KiCad's own Python exports the board as Specctra DSN (`<name>.dsn`).
+   When `pcb` has design rules, every net class's clearance becomes at
+   least the largest `clearance` or `edge_clearance` minimum in them, and
+   its track width at least the largest `track_width` minimum, because
+   Freerouting keeps one clearance. Hole clearances stay the DRC's to
+   check.
+2. Freerouting routes it (`<name>.ses`), headless and on one thread, with
+   its telemetry, analytics and log file off, in an action without
+   network where the strategy allows.
+3. KiCad's Python imports the session into the board. New tracks and vias
+   get UUIDs from a seeded generator, so the same inputs give the same
+   board. A connection left unrouted fails the build, unless
+   `allow_unrouted`. It also writes the report below.
+
+Freerouting's result is not checked against the design rules: give the
+routed board to `kicad_drc_test`, and to `kicad_render` for its images.
+
+The output group `report` holds `<name>.routing.md`, the routing for a
+person to read: per net, the track length on each copper layer, the
+tracks and the vias, and how many connections are left unrouted. The
+output groups `dsn` and `ses` hold the DSN and Freerouting's session.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_autoroute-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_autoroute-allow_unrouted"></a>allow_unrouted |  Write the board even when connections are left unrouted.   | Boolean | optional |  `False`  |
+| <a id="kicad_autoroute-max_passes"></a>max_passes |  Freerouting's most routing passes; 0 keeps Freerouting's own default.   | Integer | optional |  `0`  |
+| <a id="kicad_autoroute-pcb"></a>pcb |  The board to route (`kicad_pcb`): its footprints placed and their pads on nets. Copper it has already stays, and Freerouting routes around it.   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+
+
 <a id="kicad_bom"></a>
 
 ## kicad_bom
@@ -657,7 +776,7 @@ by tolerance.
 <pre>
 load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_toolchain")
 
-kicad_toolchain(<a href="#kicad_toolchain-name">name</a>, <a href="#kicad_toolchain-data">data</a>, <a href="#kicad_toolchain-fonts">fonts</a>, <a href="#kicad_toolchain-fonts_conf">fonts_conf</a>, <a href="#kicad_toolchain-kicad_cli">kicad_cli</a>, <a href="#kicad_toolchain-version">version</a>)
+kicad_toolchain(<a href="#kicad_toolchain-name">name</a>, <a href="#kicad_toolchain-data">data</a>, <a href="#kicad_toolchain-fonts">fonts</a>, <a href="#kicad_toolchain-fonts_conf">fonts_conf</a>, <a href="#kicad_toolchain-kicad_cli">kicad_cli</a>, <a href="#kicad_toolchain-kicad_python">kicad_python</a>, <a href="#kicad_toolchain-version">version</a>)
 </pre>
 
 A KiCad toolchain, for the toolchain type `@hdlf_rules_kicad//kicad:toolchain_type`.
@@ -674,6 +793,7 @@ kicad_toolchain(
     fonts = ["@my_fonts//:ttf"],
     fonts_conf = "fonts.conf",
     kicad_cli = "@my_kicad//:bin/kicad-cli",
+    kicad_python = "@my_kicad//:bin/python3",
     version = "9.0.9",
 )
 
@@ -701,6 +821,7 @@ the XDG directories all point inside the action (spec H3), and
 | <a id="kicad_toolchain-fonts"></a>fonts |  The font files that `fonts_conf` names.   | <a href="https://bazel.build/concepts/labels">List of labels</a> | optional |  `[]`  |
 | <a id="kicad_toolchain-fonts_conf"></a>fonts_conf |  A fontconfig file that names only `fonts` (spec H3: no host fonts).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 | <a id="kicad_toolchain-kicad_cli"></a>kicad_cli |  The kicad-cli executable.   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+| <a id="kicad_toolchain-kicad_python"></a>kicad_python |  KiCad's own Python, which can import its `pcbnew` module. Optional; `kicad_autoroute` needs it, to export and import Specctra files.   | <a href="https://bazel.build/concepts/labels">Label</a> | optional |  `None`  |
 | <a id="kicad_toolchain-version"></a>version |  The KiCad version kicad-cli reports, such as "9.0.9".   | String | required |  |
 
 
@@ -794,6 +915,26 @@ toolchain(
 | :------------- | :------------- | :------------- | :------------- | :------------- |
 | <a id="tool_toolchain-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
 | <a id="tool_toolchain-tools"></a>tools |  Executable targets, each mapped to the name rules use for it.   | <a href="https://bazel.build/rules/lib/core/dict">Dictionary: Label -> String</a> | required |  |
+
+
+<a id="FreeroutingToolchainInfo"></a>
+
+## FreeroutingToolchainInfo
+
+<pre>
+load("@hdlf_rules_kicad//kicad:defs.bzl", "FreeroutingToolchainInfo")
+
+FreeroutingToolchainInfo(<a href="#FreeroutingToolchainInfo-jar">jar</a>, <a href="#FreeroutingToolchainInfo-version">version</a>)
+</pre>
+
+What a Freerouting toolchain offers beyond its `java` tool.
+
+**FIELDS**
+
+| Name  | Description |
+| :------------- | :------------- |
+| <a id="FreeroutingToolchainInfo-jar"></a>jar |  File: Freerouting's jar, which `java -jar` runs.    |
+| <a id="FreeroutingToolchainInfo-version"></a>version |  string: Freerouting's version, such as "2.5.0".    |
 
 
 <a id="GoldenInfo"></a>

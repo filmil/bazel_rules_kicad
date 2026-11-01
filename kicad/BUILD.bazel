@@ -30,6 +30,13 @@ int_flag(
     visibility = ["//visibility:public"],
 )
 
+# The toolchain type of Freerouting, the autorouter of kicad_autoroute:
+# a Java runtime and Freerouting's jar (FreeroutingToolchainInfo).
+toolchain_type(
+    name = "freerouting_toolchain_type",
+    visibility = ["//visibility:public"],
+)
+
 # The toolchain type of KiCad: kicad-cli and its data (KicadToolchainInfo).
 toolchain_type(
     name = "toolchain_type",

@@ -40,6 +40,8 @@ update_goldens(
         "//kicad/private/kicadsmoke:version_test",
         "//kicad/private/normalize:epoch_flag_test",
         "//kicad/private/swapdemo:real_tool_test",
+        "//tests/autoroute:dsn_test",
+        "//tests/autoroute:report_test",
         "//tests/bom:custom_test",
         "//tests/bom:default_test",
         "//tests/bom:no_dnp_test",

@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The scripts that kicad_autoroute runs with KiCad's own Python: the
+# Specctra DSN export and the session import are in its pcbnew module, and
+# kicad-cli has no command for them.
+exports_files(
+    [
+        "dsn.py",
+        "ses.py",
+    ],
+    visibility = ["//visibility:public"],
+)

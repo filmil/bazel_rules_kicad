@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# kicad_autoroute as a user of the module calls it: the e2e board with its
+# tracks taken out (placed.kicad_pcb), routed by the registered Freerouting
+# toolchain with the rules of rules.kicad_dru. The routed board passes the
+# DRC, schematic parity included, and is the same in two configurations.
+load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_autoroute", "kicad_drc_test", "kicad_pcb")
+
+kicad_pcb(
+    name = "placed",
+    board = "placed.kicad_pcb",
+    design_rules = "rules.kicad_dru",
+    schematic = "//e2e:sch",
+)
+
+kicad_autoroute(
+    name = "routed",
+    pcb = ":placed",
+)
+
+kicad_pcb(
+    name = "routed_pcb",
+    board = ":routed",
+    design_rules = "rules.kicad_dru",
+    schematic = "//e2e:sch",
+)
+
+kicad_drc_test(
+    name = "drc_test",
+    size = "small",
+    pcb = ":routed_pcb",
+)
+
+determinism_test(
+    name = "determinism_test",
+    size = "small",
+    target = ":routed",
+)

@@ -9,7 +9,12 @@ stardoc(
     name = "defs_doc",
     out = "gen.defs.md",
     input = "//kicad:defs.bzl",
-    deps = ["//kicad:defs"],
+    deps = [
+        "//kicad:defs",
+        # rules_java's java_common (kicad_autoroute's toolchain) loads
+        # bazel_features, whose library rules_java does not list.
+        "@bazel_features//:features",
+    ],
 )
 
 stardoc(

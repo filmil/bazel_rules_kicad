@@ -15,8 +15,11 @@ def _kicad_toolchain_impl(ctx):
     if cli == None or cli.executable == None:
         fail("kicad_cli: %s is not executable" % ctx.attr.kicad_cli.label)
     major = ctx.attr.version.split(".")[0]
+    tools = {"kicad_cli": cli}
+    if ctx.attr.kicad_python:
+        tools["kicad_python"] = ctx.attr.kicad_python[DefaultInfo].files_to_run
     return [platform_common.ToolchainInfo(
-        tools = {"kicad_cli": cli},
+        tools = tools,
         tool_inputs = depset(ctx.files.data + ctx.files.fonts + [ctx.file.fonts_conf]),
         env = {
             # UTF-8 file names and text whatever the host's locale is. glibc
@@ -57,6 +60,7 @@ kicad_toolchain(
     fonts = ["@my_fonts//:ttf"],
     fonts_conf = "fonts.conf",
     kicad_cli = "@my_kicad//:bin/kicad-cli",
+    kicad_python = "@my_kicad//:bin/python3",
     version = "9.0.9",
 )
 
@@ -78,6 +82,13 @@ the XDG directories all point inside the action (spec H3), and
         "kicad_cli": attr.label(
             doc = "The kicad-cli executable.",
             mandatory = True,
+            allow_single_file = True,
+            executable = True,
+            cfg = "exec",
+        ),
+        "kicad_python": attr.label(
+            doc = "KiCad's own Python, which can import its `pcbnew` module. Optional; " +
+                  "`kicad_autoroute` needs it, to export and import Specctra files.",
             allow_single_file = True,
             executable = True,
             cfg = "exec",
@@ -107,7 +118,10 @@ the XDG directories all point inside the action (spec H3), and
 
 def _kicad_stub_toolchain_impl(ctx):
     return [platform_common.ToolchainInfo(
-        tools = {"kicad_cli": ctx.attr.stub[DefaultInfo].files_to_run},
+        tools = {
+            "kicad_cli": ctx.attr.stub[DefaultInfo].files_to_run,
+            "kicad_python": ctx.attr.stub[DefaultInfo].files_to_run,
+        },
         kicad = KicadToolchainInfo(
             version = ctx.attr.version,
             major = ctx.attr.version.split(".")[0],

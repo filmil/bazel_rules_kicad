@@ -1,0 +1,17 @@
+(version 1)
+# A fabricator's rules, as kicad_autoroute reads them: Freerouting keeps
+# the largest clearance (0.3 mm, the board edge's), and tracks at least
+# 0.25 mm wide. The line below is a comment, so it does not count.
+# (rule "ignored" (constraint clearance (min 5mm)))
+(rule "Trace Spacing"
+	(condition "A.Type == 'Track' && B.Type == 'Track'")
+	(constraint clearance (min 0.2mm)))
+(rule "Trace to Board Edge"
+	(condition "A.Type == 'Track'")
+	(constraint edge_clearance (min 0.3mm)))
+(rule "Trace Width"
+	(condition "A.Type == 'Track'")
+	(constraint track_width (min 0.25mm)))
+(rule "Via Hole to Trace"
+	(condition "A.Type == 'Via' && B.Type == 'Track'")
+	(constraint hole_clearance (min 0.25mm)))

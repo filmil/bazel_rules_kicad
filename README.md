@@ -121,6 +121,40 @@ The rules are documented in [docs/defs.md](docs/defs.md), and the module
 extensions (the KiCad version, the libraries and the 3D models) in
 [docs/extensions.md](docs/extensions.md).
 
+### Autorouting
+
+`kicad_autoroute` routes a board with Freerouting
+(https://github.com/freerouting/freerouting): KiCad exports it as
+Specctra DSN, Freerouting routes it headless, and KiCad imports the
+routes. Its output is a `.kicad_pcb` for `kicad_pcb` and the DRC:
+
+```starlark
+kicad_pcb(
+    name = "placed",
+    board = "placed.kicad_pcb",  # parts placed, pads on nets, no copper
+    design_rules = "fab.kicad_dru",
+    schematic = ":sch",
+)
+
+kicad_autoroute(
+    name = "routed",
+    pcb = ":placed",
+)
+
+kicad_pcb(
+    name = "pcb",
+    board = ":routed",
+    design_rules = "fab.kicad_dru",
+    schematic = ":sch",
+)
+```
+
+Freerouting keeps the largest copper clearance of the design rules, runs
+on one thread with its telemetry and analytics off and without network,
+and the build fails if it leaves a connection unrouted. Whether the
+routes are good is the DRC's to say. The module registers Freerouting
+2.5.0 on rules_java's JDK 25, both fetched only when a build routes.
+
 ### 3D models
 
 `kicad_step(models = [...])` puts the parts on the board's STEP model,
@@ -241,5 +275,15 @@ versions, sources and licenses:
 * rain 2.2.1 (https://github.com/cenkalti/rain), the BitTorrent client
   that rules_bittorrent 2.1.1 runs to fetch the 3D models: MIT. Fetched
   only with the 3D models.
+* Freerouting 2.5.0 (https://github.com/freerouting/freerouting), the
+  autorouter of `kicad_autoroute`: GPL-3.0 (the jar's `LICENSE`). Its
+  release's jar; this repository's release `mirror-freerouting-2.5.0-jar`
+  mirrors it. The jar bundles the Java libraries Freerouting needs, each
+  under its own license (the jar's `META-INF`). Fetched only when a build
+  routes a board.
+* Azul Zulu JDK 25 (https://www.azul.com/downloads/), the Java runtime of
+  Freerouting, as rules_java's `remotejdk25_linux`: GPL-2.0 with the
+  Classpath Exception. rules_java pins and fetches it, only when a build
+  routes a board.
 * The Go SDK (go1.26.7 with rules_go 0.64.2, https://go.dev): BSD-3-Clause.
   rules_go downloads it to build this module's helpers from source.
