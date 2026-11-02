@@ -225,7 +225,8 @@ cd integration && bazel test //...
 
 After changing a `.bzl` file, regenerate the documentation with
 `bazel run //docs:update_docs`.
-Format with `bazel run //tools:buildifier`.
+Format with `bazel run //tools:buildifier`, and check hermeticity with
+`bazel run //tools:lint`.
 
 ## Releasing
 
