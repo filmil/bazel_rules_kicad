@@ -4,7 +4,7 @@
 # The prebuilt KiCad trees, by the version kicad-cli reports. Each is the
 # official lite AppImage of that version (9.0.9.1 is the AppImage's own
 # revision 1 of KiCad 9.0.9), unpacked without running it and packed as a
-# reproducible tarball by make-kicad-prebuilt.sh. The release notes of each asset name
+# reproducible tarball (see tools/mirror/README.md). The release notes of each asset name
 # the AppImage it came from and its sha256. Only this repository's release
 # hosts the tarball, so it has one URL.
 _KICAD = {

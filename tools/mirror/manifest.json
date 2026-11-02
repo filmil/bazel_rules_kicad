@@ -4,7 +4,7 @@
     {
       "tag": "prebuilt-kicad-9.0.9.1",
       "title": "Prebuilt KiCad 9.0.9.1 (linux x86_64)",
-      "notes": "Unpacked, pruned KiCad 9.0.9.1 lite AppImage, for rules_kicad's toolchain. Source: https://kicad-downloads.s3.cern.ch/appimage/stable/kicad-9.0.9.1-x86_64-lite.AppImage.tar (sha256 401ed5e3e32bcf96af89d9741597670107b6a7c30b550518739b2512e6e92b63). License: GPL-3.0-or-later (KiCad). Built by make-kicad-prebuilt.sh.",
+      "notes": "Unpacked, pruned KiCad 9.0.9.1 lite AppImage, for rules_kicad's toolchain. Source: https://kicad-downloads.s3.cern.ch/appimage/stable/kicad-9.0.9.1-x86_64-lite.AppImage.tar (sha256 401ed5e3e32bcf96af89d9741597670107b6a7c30b550518739b2512e6e92b63). License: GPL-3.0-or-later (KiCad). Built by make-kicad-prebuilt.sh (tools/mirror/README.md).",
       "assets": [
         {
           "name": "kicad-9.0.9.1-linux-x86_64.tar.xz",

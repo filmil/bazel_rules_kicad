@@ -48,7 +48,7 @@ helpers_toolchain(
 
 # The helpers run on Linux x86_64 only in v1 (spec P1). The outputs of the
 # rules are files for any platform, so the target platform is not
-# constrained here; issue #6 adds the analysis-time check for other hosts.
+# constrained here; :unsupported below checks other hosts at analysis time.
 toolchain(
     name = "helpers",
     exec_compatible_with = [
