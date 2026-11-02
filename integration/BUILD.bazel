@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # The example consumer. It uses only the public API of hdlf_rules_kicad, as a
-# user of the published module would. The e2e design arrives with the
-# kicad_schematic and kicad_pcb rules (milestone M1).
+# user of the published module would; the e2e design is in //e2e.
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@hdlf_rules_kicad//kicad:defs.bzl", "RULES_KICAD_API_VERSION", "golden_test", "kicad_lib_tables", "lib_table_test", "update_goldens")

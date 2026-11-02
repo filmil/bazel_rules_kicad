@@ -4,12 +4,23 @@
 Load every rule from this file:
 
 ```starlark
-load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "swap_test", "tool_toolchain")
+load(
+    "@hdlf_rules_kicad//kicad:defs.bzl",
+    "kicad_bom",
+    "kicad_drc_test",
+    "kicad_drill",
+    "kicad_erc_test",
+    "kicad_gerbers",
+    "kicad_pcb",
+    "kicad_pos",
+    "kicad_render",
+    "kicad_schematic",
+    "kicad_step",
+)
 ```
 
-The rules arrive in milestones M1 and M2 (see the issues of
-https://github.com/filmil/bazel_rules_kicad). This file is the only public
-entry point; everything under `//kicad/private` may change without notice.
+This file is the only public entry point; everything under `//kicad/private`
+may change without notice.
 """
 
 load("//kicad/private:autoroute.bzl", _kicad_autoroute = "kicad_autoroute")
