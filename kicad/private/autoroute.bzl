@@ -19,8 +19,9 @@ def _kicad_autoroute_impl(ctx):
     if ctx.attr.max_passes < 0:
         fail("%s: max_passes must be 0 (Freerouting's default) or more, not %d" % (ctx.label, ctx.attr.max_passes))
 
-    # -I: the scripts see no PYTHON* variable, user site or current directory.
-    args = ["-I", ctx.file._dsn.path, "--board", pcb.board.path, "--out", dsn.path]
+    # -I -B: the scripts see no PYTHON* variable, user site or current
+    # directory, and do not write .pyc files into the external toolchain tree.
+    args = ["-I", "-B", ctx.file._dsn.path, "--board", pcb.board.path, "--out", dsn.path]
     inputs = [ctx.file._dsn]
     if pcb.design_rules:
         args += ["--rules", pcb.design_rules.path]
@@ -71,7 +72,7 @@ def _kicad_autoroute_impl(ctx):
     )
 
     # 3. The routes, back into the board.
-    sargs = ["-I", ctx.file._ses.path, "--board", pcb.board.path, "--ses", ses.path, "--out", out.path, "--report", report.path]
+    sargs = ["-I", "-B", ctx.file._ses.path, "--board", pcb.board.path, "--ses", ses.path, "--out", out.path, "--report", report.path]
     if ctx.attr.allow_unrouted:
         sargs.append("--allow_unrouted")
     run_tool(
@@ -177,7 +178,7 @@ def _autoroute_selftest_impl(ctx):
         ctx,
         _KICAD,
         "kicad_python",
-        arguments = ["-I", ctx.file._dsn.path, "--selftest"],
+        arguments = ["-I", "-B", ctx.file._dsn.path, "--selftest"],
         inputs = [ctx.file._dsn],
         stdout = out,
         mnemonic = "KicadDsnSelftest",

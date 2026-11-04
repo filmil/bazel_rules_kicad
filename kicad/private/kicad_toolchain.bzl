@@ -34,6 +34,7 @@ def _kicad_toolchain_impl(ctx):
             # in CET just after midnight carries the next day's date. UTC0
             # is a POSIX TZ string, so glibc reads no zone file for it.
             "TZ": "UTC0",
+            "PYTHONDONTWRITEBYTECODE": "1",
         },
         path_env = {
             # Only the fonts of this toolchain; no host font directory.

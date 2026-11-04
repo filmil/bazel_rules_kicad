@@ -20,7 +20,8 @@ def _autoroute_action_impl(ctx):
     by = _actions(env)
     dsn = _tool_args(by["KicadDsn"][0])
     asserts.equals(env, "-I", dsn[0], "isolated Python")
-    asserts.true(env, dsn[1].endswith("/autoroute/dsn.py"), "the export script: %s" % dsn[1])
+    asserts.equals(env, "-B", dsn[1], "no bytecode writes into toolchain")
+    asserts.true(env, dsn[2].endswith("/autoroute/dsn.py"), "the export script: %s" % dsn[2])
     asserts.true(env, "--rules" in dsn, "the design rules go to the export")
     if "--rules" in dsn:
         asserts.true(env, dsn[dsn.index("--rules") + 1].endswith("placed_project/board.kicad_dru"), "the staged rules")
@@ -41,7 +42,8 @@ def _autoroute_action_impl(ctx):
 
     ses = _tool_args(by["KicadSes"][0])
     asserts.equals(env, "-I", ses[0], "isolated Python")
-    asserts.true(env, ses[1].endswith("/autoroute/ses.py"), "the import script: %s" % ses[1])
+    asserts.equals(env, "-B", ses[1], "no bytecode writes into toolchain")
+    asserts.true(env, ses[2].endswith("/autoroute/ses.py"), "the import script: %s" % ses[2])
     asserts.false(env, "--allow_unrouted" in ses, "unrouted fails by default")
     files = [f.basename for f in analysistest.target_under_test(env)[DefaultInfo].files.to_list()]
     asserts.equals(env, ["routed.kicad_pcb"], files)
