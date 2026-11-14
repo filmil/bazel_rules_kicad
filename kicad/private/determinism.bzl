@@ -18,11 +18,42 @@ def _one(target):
     # A 1:1 transition gives a Target; older Bazel versions give a list.
     return target[0] if type(target) == "list" else target
 
+def staging_path(name, tag, short_path):
+    """Returns where the copy of one output goes, below `<name>.<tag>/`.
+
+    An output of the main repository goes to `<name>.<tag>/main/<short_path>`.
+    An output of an external repository has a short path `../<repo>/<path>`;
+    joined as is, it would climb out of `<name>.<tag>/` and give the copies
+    for `a` and `b` the same path. It goes to `<name>.<tag>/external/<repo>/<path>`.
+    The two prefixes keep a main-repository path that starts with `external/`
+    apart from an external repository's path.
+
+    Args:
+      name: the test's name.
+      tag: "a" or "b", one per configuration.
+      short_path: the output's `File.short_path`.
+
+    Returns:
+      The path to declare, relative to the test's package.
+    """
+    if short_path.startswith("../"):
+        rel = "external/" + short_path[3:]
+    else:
+        rel = "main/" + short_path
+    path = "%s.%s/%s" % (name, tag, rel)
+
+    # A ".." left over would let both copies share a path. For source files
+    # Bazel then merges the two links and the test compares a file with
+    # itself, so fail loudly instead.
+    if ".." in path.split("/"):
+        fail("determinism_test: cannot stage %r: the path %r climbs out of %s.%s/" % (short_path, path, name, tag))
+    return path
+
 def _stage(ctx, target, tag):
     """Links each output of target under <name>.<tag>/ for the runfiles."""
     links = []
     for f in _one(target)[DefaultInfo].files.to_list():
-        path = "%s.%s/%s" % (ctx.label.name, tag, f.short_path)
+        path = staging_path(ctx.label.name, tag, f.short_path)
         if f.is_directory:
             link = ctx.actions.declare_directory(path)
         else:
