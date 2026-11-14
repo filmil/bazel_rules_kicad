@@ -18,11 +18,31 @@ def _one(target):
     # A 1:1 transition gives a Target; older Bazel versions give a list.
     return target[0] if type(target) == "list" else target
 
+def staging_path(name, tag, short_path):
+    """Returns where the copy of one output goes, below `<name>.<tag>/`.
+
+    An output of an external repository has a short path that starts with
+    `../`. Joined as is, it would climb out of `<name>.<tag>/`, and the
+    copies for `a` and `b` would get the same path. Such a path goes below
+    `external/` instead.
+
+    Args:
+      name: the test's name.
+      tag: "a" or "b", one per configuration.
+      short_path: the output's `File.short_path`.
+
+    Returns:
+      The path to declare, relative to the test's package.
+    """
+    if short_path.startswith("../"):
+        short_path = "external/" + short_path[3:]
+    return "%s.%s/%s" % (name, tag, short_path)
+
 def _stage(ctx, target, tag):
     """Links each output of target under <name>.<tag>/ for the runfiles."""
     links = []
     for f in _one(target)[DefaultInfo].files.to_list():
-        path = "%s.%s/%s" % (ctx.label.name, tag, f.short_path)
+        path = staging_path(ctx.label.name, tag, f.short_path)
         if f.is_directory:
             link = ctx.actions.declare_directory(path)
         else:
