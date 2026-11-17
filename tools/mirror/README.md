@@ -11,11 +11,20 @@ bazel run //tools:kicad_prebuilt -- --out=/tmp/kicad-prebuilt
 ```
 
 The tool (`tools/kicad_prebuilt`) needs podman on the host. It runs
-`build.sh` in Ubuntu 26.04, pinned by digest, with every package from one
-snapshot of the Ubuntu archive. It fails unless the archive's sha256 is the
-one above. Two runs give the same bytes, and they match the archive that
-was mirrored first. It takes about half an hour, most of it compiling
+`build.sh` in Ubuntu 26.04 (linux/amd64), pinned by digest, with every
+package from one snapshot of the Ubuntu archive. The snapshot is served
+over HTTPS, and the image has no CA certificates, so apt checks the server
+against a copy of the host's CA bundle. That copy verifies the connection
+and reaches no output. The tool fails unless the archive's sha256 is the
+one above. Separate runs give the same bytes, and they match the archive
+that was mirrored first. It takes about half an hour, most of it compiling
 DwarFS.
+
+`--out` must be missing or empty. It receives the archive, the two inputs
+as downloaded (`dwarfs-src.tar.xz`, `appimage.tar`) and `SHA256SUMS`, and
+only once the run has worked: a failed run leaves it empty.
+`--dry_run` prints the podman command with the script as a here-document,
+which a shell runs as it is.
 
 ## What the tool does
 
@@ -31,7 +40,8 @@ DwarFS.
 4. **Leaves out** `share/kicad/footprints`, `symbols`, `demos` and
    `internat`. The libraries come from their own mirrored archives
    (`prebuilt-kicad-libs-9.0.9`); the rules read neither the demos nor the
-   translations.
+   translations. Each must be there, so a KiCad that moved them fails the
+   build rather than passing unnoticed.
 5. **Packs the archive** the same way every time: POSIX pax, sorted by
    name, every time 0, owner root, no atime or ctime records, and
    `xz -9` in one thread.
@@ -42,7 +52,9 @@ it: `shared/lib/python3.11/sitecustomize.py` points to
 `config-3.11-x86_64-linux-gnu/libpython3.11.so` points to
 `../../x86_64-linux-gnu/libpython3.11.so.1`. An earlier version of this
 README said they were removed, but the archive has always had them.
-Removing them would change the archive's sha256, and so the toolchain's pin.
+`kicad/private/extensions.bzl` removes them when it fetches the archive
+(`remove`). Removing them from the archive itself would change its sha256,
+and so the toolchain's pin.
 
 ## Verifying and uploading with //tools:mirror
 

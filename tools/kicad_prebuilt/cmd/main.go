@@ -7,18 +7,18 @@
 //
 //	bazel run //tools:kicad_prebuilt -- --out=/tmp/kicad-prebuilt
 //
-// A relative --out is taken from the directory bazel run was started in.
-// It fails unless the archive's sha256 is the one the toolchain pins. It is
-// not part of any build: tools/mirror checks and uploads its output. With
-// --dry_run it prints the podman command and the script instead.
+// --out must be missing or empty; a relative one is taken from the
+// directory bazel run was started in. It receives the archive, the two
+// inputs as downloaded and SHA256SUMS, and stays empty if the run fails.
+// The tool fails unless the archive's sha256 is the one the toolchain
+// pins. It is not part of any build: tools/mirror checks and uploads its
+// output. With --dry_run it prints the command, the script as a
+// here-document, and runs nothing.
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,49 +27,39 @@ import (
 	"github.com/filmil/bazel_rules_kicad/tools/kicad_prebuilt"
 )
 
-func fileSHA256(p string) (string, error) {
-	f, err := os.Open(p)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
 func run() error {
-	out := flag.String("out", "", "an empty directory for the archive, its two inputs and SHA256SUMS (required)")
+	out := flag.String("out", "", "a missing or empty directory for the archive, its two inputs and SHA256SUMS (required)")
 	jobs := flag.Int("jobs", 4, "parallel compile jobs, and the container's CPUs")
-	dry := flag.Bool("dry_run", false, "print the command and the script; run nothing")
+	dry := flag.Bool("dry_run", false, "print the command, with the script as a here-document; run nothing")
 	flag.Parse()
-	if *out == "" {
-		return fmt.Errorf("--out is required")
-	}
 	if *jobs < 1 {
 		return fmt.Errorf("--jobs must be 1 or more")
 	}
-	// bazel run starts the tool in its runfiles; a relative --out means the
-	// directory bazel run was started in.
-	abs := *out
-	if !filepath.IsAbs(abs) {
-		wd := os.Getenv("BUILD_WORKING_DIRECTORY")
-		if wd == "" {
-			return fmt.Errorf("--out %q is relative and BUILD_WORKING_DIRECTORY is not set; give an absolute path", abs)
-		}
-		abs = filepath.Join(wd, abs)
+	abs, err := prebuilt.ResolveOut(*out, os.Getenv("BUILD_WORKING_DIRECTORY"))
+	if err != nil {
+		return err
 	}
-	cmd := prebuilt.Command(abs, *jobs)
 	if *dry {
-		fmt.Println(strings.Join(cmd, " "))
-		fmt.Print(prebuilt.BuildScript)
+		ca, err := prebuilt.FindCABundle()
+		if err != nil {
+			return err
+		}
+		// The run mounts a copy of it; the dry run names the bundle itself.
+		fmt.Print(prebuilt.DryRun(prebuilt.Command(abs, ca, *jobs)))
 		return nil
 	}
-	// An old archive left in --out would pass for a new one.
-	if entries, err := os.ReadDir(abs); err == nil && len(entries) > 0 {
-		return fmt.Errorf("--out %s is not empty", abs)
+	tmp, err := os.MkdirTemp("", "kicad-prebuilt-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmp)
+	ca, err := prebuilt.CopyCABundle(tmp)
+	if err != nil {
+		return err
+	}
+	cmd := prebuilt.Command(abs, ca, *jobs)
+	if err := prebuilt.CheckOut(abs); err != nil {
+		return err
 	}
 	if err := os.MkdirAll(abs, 0o755); err != nil {
 		return err
@@ -81,14 +71,10 @@ func run() error {
 		return err
 	}
 	archive := filepath.Join(abs, prebuilt.Prebuilt+".tar.xz")
-	got, err := fileSHA256(archive)
-	if err != nil {
+	if err := prebuilt.VerifyArchive(archive); err != nil {
 		return err
 	}
-	if got != prebuilt.PrebuiltSHA256 {
-		return fmt.Errorf("%s has sha256 %s; the toolchain pins %s", archive, got, prebuilt.PrebuiltSHA256)
-	}
-	fmt.Printf("ok %s: sha256 %s, as pinned\n", archive, got)
+	fmt.Printf("ok %s: sha256 %s, as pinned\n", archive, prebuilt.PrebuiltSHA256)
 	return nil
 }
 
