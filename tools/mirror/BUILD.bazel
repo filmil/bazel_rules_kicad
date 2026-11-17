@@ -35,3 +35,9 @@ go_binary(
     visibility = ["//tools:__pkg__"],
     deps = [":mirror_lib"],
 )
+
+# //tools/kicad_prebuilt's test checks the prebuilt's entry.
+exports_files(
+    ["manifest.json"],
+    visibility = ["//tools/kicad_prebuilt:__pkg__"],
+)

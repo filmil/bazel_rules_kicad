@@ -10,6 +10,13 @@ alias(
     actual = "//tools/mirror",
 )
 
+# bazel run //tools:kicad_prebuilt -- --out=DIR: makes the KiCad prebuilt
+# archive from KiCad's AppImage (tools/kicad_prebuilt).
+alias(
+    name = "kicad_prebuilt",
+    actual = "//tools/kicad_prebuilt:cmd",
+)
+
 # bazel run //tools:models3d: splits and publishes the 3D models
 # (tools/models3d).
 alias(
