@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: Apache-2.0
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+# The KiCad prebuilt archive (issue #100), which the operator makes by hand:
+# bazel run //tools:kicad_prebuilt -- --out=DIR. It runs build.sh in the
+# pinned Ubuntu container with podman: DwarFS's dwarfsextract, built from
+# source, unpacks KiCad's AppImage. Its output is checked against
+# tools/mirror/manifest.json and uploaded as a mirror release; no build
+# runs it.
+
+go_library(
+    name = "kicad_prebuilt",
+    srcs = ["prebuilt.go"],
+    embedsrcs = ["build.sh"],
+    importpath = "github.com/filmil/bazel_rules_kicad/tools/kicad_prebuilt",
+    visibility = ["//visibility:private"],
+)
+
+go_test(
+    name = "kicad_prebuilt_test",
+    size = "small",
+    srcs = ["prebuilt_test.go"],
+    data = [
+        "//kicad/private:extensions.bzl",
+        "//tools/mirror:manifest.json",
+    ],
+    embed = [":kicad_prebuilt"],
+    pure = "on",
+    deps = ["@rules_go//go/runfiles"],
+)
+
+go_binary(
+    name = "cmd",
+    srcs = ["cmd/main.go"],
+    pure = "on",
+    visibility = ["//tools:__pkg__"],
+    deps = [":kicad_prebuilt"],
+)

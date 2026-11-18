@@ -70,3 +70,9 @@ staging_path_test(
     name = "staging_path_test",
     size = "small",
 )
+
+# //tools/kicad_prebuilt's test reads the prebuilt's pinned sha256.
+exports_files(
+    ["extensions.bzl"],
+    visibility = ["//tools/kicad_prebuilt:__pkg__"],
+)
