@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The KiCadRoutingTools trial (issue #104): its toolchain and route tool.
+load("@rules_python//python:py_binary.bzl", "py_binary")
+load(":krt.bzl", "krt_toolchain")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["kicad_routing_tools.BUILD"])
+
+toolchain_type(name = "toolchain_type")
+
+# route.py's interpreter is rules_python's CPython 3.14, with the approved
+# wheels; route.py's exact fill runs KiCad's own python (KICAD_PYTHON).
+py_binary(
+    name = "krt_route",
+    srcs = ["krt_route.py"],
+    main = "krt_route.py",
+    deps = [
+        "@krt_pip//numpy",
+        "@krt_pip//scipy",
+        "@krt_pip//shapely",
+    ],
+)
+
+krt_toolchain(
+    name = "krt_impl",
+    files = "//third_party/kicad_routing_tools:files",
+    route = ":krt_route",
+    route_py = "//third_party/kicad_routing_tools:route_py",
+)
+
+toolchain(
+    name = "krt",
+    exec_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+    toolchain = ":krt_impl",
+    toolchain_type = ":toolchain_type",
+)

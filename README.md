@@ -285,3 +285,28 @@ versions, sources and licenses:
   routes a board.
 * The Go SDK (go1.26.7 with rules_go 0.64.2, https://go.dev): BSD-3-Clause.
   rules_go downloads it to build this module's helpers from source.
+
+The integration module's KiCadRoutingTools trial (`integration/krt`,
+issue #104) also downloads, in that module only, so a user of
+hdlf_rules_kicad fetches none of it:
+
+* KiCadRoutingTools 0.24.2 (https://github.com/drandyhaas/KiCadRoutingTools):
+  MIT (`integration/third_party/kicad_routing_tools/LICENSE`, copied from
+  it). The release's KiCad plugin zip, `KiCadRoutingTools-0.24.2.zip`,
+  sha256 `24f7a0fc766e2b45f57e6172e9a9c6c620e6bb2d471ffeb7cc3c6e51b237da85`,
+  from the GitHub release: its Python sources, and its prebuilt router
+  module `grid_router-linux-x86_64.so` (sha256 `0d3e028c…`, the release's
+  own binary).
+* CPython 3.14.10 (python-build-standalone 20261026,
+  `cpython-3.14.10+20261026-x86_64-unknown-linux-gnu-install_only.tar.gz`,
+  sha256 `1b38024924eb7f4cf0cab45d7b871d1f1991354190fccd2625ac7529a43786e2`),
+  rules_python 2.4.6's interpreter for `python_version = "3.14"`: the PSF
+  License; rules_python pins and fetches it from GitHub.
+* numpy 2.5.5, scipy 1.18.1 and shapely 2.2.0, each its CPython 3.14
+  manylinux x86_64 wheel from PyPI, pinned by sha256 in
+  `integration/krt/requirements_lock.txt`. numpy: BSD-3-Clause AND 0BSD AND
+  MIT AND Zlib AND CC0-1.0; numpy's and scipy's wheels bundle OpenBLAS
+  (BSD-3-Clause) and the gfortran runtime (GPL-3.0 with the GCC Runtime
+  Library Exception). scipy: BSD-3-Clause. shapely: BSD-3-Clause; its wheel
+  bundles GEOS (LGPL-2.1), used as a shared library inside the unmodified
+  wheel.

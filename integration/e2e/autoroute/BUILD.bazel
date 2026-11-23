@@ -6,11 +6,19 @@
 # DRC, schematic parity included, and is the same in two configurations.
 load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_autoroute", "kicad_drc_test", "kicad_pcb")
 
+# The board and its rules are also routed by //e2e/route_krt, the
+# KiCadRoutingTools trial, for a like-for-like comparison.
+exports_files(
+    ["rules.kicad_dru"],
+    visibility = ["//e2e:__subpackages__"],
+)
+
 kicad_pcb(
     name = "placed",
     board = "placed.kicad_pcb",
     design_rules = "rules.kicad_dru",
     schematic = "//e2e:sch",
+    visibility = ["//e2e:__subpackages__"],
 )
 
 kicad_autoroute(
