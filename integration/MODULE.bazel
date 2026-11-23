@@ -42,6 +42,17 @@ use_repo(models, "kicad_models")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_python", version = "2.4.6")
 
+# Under Bazel 8, rules_python asks for a C++ toolchain though nothing is
+# compiled, and .bazelrc turns off host toolchain detection. The
+# self-contained zig toolchain answers, as in the root module and in
+# hdlf_example_sensor, at the same version; Bazel 9 does not ask.
+bazel_dep(name = "hermetic_cc_toolchain", version = "4.3.0")
+
+zig_toolchains = use_extension("@hermetic_cc_toolchain//toolchain:ext.bzl", "toolchains")
+use_repo(zig_toolchains, "zig_sdk")
+
+register_toolchains("@zig_sdk//toolchain:linux_amd64_gnu.2.31")
+
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
 python.toolchain(
     is_default = True,

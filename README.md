@@ -315,3 +315,7 @@ hdlf_rules_kicad fetches none of it:
   Library Exception). scipy: BSD-3-Clause. shapely: BSD-3-Clause; its wheel
   bundles GEOS (LGPL-2.1), used as a shared library inside the unmodified
   wheel.
+* zig 0.15.2 through hermetic_cc_toolchain 4.3.0, as in the root module
+  (BCR, MIT; zig itself MIT): under Bazel 8, rules_python asks for a C++
+  toolchain though the trial compiles nothing, and zig's self-contained
+  toolchain answers.
