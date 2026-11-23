@@ -12,6 +12,10 @@ load("//krt:krt.bzl", "kicad_route_krt")
 kicad_route_krt(
     name = "routed",
     pcb = "//e2e/autoroute:placed",
+    target_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
 )
 
 kicad_pcb(

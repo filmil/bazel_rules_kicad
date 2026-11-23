@@ -2,6 +2,7 @@
 #
 # The KiCadRoutingTools trial (issue #104): its toolchain and route tool.
 load("@rules_python//python:py_binary.bzl", "py_binary")
+load("@rules_python//python:py_test.bzl", "py_test")
 load(":krt.bzl", "krt_toolchain")
 
 package(default_visibility = ["//visibility:public"])
@@ -12,10 +13,16 @@ toolchain_type(name = "toolchain_type")
 
 # route.py's interpreter is rules_python's CPython 3.14, with the approved
 # wheels; route.py's exact fill runs KiCad's own python (KICAD_PYTHON).
+_LINUX_X86_64 = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+]
+
 py_binary(
     name = "krt_route",
     srcs = ["krt_route.py"],
     main = "krt_route.py",
+    target_compatible_with = _LINUX_X86_64,
     deps = [
         "@krt_pip//numpy",
         "@krt_pip//scipy",
@@ -32,10 +39,19 @@ krt_toolchain(
 
 toolchain(
     name = "krt",
-    exec_compatible_with = [
-        "@platforms//os:linux",
-        "@platforms//cpu:x86_64",
-    ],
+    exec_compatible_with = _LINUX_X86_64,
     toolchain = ":krt_impl",
     toolchain_type = ":toolchain_type",
+)
+
+py_test(
+    name = "krt_route_test",
+    size = "small",
+    srcs = [
+        "krt_route.py",
+        "krt_route_test.py",
+    ],
+    imports = ["."],
+    main = "krt_route_test.py",
+    target_compatible_with = _LINUX_X86_64,
 )

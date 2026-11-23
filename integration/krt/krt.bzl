@@ -29,10 +29,13 @@ KrtInfo = provider(
 
 def _krt_toolchain_impl(ctx):
     route_py = ctx.file.route_py
+    if route_py.basename != "route.py" or not route_py.dirname.endswith("/py_router"):
+        fail("route_py: %s is not <root>/py_router/route.py" % route_py.path)
+    files = depset([route_py] + ctx.files.files)
     return [platform_common.ToolchainInfo(
         tools = {"route": ctx.attr.route[DefaultInfo].files_to_run},
-        tool_inputs = depset(ctx.files.files),
-        krt = KrtInfo(root = route_py.dirname.rsplit("/py_router", 1)[0], files = depset(ctx.files.files)),
+        tool_inputs = files,
+        krt = KrtInfo(root = route_py.dirname[:-len("/py_router")], files = files),
     )]
 
 krt_toolchain = rule(
@@ -53,6 +56,16 @@ def _kicad_route_krt_impl(ctx):
         fail("%s: the KiCad toolchain has no kicad_python; route.py's exact fill needs it" % ctx.label)
     cli, kpy = kicad.tools["kicad_cli"], kicad.tools["kicad_python"]
     out = ctx.actions.declare_file(ctx.label.name + ".kicad_pcb")
+    env = dict(getattr(kicad, "env", {}) or {})
+    env.update({
+        # The same order of sets and dicts on every run, no .pyc written
+        # into the release's files, and one thread each for numpy's and
+        # scipy's OpenBLAS: the same result whatever the machine's cores.
+        "PYTHONHASHSEED": "0",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+    })
     path_env = dict(getattr(kicad, "path_env", {}) or {})
     path_env["KICAD_CLI"] = cli.executable
     path_env["KICAD_PYTHON"] = kpy.executable
@@ -64,7 +77,7 @@ def _kicad_route_krt_impl(ctx):
         inputs = depset(transitive = [pcb.files, krt.files, kicad.tool_inputs]),
         outputs = [out],
         tools = [cli, kpy],
-        env = dict(getattr(kicad, "env", {}) or {}),
+        env = env,
         path_env = path_env,
         home_env = list(getattr(kicad, "home_env", []) or []),
         block_network = True,
@@ -76,7 +89,9 @@ def _kicad_route_krt_impl(ctx):
 kicad_route_krt = rule(
     implementation = _kicad_route_krt_impl,
     doc = """`<name>.kicad_pcb`: the board of `pcb`, routed by KiCadRoutingTools'
-route.py, with the pinned KiCad for its design rules and exact fills.""",
+route.py. route.py reads the board's design rules from the staged
+`<board>.kicad_dru` beside it (kicad_pcb stages them so), through the
+pinned kicad-cli, and runs its exact fills in the pinned KiCad's Python.""",
     attrs = {
         "pcb": attr.label(mandatory = True, providers = [KicadPcbInfo]),
         "route_args": attr.string_list(doc = "More route.py options."),

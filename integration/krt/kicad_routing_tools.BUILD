@@ -1,8 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 # The release zip's plugins/ directory (MODULE.bazel strips the prefix).
-package(default_visibility = ["//visibility:public"])
+# Only //third_party/kicad_routing_tools wraps it; targets use that package.
+package(default_visibility = ["@@//third_party/kicad_routing_tools:__pkg__"])
 
-exports_files(glob(["**"]))
+exports_files(
+    glob(["**"]),
+    visibility = ["@@//third_party/kicad_routing_tools:__pkg__"],
+)
 
 # Everything route.py reads: the Python sources, the router module for
 # Linux x86_64, and rust_router/Cargo.toml, against whose version

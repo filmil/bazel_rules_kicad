@@ -33,21 +33,25 @@ use_repo(models, "kicad_models")
 # https://github.com/filmil/bazel_rules_kicad/issues/104), pinned as the
 # operator approved: the v0.24.2 release's KiCad plugin zip (its sources,
 # MIT, and its prebuilt router module, the release's
-# grid_router-linux-x86_64.so, sha256 0d3e028c...), and numpy 2.5.5,
-# scipy 1.18.1 and shapely 2.2.0 on rules_python's CPython 3.14.
+# grid_router-linux-x86_64.so, sha256
+# 0d3e028c392081a0266f3f7e5f967ba89c9aafc92559e355e541d5c3b2ea52f2), and
+# numpy 2.5.5, scipy 1.18.1 and shapely 2.2.0 on rules_python's CPython
+# 3.14.10 (python-build-standalone 20261026), pinned to the patch release so
+# a rules_python update cannot change it. It is this module's default
+# Python; nothing else here uses Python.
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_python", version = "2.4.6")
 
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
 python.toolchain(
     is_default = True,
-    python_version = "3.14",
+    python_version = "3.14.10",
 )
 
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 pip.parse(
     hub_name = "krt_pip",
-    python_version = "3.14",
+    python_version = "3.14.10",
     requirements_lock = "//krt:requirements_lock.txt",
 )
 use_repo(pip, "krt_pip")

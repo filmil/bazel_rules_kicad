@@ -295,8 +295,13 @@ hdlf_rules_kicad fetches none of it:
   it). The release's KiCad plugin zip, `KiCadRoutingTools-0.24.2.zip`,
   sha256 `24f7a0fc766e2b45f57e6172e9a9c6c620e6bb2d471ffeb7cc3c6e51b237da85`,
   from the GitHub release: its Python sources, and its prebuilt router
-  module `grid_router-linux-x86_64.so` (sha256 `0d3e028c…`, the release's
-  own binary).
+  module `grid_router-linux-x86_64.so` (sha256
+  `0d3e028c392081a0266f3f7e5f967ba89c9aafc92559e355e541d5c3b2ea52f2`, the
+  release's own binary). The module statically links the Rust crates of
+  its `rust_router/Cargo.lock`, among them pyo3 (MIT OR Apache-2.0), numpy
+  for Rust (BSD-2-Clause), ndarray, rustc-hash and the num crates (MIT OR
+  Apache-2.0), and mimalloc with libmimalloc-sys (MIT), which compiles
+  Microsoft's mimalloc C library (MIT) into it.
 * CPython 3.14.10 (python-build-standalone 20261026,
   `cpython-3.14.10+20261026-x86_64-unknown-linux-gnu-install_only.tar.gz`,
   sha256 `1b38024924eb7f4cf0cab45d7b871d1f1991354190fccd2625ac7529a43786e2`),
