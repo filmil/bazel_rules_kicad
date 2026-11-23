@@ -28,3 +28,53 @@ use_repo(kicad, "kicad_libs")
 # KiCad's 3D model libraries, fetched over BitTorrent (issue #43).
 models = use_extension("@hdlf_rules_kicad//kicad:models.bzl", "models")
 use_repo(models, "kicad_models")
+
+# The KiCadRoutingTools trial (krt/, issue
+# https://github.com/filmil/bazel_rules_kicad/issues/104), pinned as the
+# operator approved: the v0.24.2 release's KiCad plugin zip (its sources,
+# MIT, and its prebuilt router module, the release's
+# grid_router-linux-x86_64.so, sha256
+# 0d3e028c392081a0266f3f7e5f967ba89c9aafc92559e355e541d5c3b2ea52f2), and
+# numpy 2.5.5, scipy 1.18.1 and shapely 2.2.0 on rules_python's CPython
+# 3.14.10 (python-build-standalone 20261026), pinned to the patch release so
+# a rules_python update cannot change it. It is this module's default
+# Python; nothing else here uses Python.
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "rules_python", version = "2.4.6")
+
+# Under Bazel 8, rules_python asks for a C++ toolchain though nothing is
+# compiled, and .bazelrc turns off host toolchain detection. The
+# self-contained zig toolchain answers, as in the root module and in
+# hdlf_example_sensor, at the same version; Bazel 9 does not ask.
+bazel_dep(name = "hermetic_cc_toolchain", version = "4.3.0")
+
+zig_toolchains = use_extension("@hermetic_cc_toolchain//toolchain:ext.bzl", "toolchains")
+use_repo(zig_toolchains, "zig_sdk")
+
+register_toolchains("@zig_sdk//toolchain:linux_amd64_gnu.2.31")
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    is_default = True,
+    python_version = "3.14.10",
+)
+
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "krt_pip",
+    python_version = "3.14.10",
+    requirements_lock = "//krt:requirements_lock.txt",
+)
+use_repo(pip, "krt_pip")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "kicad_routing_tools",
+    build_file = "//krt:kicad_routing_tools.BUILD",
+    sha256 = "24f7a0fc766e2b45f57e6172e9a9c6c620e6bb2d471ffeb7cc3c6e51b237da85",
+    strip_prefix = "plugins",
+    urls = ["https://github.com/drandyhaas/KiCadRoutingTools/releases/download/v0.24.2/KiCadRoutingTools-0.24.2.zip"],
+)
+
+register_toolchains("//krt:krt")

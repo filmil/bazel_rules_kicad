@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The KiCadRoutingTools trial (issue
+# https://github.com/filmil/bazel_rules_kicad/issues/104): the board that
+# //e2e/autoroute routes with Freerouting, routed instead by
+# KiCadRoutingTools' route.py (//krt:krt.bzl). Its first question is
+# whether two configurations give the same bytes (determinism_test); then
+# whether the routed board passes the same DRC, schematic parity included.
+load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_drc_test", "kicad_pcb")
+load("//krt:krt.bzl", "kicad_route_krt")
+
+kicad_route_krt(
+    name = "routed",
+    pcb = "//e2e/autoroute:placed",
+    target_compatible_with = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+)
+
+kicad_pcb(
+    name = "routed_pcb",
+    board = ":routed",
+    design_rules = "//e2e/autoroute:rules.kicad_dru",
+    schematic = "//e2e:sch",
+)
+
+kicad_drc_test(
+    name = "drc_test",
+    size = "small",
+    pcb = ":routed_pcb",
+)
+
+determinism_test(
+    name = "determinism_test",
+    size = "small",
+    target = ":routed",
+)

@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# What KiCadRoutingTools' route.py needs (its startup_checks.ROUTING_PACKAGES),
+# at the versions the operator approved for the trial (issue #104), each
+# pinned to its one wheel for CPython 3.14 on manylinux x86_64. Nothing
+# else: scipy needs numpy<2.8,>=2.0; shapely needs numpy>=1.26.
+numpy==2.5.5 \
+    --hash=sha256:c48960d420e90cf305cb1fde0d4e6082cc90512cda87a9acf0b6e04e91cf4abe
+scipy==1.18.1 \
+    --hash=sha256:ac0333bdf38309aa3dcbe7e3fa7ea29e7a2c37c6ea306a757b700ded8e4596ad
+shapely==2.2.0 \
+    --hash=sha256:74f4313af38d6e49ea83532d6cedfb4fe5e6c5485d7c40202bd61b19d6ff09bf
