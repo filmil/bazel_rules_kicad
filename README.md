@@ -315,6 +315,11 @@ hdlf_rules_kicad fetches none of it:
   Library Exception). scipy: BSD-3-Clause. shapely: BSD-3-Clause; its wheel
   bundles GEOS (LGPL-2.1), used as a shared library inside the unmodified
   wheel.
+* kicad-druid 1.2.0 (https://github.com/Cimos/kicad-druid): MIT
+  (`integration/third_party/kicad_druid/LICENSE`). Its archive, pinned by
+  sha256 as hdlf_rules_fab pins it (bazel_rules_fab's mirror first, then
+  GitHub), for the JLCPCB rules of the router comparison
+  (`integration/e2e/route_krt_sensor`).
 * zig 0.15.2 through hermetic_cc_toolchain 4.3.0, as in the root module
   (BCR, MIT; zig itself MIT): under Bazel 8, rules_python asks for a C++
   toolchain though the trial compiles nothing, and zig's self-contained

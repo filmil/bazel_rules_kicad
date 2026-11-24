@@ -7,7 +7,10 @@ load(":krt.bzl", "krt_toolchain")
 
 package(default_visibility = ["//visibility:public"])
 
-exports_files(["kicad_routing_tools.BUILD"])
+exports_files([
+    "kicad_druid.BUILD",
+    "kicad_routing_tools.BUILD",
+])
 
 toolchain_type(name = "toolchain_type")
 
@@ -54,4 +57,23 @@ py_test(
     imports = ["."],
     main = "krt_route_test.py",
     target_compatible_with = _LINUX_X86_64,
+)
+
+# compare OUT NAME=BOARD:DRC_JSON...: the router comparison's table
+# (//e2e/route_krt_sensor).
+py_binary(
+    name = "compare",
+    srcs = ["compare.py"],
+    main = "compare.py",
+)
+
+py_test(
+    name = "compare_test",
+    size = "small",
+    srcs = [
+        "compare.py",
+        "compare_test.py",
+    ],
+    imports = ["."],
+    main = "compare_test.py",
 )

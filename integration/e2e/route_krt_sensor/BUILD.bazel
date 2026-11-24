@@ -1,0 +1,124 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The router comparison of issue
+# https://github.com/filmil/bazel_rules_kicad/issues/104 on a real board:
+# hdlf_example_sensor's placed board (README.md says which commit), routed
+# by Freerouting (kicad_autoroute) and by KiCadRoutingTools
+# (kicad_route_krt), each checked for determinism and by the same DRC, and
+# compared in one table (comparison.tsv).
+#
+# Manual: routing this board takes minutes, so CI does not run it on every
+# push. README.md has the commands that run it.
+load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_autoroute", "kicad_drc_report", "kicad_pcb")
+load("@rules_python//python:py_test.bzl", "py_test")
+load("//krt:krt.bzl", "kicad_route_krt")
+
+_MANUAL = ["manual"]
+
+_LINUX_X86_64 = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+]
+
+# The rules the sensor's board is made to: JLCPCB's 2-layer 1 oz rules,
+# from kicad-druid (//third_party/kicad_druid), as hdlf_example_sensor uses
+# them. (Under this repository's stricter e2e rules, 0.25 mm tracks,
+# Freerouting left 9 connections unrouted and KiCadRoutingTools narrowed
+# tracks below the minimum: no fair comparison.)
+_RULES = "//third_party/kicad_druid:jlcpcb_2l_1oz"
+
+_ROUTERS = [
+    "freerouting",
+    "krt",
+    "krt_board",
+]
+
+# Not manual: it only stages the board, so CI analyses this package and
+# notices when a rule it uses changes.
+kicad_pcb(
+    name = "placed",
+    board = "sensor.kicad_pcb",
+    design_rules = _RULES,
+    netlist = "sensor.net",
+    project = "sensor.kicad_pro",
+    deps = ["@kicad_libs//:standard"],
+)
+
+# The copies are hdlf_example_sensor's files unchanged: their sha256s are
+# the ones README.md records.
+py_test(
+    name = "fixtures_test",
+    size = "small",
+    srcs = ["fixtures_test.py"],
+    data = [
+        "README.md",
+        "sensor.kicad_pcb",
+        "sensor.kicad_pro",
+        "sensor.net",
+    ],
+    env = {"README": "$(rootpath README.md)"},
+    main = "fixtures_test.py",
+)
+
+kicad_autoroute(
+    name = "freerouting",
+    pcb = ":placed",
+    tags = _MANUAL,
+)
+
+kicad_route_krt(
+    name = "krt",
+    pcb = ":placed",
+    tags = _MANUAL,
+    target_compatible_with = _LINUX_X86_64,
+)
+
+# The same, with KiCadRoutingTools' escalation held at the board's own
+# minimums: by default (--escalation fab) a net that fails is retried with
+# narrower tracks, down to the fab's floor, below the board's minimums.
+kicad_route_krt(
+    name = "krt_board",
+    pcb = ":placed",
+    route_args = [
+        "--escalation",
+        "board",
+    ],
+    tags = _MANUAL,
+    target_compatible_with = _LINUX_X86_64,
+)
+
+[kicad_pcb(
+    name = router + "_pcb",
+    board = ":" + router,
+    design_rules = _RULES,
+    netlist = "sensor.net",
+    project = "sensor.kicad_pro",
+    tags = _MANUAL,
+    deps = ["@kicad_libs//:standard"],
+) for router in _ROUTERS]
+
+[kicad_drc_report(
+    name = router + "_drc",
+    pcb = ":" + router + "_pcb",
+    tags = _MANUAL,
+) for router in _ROUTERS]
+
+# Each router, twice (two configurations): the same bytes.
+[determinism_test(
+    name = router + "_determinism_test",
+    size = "medium",
+    tags = _MANUAL,
+    target = ":" + router,
+) for router in _ROUTERS]
+
+genrule(
+    name = "comparison",
+    srcs = [":" + r for r in _ROUTERS] + [":" + r + "_drc" for r in _ROUTERS],
+    outs = ["comparison.tsv"],
+    cmd = " ".join(["$(execpath //krt:compare) $@"] + [
+        "%s=$(execpath :%s):$(execpath :%s_drc)" % (r, r, r)
+        for r in _ROUTERS
+    ]),
+    tags = _MANUAL,
+    tools = ["//krt:compare"],
+)
