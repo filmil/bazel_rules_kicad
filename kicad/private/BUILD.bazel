@@ -19,6 +19,7 @@ bzl_library(
         "gerbers.bzl",
         "golden.bzl",
         "kicad_toolchain.bzl",
+        "layers.bzl",
         "library.bzl",
         "models_pins.bzl",
         "netlist.bzl",

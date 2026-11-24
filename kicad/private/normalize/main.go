@@ -27,6 +27,9 @@
 //   - KiCad netlists (s-expression): the date of the (design ...) header,
 //     and the paths of its source and of each library, which name the
 //     action's directory, cut to the file name;
+//   - KiCad SVG plots: the date in the <title> ("SVG Image created as
+//     x.svg date 2026/10/29 03:58:50"), which kicad-cli writes into every
+//     sheet and layer it plots to SVG;
 //   - PNG: the chunks of text, time and Exif data are dropped (png.go).
 //
 // A file in none of these formats is copied unchanged. A file in one of
@@ -57,9 +60,14 @@ const (
 	STEP    Format = "step"
 	Report  Format = "kicad-report"
 	Netlist Format = "kicad-netlist"
+	SVG     Format = "kicad-svg"
 )
 
 var netlistRe = regexp.MustCompile(`^\(export\s+\(version\s+"[^"]*"\)`)
+
+// kicadSVGRe is the <title> kicad-cli gives an SVG plot. Other SVG files
+// are copied unchanged.
+var kicadSVGRe = regexp.MustCompile(`<svg\b[\s\S]*<title>SVG Image created as `)
 
 var reportSchemaRe = regexp.MustCompile(`"\$schema":\s*"https://schemas\.kicad\.org/(drc|erc)\.`)
 
@@ -88,6 +96,8 @@ func Detect(b []byte) Format {
 		return Report
 	case netlistRe.Match(head):
 		return Netlist
+	case bytes.HasPrefix(head, []byte("<")) && kicadSVGRe.Match(head):
+		return SVG
 	}
 	return Unknown
 }
@@ -173,12 +183,15 @@ var rules = map[Format][]rule{
 		// Only a library's path, not text elsewhere that looks like one.
 		{re: regexp.MustCompile(`(\(library\s+\(logical\s+"(?:[^"\\]|\\.)*"\)\s+\(uri\s+")((?:[^"\\]|\\.)*)(")`), stamp: base, path: true},
 	},
+	SVG: {
+		{re: regexp.MustCompile(`(<title>SVG Image created as [^<]*? date )([^<]*?)( ?</title>)`), stamp: layout("2006/01/02 15:04:05"), needed: true},
+	},
 }
 
 // stampRe is what every time stamp KiCad writes looks like: a year, then
 // digits and separators. A match whose time stamp is not of this form is
 // left for an error rather than replaced blindly.
-var stampRe = regexp.MustCompile(`^(D:)?\d{4}-?\d{2}-?\d{2}[T ]?\d{2}:?\d{2}:?\d{2}([+-]\d{2}'?:?\d{2}'?|Z)?$`)
+var stampRe = regexp.MustCompile(`^(D:)?\d{4}[-/]?\d{2}[-/]?\d{2}[T ]?\d{2}:?\d{2}:?\d{2}([+-]\d{2}'?:?\d{2}'?|Z)?$`)
 
 // Normalize returns b with its time stamps replaced by t.
 func Normalize(b []byte, t time.Time) ([]byte, Format, error) {

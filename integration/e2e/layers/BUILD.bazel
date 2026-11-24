@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# The e2e board's layers plotted flat (issue #103), as a book's figures
+# use them: the top copper, the bottom copper seen from below, and the
+# silkscreen over the mask openings; each the same bytes in two
+# configurations, and with no date but the epoch (//e2e/timestamp_scan).
+load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_layers")
+
+_PLOTS = {
+    "b_cu": (
+        [
+            "B.Cu",
+            "Edge.Cuts",
+        ],
+        True,
+    ),
+    "f_cu": (
+        [
+            "F.Cu",
+            "Edge.Cuts",
+        ],
+        False,
+    ),
+    "f_silk": (
+        [
+            "F.Silkscreen",
+            "F.Mask",
+            "Edge.Cuts",
+        ],
+        False,
+    ),
+}
+
+[kicad_layers(
+    name = name,
+    layers = layers,
+    mirror = mirror,
+    pcb = "//e2e:pcb",
+    png_dpi = 600,
+    visibility = ["//e2e/timestamp_scan:__pkg__"],
+) for name, (layers, mirror) in _PLOTS.items()]
+
+[determinism_test(
+    name = name + "_determinism_test",
+    size = "small",
+    target = ":" + name,
+) for name in _PLOTS]

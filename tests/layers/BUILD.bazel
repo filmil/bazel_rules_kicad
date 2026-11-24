@@ -1,0 +1,128 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# kicad_layers on the board of //tests/design (issue #103): the SVG plot
+# through the KiCad toolchain, its date removed and the PNG drawn through
+# the normalize toolchain, and the same bytes in two configurations.
+load("@rules_go//go:def.bzl", "go_test")
+load("//kicad:defs.bzl", "determinism_test", "kicad_layers", "swap_test")
+load("//tests:fails_test.bzl", "fails_test")
+load(":action_test.bzl", "layers_action_test")
+
+kicad_layers(
+    name = "f_cu",
+    layers = [
+        "F.Cu",
+        "Edge.Cuts",
+    ],
+    pcb = "//tests/design:pcb",
+)
+
+layers_action_test(
+    name = "f_cu_action_test",
+    size = "small",
+    layers = "F.Cu,Edge.Cuts",
+    target_under_test = ":f_cu",
+)
+
+# The bottom, mirrored, with more options and a PNG.
+kicad_layers(
+    name = "b_cu",
+    layers = [
+        "B.Cu",
+        "Edge.Cuts",
+    ],
+    mirror = True,
+    options = ["--black-and-white"],
+    pcb = "//tests/design:pcb",
+    png_dpi = 300,
+)
+
+layers_action_test(
+    name = "b_cu_action_test",
+    size = "small",
+    dpi = 300,
+    layers = "B.Cu,Edge.Cuts",
+    more = [
+        "--mirror",
+        "--black-and-white",
+    ],
+    png = True,
+    target_under_test = ":b_cu",
+)
+
+swap_test(
+    name = "layers_swap_test",
+    size = "small",
+    targets = [
+        ":b_cu",
+        ":f_cu",
+    ],
+)
+
+determinism_test(
+    name = "layers_determinism_test",
+    size = "small",
+    target = ":b_cu",
+)
+
+# The real plot: no date left in the SVG, and a PNG of the board's size.
+go_test(
+    name = "layers_look_test",
+    size = "small",
+    srcs = ["look_test.go"],
+    args = [
+        "--svg=$(rlocationpath :f_cu)",
+        "--png=$(rlocationpaths :b_cu)",
+    ],
+    data = [
+        ":b_cu",
+        ":f_cu",
+    ],
+    pure = "on",
+    deps = ["@rules_go//go/runfiles"],
+)
+
+kicad_layers(
+    name = "layers_output_option",
+    layers = ["F.Cu"],
+    options = ["--output=x.svg"],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "layers_output_option_test",
+    size = "small",
+    message = "options may not hold --output=x.svg",
+    target_under_test = ":layers_output_option",
+)
+
+kicad_layers(
+    name = "layers_mirror_option",
+    layers = ["B.Cu"],
+    options = ["-m"],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "layers_mirror_option_test",
+    size = "small",
+    message = "options may not hold -m",
+    target_under_test = ":layers_mirror_option",
+)
+
+kicad_layers(
+    name = "layers_negative_dpi",
+    layers = ["F.Cu"],
+    pcb = "//tests/design:pcb",
+    png_dpi = -1,
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "layers_negative_dpi_test",
+    size = "small",
+    message = "png_dpi is -1",
+    target_under_test = ":layers_negative_dpi",
+)
