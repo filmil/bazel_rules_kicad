@@ -366,11 +366,13 @@ kicad_layers(
 )
 ```
 
-The outputs are `<name>.svg` and, when `png_dpi` is set, `<name>.png`.
+The outputs are `<name>.svg` and, when `png_dpi` is set, `<name>.png`;
+the output groups `svg` and `png` hold one each, for a rule that takes
+a single file (`filegroup(srcs = [":b_cu"], output_group = "png")`).
 They are drawn by `kicad-cli pcb export svg` with every option that
 shapes the plot given: all layers in one image, cut to the board's area,
-with no drawing sheet, and drill holes at their real size. KiCad's colors
-are its default theme's.
+with no drawing sheet, and drill holes at their real size. The colors are
+those of KiCad's default theme unless `options` says otherwise.
 
 kicad-cli writes the time of the plot into the SVG's `<title>`; the
 normalize toolchain sets it to `--@hdlf_rules_kicad//kicad:source_date_epoch`,
@@ -386,7 +388,7 @@ strokes, so no font is read.
 | <a id="kicad_layers-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
 | <a id="kicad_layers-layers"></a>layers |  The layers, by KiCad's untranslated names, such as `F.Cu`, `F.Silkscreen` and `Edge.Cuts`. All are drawn in one image.   | List of strings | required |  |
 | <a id="kicad_layers-mirror"></a>mirror |  Mirror the plot, as the board's bottom is seen from below.   | Boolean | optional |  `False`  |
-| <a id="kicad_layers-options"></a>options |  More `kicad-cli pcb export svg` options, such as `--black-and-white` or `--sketch-pads-on-fab-layers`. Not the ones the rule sets: the output, the layers, `--mirror`, the mode, the page size, the drawing sheet and the drill shape.   | List of strings | optional |  `[]`  |
+| <a id="kicad_layers-options"></a>options |  More `kicad-cli pcb export svg` options, such as `--black-and-white` or `--sketch-pads-on-fab-layers`, in their long forms. Not the ones the rule sets: the output, the layers, `--mirror`, the mode, the page size, the drawing sheet and the drill shape.   | List of strings | optional |  `[]`  |
 | <a id="kicad_layers-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 | <a id="kicad_layers-png_dpi"></a>png_dpi |  Also draw `<name>.png`, at this many dots per inch: 600 makes a 50 mm board about 1180 pixels wide. 0, the default, draws no PNG.   | Integer | optional |  `0`  |
 

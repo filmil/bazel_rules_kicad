@@ -10,6 +10,10 @@ def _layers_action_impl(ctx):
     outs = analysistest.target_under_test(env)[DefaultInfo].files.to_list()
     want = [name + ".svg"] + ([name + ".png"] if ctx.attr.png else [])
     asserts.equals(env, want, [f.basename for f in outs], "outputs")
+    groups = analysistest.target_under_test(env)[OutputGroupInfo]
+    for ext in ["svg", "png"]:
+        got = [f.basename for f in getattr(groups, ext).to_list()] if hasattr(groups, ext) else []
+        asserts.equals(env, [n for n in want if n.endswith("." + ext)], got, "output group " + ext)
     asserts.equals(env, ctx.attr.png, "KicadLayersPng" in actions, "a KicadLayersPng action")
     svg = actions.get("KicadLayersSvg")
     norm = actions.get("KicadLayersNormalize")
@@ -30,7 +34,9 @@ def _layers_action_impl(ctx):
         "2",
         "--layers",
         ctx.attr.layers,
-    ] + ctx.attr.more + ["--output", raw], args[:-1])
+        "--output",
+        raw,
+    ] + ctx.attr.more, args[:-1])
     asserts.true(env, args[-1].endswith("/pcb_project/main.kicad_pcb"), "the staged board: %s" % args[-1])
 
     # The normalized SVG is the output; the PNG is drawn from it.

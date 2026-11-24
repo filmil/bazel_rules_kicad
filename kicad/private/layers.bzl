@@ -10,11 +10,8 @@ _KICAD = Label("//kicad:toolchain_type")
 # The options this rule gives kicad-cli itself; `options` may not repeat
 # or override them.
 _FIXED_OPTIONS = [
-    "-o",
     "--output",
-    "-l",
     "--layers",
-    "-m",
     "--mirror",
     "--mode-single",
     "--mode-multi",
@@ -25,8 +22,12 @@ _FIXED_OPTIONS = [
 
 def _kicad_layers_impl(ctx):
     for opt in ctx.attr.options:
+        # Short options can bundle letters (-bm) or attach a value
+        # (-ox.svg), so only long ones are taken.
+        if not opt.startswith("--") or opt == "--":
+            fail("%s: options may hold long options only (--name or --name=value), not %s" % (ctx.label, opt))
         if opt.split("=")[0] in _FIXED_OPTIONS:
-            fail("%s: options may not hold %s; the rule sets it (see `layers` and `mirror`)" % (ctx.label, opt))
+            fail("%s: options may not hold %s; the rule sets it" % (ctx.label, opt))
     if ctx.attr.png_dpi < 0:
         fail("%s: png_dpi is %d; it must be positive, or 0 for no PNG" % (ctx.label, ctx.attr.png_dpi))
     pcb = ctx.attr.pcb[KicadPcbInfo]
@@ -52,11 +53,9 @@ def _kicad_layers_impl(ctx):
             "2",
             "--layers",
             ",".join(ctx.attr.layers),
-        ] + (["--mirror"] if ctx.attr.mirror else []) + ctx.attr.options + [
             "--output",
             raw.path,
-            pcb.board.path,
-        ],
+        ] + (["--mirror"] if ctx.attr.mirror else []) + ctx.attr.options + [pcb.board.path],
         inputs = pcb.files,
         outputs = [raw],
         mnemonic = "KicadLayersSvg",
@@ -66,6 +65,7 @@ def _kicad_layers_impl(ctx):
     # kicad-cli writes the time of the plot into the SVG's <title>.
     normalize(ctx, raw, svg, mnemonic = "KicadLayersNormalize")
     outs = [svg]
+    groups = {"svg": depset([svg])}
     if ctx.attr.png_dpi:
         png = ctx.actions.declare_file(ctx.label.name + ".png")
         run_tool(
@@ -79,7 +79,8 @@ def _kicad_layers_impl(ctx):
             progress_message = "Drawing %{output}",
         )
         outs.append(png)
-    return [DefaultInfo(files = depset(outs))]
+        groups["png"] = depset([png])
+    return [DefaultInfo(files = depset(outs)), OutputGroupInfo(**groups)]
 
 kicad_layers = rule(
     implementation = _kicad_layers_impl,
@@ -95,11 +96,13 @@ kicad_layers(
 )
 ```
 
-The outputs are `<name>.svg` and, when `png_dpi` is set, `<name>.png`.
+The outputs are `<name>.svg` and, when `png_dpi` is set, `<name>.png`;
+the output groups `svg` and `png` hold one each, for a rule that takes
+a single file (`filegroup(srcs = [":b_cu"], output_group = "png")`).
 They are drawn by `kicad-cli pcb export svg` with every option that
 shapes the plot given: all layers in one image, cut to the board's area,
-with no drawing sheet, and drill holes at their real size. KiCad's colors
-are its default theme's.
+with no drawing sheet, and drill holes at their real size. The colors are
+those of KiCad's default theme unless `options` says otherwise.
 
 kicad-cli writes the time of the plot into the SVG's `<title>`; the
 normalize toolchain sets it to `--@hdlf_rules_kicad//kicad:source_date_epoch`,
@@ -125,8 +128,8 @@ strokes, so no font is read.
         ),
         "options": attr.string_list(
             doc = "More `kicad-cli pcb export svg` options, such as " +
-                  "`--black-and-white` or `--sketch-pads-on-fab-layers`. " +
-                  "Not the ones the rule sets: the output, the layers, " +
+                  "`--black-and-white` or `--sketch-pads-on-fab-layers`, in " +
+                  "their long forms. Not the ones the rule sets: the output, the layers, " +
                   "`--mirror`, the mode, the page size, the drawing sheet " +
                   "and the drill shape.",
         ),

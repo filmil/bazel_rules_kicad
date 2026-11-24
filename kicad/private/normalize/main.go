@@ -65,9 +65,9 @@ const (
 
 var netlistRe = regexp.MustCompile(`^\(export\s+\(version\s+"[^"]*"\)`)
 
-// kicadSVGRe is the <title> kicad-cli gives an SVG plot. Other SVG files
-// are copied unchanged.
-var kicadSVGRe = regexp.MustCompile(`<svg\b[\s\S]*<title>SVG Image created as `)
+// kicadSVGTitle starts the <title> kicad-cli gives an SVG plot. Other SVG
+// files are copied unchanged.
+var kicadSVGTitle = []byte("<title>SVG Image created as ")
 
 var reportSchemaRe = regexp.MustCompile(`"\$schema":\s*"https://schemas\.kicad\.org/(drc|erc)\.`)
 
@@ -96,7 +96,9 @@ func Detect(b []byte) Format {
 		return Report
 	case netlistRe.Match(head):
 		return Netlist
-	case bytes.HasPrefix(head, []byte("<")) && kicadSVGRe.Match(head):
+	// The whole file is searched for the title, not only its head, so
+	// a long <svg> element cannot hide a time stamp.
+	case bytes.HasPrefix(head, []byte("<")) && bytes.Contains(head, []byte("<svg")) && bytes.Contains(b, kicadSVGTitle):
 		return SVG
 	}
 	return Unknown
@@ -184,7 +186,7 @@ var rules = map[Format][]rule{
 		{re: regexp.MustCompile(`(\(library\s+\(logical\s+"(?:[^"\\]|\\.)*"\)\s+\(uri\s+")((?:[^"\\]|\\.)*)(")`), stamp: base, path: true},
 	},
 	SVG: {
-		{re: regexp.MustCompile(`(<title>SVG Image created as [^<]*? date )([^<]*?)( ?</title>)`), stamp: layout("2006/01/02 15:04:05"), needed: true},
+		{re: regexp.MustCompile(`(<title>SVG Image created as [^<]* date )([^<]*?)( ?</title>)`), stamp: layout("2006/01/02 15:04:05"), needed: true},
 	},
 }
 

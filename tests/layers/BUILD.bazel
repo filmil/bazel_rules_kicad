@@ -65,17 +65,29 @@ determinism_test(
     target = ":b_cu",
 )
 
-# The real plot: no date left in the SVG, and a PNG of the board's size.
+[filegroup(
+    name = "b_cu_" + ext,
+    srcs = [":b_cu"],
+    output_group = ext,
+) for ext in [
+    "png",
+    "svg",
+]]
+
+# The real plots: no date left in either SVG, the options at work, and a
+# PNG of the board's size with the board drawn in it.
 go_test(
     name = "layers_look_test",
     size = "small",
     srcs = ["look_test.go"],
     args = [
-        "--svg=$(rlocationpath :f_cu)",
-        "--png=$(rlocationpaths :b_cu)",
+        "--f_cu_svg=$(rlocationpath :f_cu)",
+        "--b_cu_svg=$(rlocationpath :b_cu_svg)",
+        "--b_cu_png=$(rlocationpath :b_cu_png)",
     ],
     data = [
-        ":b_cu",
+        ":b_cu_png",
+        ":b_cu_svg",
         ":f_cu",
     ],
     pure = "on",
@@ -108,7 +120,7 @@ kicad_layers(
 fails_test(
     name = "layers_mirror_option_test",
     size = "small",
-    message = "options may not hold -m",
+    message = "options may hold long options only (--name or --name=value), not -m",
     target_under_test = ":layers_mirror_option",
 )
 
@@ -118,6 +130,21 @@ kicad_layers(
     pcb = "//tests/design:pcb",
     png_dpi = -1,
     tags = ["manual"],
+)
+
+kicad_layers(
+    name = "layers_dashdash_option",
+    layers = ["F.Cu"],
+    options = ["--"],
+    pcb = "//tests/design:pcb",
+    tags = ["manual"],
+)
+
+fails_test(
+    name = "layers_dashdash_option_test",
+    size = "small",
+    message = "long options only (--name or --name=value), not --",
+    target_under_test = ":layers_dashdash_option",
 )
 
 fails_test(

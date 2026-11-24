@@ -322,3 +322,44 @@ func TestOtherSVGPassesThrough(t *testing.T) {
 		t.Errorf("got %q, %s, %v; want the input unchanged, %s, nil", out, f, err, Unknown)
 	}
 }
+
+// A time with a month, day and hour that cannot be swapped unseen:
+// 2023/11/14 22:13:20 UTC.
+var oddEpoch = time.Unix(1700000000, 0).UTC()
+
+func TestKiCadSVGLayout(t *testing.T) {
+	out, _, err := Normalize(kicadSVG("2026/10/29 03:58:50"), oddEpoch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := kicadSVG("2023/11/14 22:13:20"); !bytes.Equal(out, want) {
+		t.Errorf("got\n%s\nwant\n%s", out, want)
+	}
+}
+
+// kicad-cli writes "date ... </title>" for sheets and "date ...</title>"
+// for board plots; a file name may hold " date " too.
+func TestKiCadSVGTitleForms(t *testing.T) {
+	for _, c := range []struct{ name, in, want string }{
+		{"no space", "f_cu.svg date 2026/10/29 03:58:50</title>", "f_cu.svg date 2023/11/14 22:13:20</title>"},
+		{"date in name", "a date b.svg date 2026/10/29 03:58:50 </title>", "a date b.svg date 2023/11/14 22:13:20 </title>"},
+	} {
+		in := []byte("<svg>\n<title>SVG Image created as " + c.in + "\n</svg>\n")
+		out, f, err := Normalize(in, oddEpoch)
+		if err != nil || f != SVG {
+			t.Errorf("%s: %s, %v", c.name, f, err)
+			continue
+		}
+		if want := "<svg>\n<title>SVG Image created as " + c.want + "\n</svg>\n"; string(out) != want {
+			t.Errorf("%s: got %q, want %q", c.name, out, want)
+		}
+	}
+}
+
+// The title is found past the first 4096 bytes too.
+func TestKiCadSVGLongHead(t *testing.T) {
+	in := append([]byte("<svg "+strings.Repeat(`a="1" `, 1000)+">\n"), []byte("<title>SVG Image created as x.svg date 2026/10/29 03:58:50 </title>\n</svg>\n")...)
+	if _, f, err := Normalize(in, oddEpoch); err != nil || f != SVG {
+		t.Errorf("got %s, %v; want %s, nil", f, err, SVG)
+	}
+}
