@@ -3,12 +3,15 @@
 
 The board of `//e2e/autoroute` is small: three tracks. This package
 compares Freerouting and KiCadRoutingTools on a real one: the placed
-board of https://github.com/filmil/hdlf_example_sensor (36 parts, 111
-nets, 13 zones of which 11 are pours, so KiCadRoutingTools' exact fill in
-KiCad's own Python runs too).
+board of https://github.com/filmil/hdlf_example_sensor (26 footprints, 22
+parts and 4 mounting holes; 18 nets; 10 keep-out zones). It has no copper
+pours, so KiCadRoutingTools' exact fill, which runs in KiCad's own
+Python, is not exercised here either.
 
 The three files are copies of that repository's build outputs, unchanged,
 at commit `0a944e6` (main, 2026-11-23):
+
+`:fixtures_test` checks that the copies still have these sha256s.
 
 | File here | Its target there | sha256 |
 |---|---|---|
@@ -24,7 +27,11 @@ clearance) was no fair comparison: Freerouting left 9 connections
 unrouted, and KiCadRoutingTools narrowed 65 of its 242 segments below
 0.25 mm. No 3D models are used.
 
-Every target is manual, since routing this board takes minutes:
+The routing targets are manual, since routing this board takes minutes;
+`:placed`, which only stages the board, and `:fixtures_test` are not, so
+CI still analyses the package and checks the copies. Run these in
+`integration/` (the integration module), on Linux x86_64 (the only host
+KiCadRoutingTools' targets support):
 
 ```
 bazel test //e2e/route_krt_sensor:freerouting_determinism_test //e2e/route_krt_sensor:krt_determinism_test //e2e/route_krt_sensor:krt_board_determinism_test

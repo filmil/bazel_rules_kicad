@@ -10,6 +10,7 @@
 # Manual: routing this board takes minutes, so CI does not run it on every
 # push. README.md has the commands that run it.
 load("@hdlf_rules_kicad//kicad:defs.bzl", "determinism_test", "kicad_autoroute", "kicad_drc_report", "kicad_pcb")
+load("@rules_python//python:py_test.bzl", "py_test")
 load("//krt:krt.bzl", "kicad_route_krt")
 
 _MANUAL = ["manual"]
@@ -32,14 +33,31 @@ _ROUTERS = [
     "krt_board",
 ]
 
+# Not manual: it only stages the board, so CI analyses this package and
+# notices when a rule it uses changes.
 kicad_pcb(
     name = "placed",
     board = "sensor.kicad_pcb",
     design_rules = _RULES,
     netlist = "sensor.net",
     project = "sensor.kicad_pro",
-    tags = _MANUAL,
     deps = ["@kicad_libs//:standard"],
+)
+
+# The copies are hdlf_example_sensor's files unchanged: their sha256s are
+# the ones README.md records.
+py_test(
+    name = "fixtures_test",
+    size = "small",
+    srcs = ["fixtures_test.py"],
+    data = [
+        "README.md",
+        "sensor.kicad_pcb",
+        "sensor.kicad_pro",
+        "sensor.net",
+    ],
+    env = {"README": "$(rootpath README.md)"},
+    main = "fixtures_test.py",
 )
 
 kicad_autoroute(
