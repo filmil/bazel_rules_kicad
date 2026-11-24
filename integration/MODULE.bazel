@@ -77,4 +77,18 @@ http_archive(
     urls = ["https://github.com/drandyhaas/KiCadRoutingTools/releases/download/v0.24.2/KiCadRoutingTools-0.24.2.zip"],
 )
 
+# kicad-druid 1.2.0 (MIT), pinned as hdlf_rules_fab pins it, for the JLCPCB
+# rules of the router comparison (//e2e/route_krt_sensor; the operator's
+# Q-druid, issue #104).
+http_archive(
+    name = "kicad_druid",
+    build_file = "//krt:kicad_druid.BUILD",
+    sha256 = "85b07296d10beb91a96b12870b5cab83894ac2cf6b035b84df90e0f1a9516401",
+    strip_prefix = "kicad-druid-1.2.0",
+    urls = [
+        "https://github.com/filmil/bazel_rules_fab/releases/download/mirror-kicad-druid-1.2.0/kicad-druid-1.2.0.tar.gz",
+        "https://github.com/Cimos/kicad-druid/archive/refs/tags/v1.2.0.tar.gz",
+    ],
+)
+
 register_toolchains("//krt:krt")
