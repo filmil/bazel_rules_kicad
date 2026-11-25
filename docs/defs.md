@@ -344,6 +344,55 @@ same board gives the same bytes.
 | <a id="kicad_gerbers-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
 
 
+<a id="kicad_layers"></a>
+
+## kicad_layers
+
+<pre>
+load("@hdlf_rules_kicad//kicad:defs.bzl", "kicad_layers")
+
+kicad_layers(<a href="#kicad_layers-name">name</a>, <a href="#kicad_layers-layers">layers</a>, <a href="#kicad_layers-mirror">mirror</a>, <a href="#kicad_layers-options">options</a>, <a href="#kicad_layers-pcb">pcb</a>, <a href="#kicad_layers-png_dpi">png_dpi</a>)
+</pre>
+
+Layers of a board plotted flat, as one SVG, and optionally a PNG.
+
+```starlark
+kicad_layers(
+    name = "b_cu",
+    pcb = ":pcb",
+    layers = ["B.Cu", "Edge.Cuts"],
+    mirror = True,
+    png_dpi = 600,
+)
+```
+
+The outputs are `<name>.svg` and, when `png_dpi` is set, `<name>.png`;
+the output groups `svg` and `png` hold one each, for a rule that takes
+a single file (`filegroup(srcs = [":b_cu"], output_group = "png")`).
+They are drawn by `kicad-cli pcb export svg` with every option that
+shapes the plot given: all layers in one image, cut to the board's area,
+with no drawing sheet, and drill holes at their real size. The colors are
+those of KiCad's default theme unless `options` says otherwise.
+
+kicad-cli writes the time of the plot into the SVG's `<title>`; the
+normalize toolchain sets it to `--@hdlf_rules_kicad//kicad:source_date_epoch`,
+so the same board gives the same bytes. The PNG is drawn from the SVG by
+svgpng, as `kicad_sch_render` draws its sheets. KiCad writes text as
+strokes, so no font is read.
+
+**ATTRIBUTES**
+
+
+| Name  | Description | Type | Mandatory | Default |
+| :------------- | :------------- | :------------- | :------------- | :------------- |
+| <a id="kicad_layers-name"></a>name |  A unique name for this target.   | <a href="https://bazel.build/concepts/labels#target-names">Name</a> | required |  |
+| <a id="kicad_layers-layers"></a>layers |  The layers, by KiCad's untranslated names, such as `F.Cu`, `F.Silkscreen` and `Edge.Cuts`. All are drawn in one image.   | List of strings | required |  |
+| <a id="kicad_layers-mirror"></a>mirror |  Mirror the plot, as the board's bottom is seen from below.   | Boolean | optional |  `False`  |
+| <a id="kicad_layers-options"></a>options |  More `kicad-cli pcb export svg` options, such as `--black-and-white` or `--sketch-pads-on-fab-layers`, in their long forms. Not the ones the rule sets: the output, the layers, `--mirror`, the mode, the page size, the drawing sheet and the drill shape.   | List of strings | optional |  `[]`  |
+| <a id="kicad_layers-pcb"></a>pcb |  The board (`kicad_pcb`).   | <a href="https://bazel.build/concepts/labels">Label</a> | required |  |
+| <a id="kicad_layers-png_dpi"></a>png_dpi |  Also draw `<name>.png`, at this many dots per inch: 600 makes a 50 mm board about 1180 pixels wide. 0, the default, draws no PNG.   | Integer | optional |  `0`  |
+
+
 <a id="kicad_lib_tables"></a>
 
 ## kicad_lib_tables

@@ -34,6 +34,7 @@ load("//kicad/private:freerouting_toolchain.bzl", _FreeroutingToolchainInfo = "F
 load("//kicad/private:gerbers.bzl", _DEFAULT_GERBER_LAYERS = "DEFAULT_GERBER_LAYERS", _kicad_gerbers = "kicad_gerbers")
 load("//kicad/private:golden.bzl", _GoldenInfo = "GoldenInfo", _golden_test = "golden_test", _update_goldens = "update_goldens")
 load("//kicad/private:kicad_toolchain.bzl", _KicadToolchainInfo = "KicadToolchainInfo", _kicad_toolchain = "kicad_toolchain")
+load("//kicad/private:layers.bzl", _kicad_layers = "kicad_layers")
 load("//kicad/private:library.bzl", _KicadLibraryInfo = "KicadLibraryInfo", _kicad_lib_tables = "kicad_lib_tables", _kicad_library = "kicad_library", _lib_table_test = "lib_table_test")
 load("//kicad/private:netlist.bzl", _kicad_netlist = "kicad_netlist")
 load("//kicad/private:normalize.bzl", _NormalizeToolchainInfo = "NormalizeToolchainInfo")
@@ -66,6 +67,7 @@ kicad_drill = _kicad_drill
 kicad_erc_report = _kicad_erc_report
 kicad_erc_test = _kicad_erc_test
 kicad_gerbers = _kicad_gerbers
+kicad_layers = _kicad_layers
 kicad_lib_tables = _kicad_lib_tables
 kicad_library = _kicad_library
 kicad_netlist = _kicad_netlist
